@@ -493,17 +493,145 @@ pip freeze > requirements.txt
 ## 📁 Project Structure (example)
 
 ```
-my-fastapi-app/
-├── src/
-│   └── main.py
-├── requirements.in
-├── requirements.txt
-├── .pre-commit-config.yaml
-├── .pylintrc
-├── setup.cfg
-├── venv/
-└── README.md
+moneta-backend/
+├── 📁 src/                          # Main application source code
+│   ├── 📁 api/                      # API layer
+│   │   ├── 📁 v1/                   # API version 1
+│   │   │   ├── __init__.py
+│   │   │   ├── endpoints/           # API endpoints
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── auth.py          # Authentication endpoints
+│   │   │   │   ├── users.py         # User management endpoints
+│   │   │   │   └── items.py         # Business logic endpoints
+│   │   │   └── api.py               # API router aggregation
+│   │   └── deps.py                  # Dependency injection
+│   ├── 📁 core/                     # Core application configuration
+│   │   ├── __init__.py
+│   │   ├── config.py                # Application settings
+│   │   ├── security.py              # Security utilities (JWT, passwords)
+│   │   └── database.py              # Database configuration
+│   ├── 📁 models/                   # Database models (SQLAlchemy/Pydantic)
+│   │   ├── __init__.py
+│   │   ├── user.py                  # User model
+│   │   ├── item.py                  # Business entity models
+│   │   └── base.py                  # Base model classes
+│   ├── 📁 schemas/                  # Pydantic schemas (request/response models)
+│   │   ├── __init__.py
+│   │   ├── user.py                  # User schemas
+│   │   ├── item.py                  # Item schemas
+│   │   └── token.py                 # Authentication schemas
+│   ├── 📁 services/                 # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── auth_service.py          # Authentication business logic
+│   │   ├── user_service.py          # User management logic
+│   │   └── item_service.py          # Item management logic
+│   ├── 📁 repository/               # Data access layer
+│   │   ├── __init__.py
+│   │   ├── base.py                  # Base repository class
+│   │   ├── user_repository.py       # User data access
+│   │   └── item_repository.py       # Item data access
+│   ├── 📁 utils/                    # Utility functions
+│   │   ├── __init__.py
+│   │   ├── helpers.py               # General helper functions
+│   │   ├── validators.py            # Custom validators
+│   │   └── exceptions.py            # Custom exception classes
+│   ├── 📁 middleware/               # Custom middleware
+│   │   ├── __init__.py
+│   │   ├── cors.py                  # CORS middleware
+│   │   ├── auth.py                  # Authentication middleware
+│   │   └── logging.py               # Logging middleware
+│   └── main.py                      # FastAPI application entry point
+├── 📁 tests/                        # Test suite
+│   ├── __init__.py
+│   ├── conftest.py                  # Pytest configuration and fixtures
+│   ├── 📁 unit/                     # Unit tests
+│   │   ├── __init__.py
+│   │   ├── test_services/           # Service layer tests
+│   │   ├── test_repository/         # Repository layer tests
+│   │   └── test_utils/              # Utility function tests
+│   ├── 📁 integration/              # Integration tests
+│   │   ├── __init__.py
+│   │   ├── test_api/                # API endpoint tests
+│   │   └── test_database/           # Database integration tests
+│   └── 📁 e2e/                      # End-to-end tests
+│       ├── __init__.py
+│       └── test_complete_flows/     # Full user journey tests
+├── 📁 alembic/                      # Database migrations (if using SQLAlchemy)
+│   ├── versions/                    # Migration files
+│   ├── env.py                       # Alembic environment configuration
+│   ├── script.py.mako               # Migration template
+│   └── alembic.ini                  # Alembic configuration
+├── 📁 docs/                         # Documentation
+│   ├── api/                         # API documentation
+│   ├── deployment/                  # Deployment guides
+│   └── development/                 # Development guides
+├── 📁 scripts/                      # Utility scripts
+│   ├── init_db.py                   # Database initialization
+│   ├── seed_data.py                 # Sample data seeding
+│   └── deployment/                  # Deployment scripts
+├── 📁 docker/                       # Docker configuration
+│   ├── Dockerfile                   # Main application Dockerfile
+│   ├── Dockerfile.dev               # Development Dockerfile
+│   └── docker-compose.yml           # Multi-container setup
+├── 📁 .github/                      # GitHub configuration
+│   ├── workflows/                   # GitHub Actions CI/CD
+│   │   ├── ci.yml                   # Continuous Integration
+│   │   └── deploy.yml               # Deployment workflow
+│   └── PULL_REQUEST_TEMPLATE.md     # PR template
+├── 📄 requirements.in               # Abstract dependencies
+├── 📄 requirements.txt              # Pinned dependencies
+├── 📄 requirements-dev.txt          # Development dependencies
+├── 📄 .env.example                  # Environment variables template
+├── 📄 .env                          # Environment variables (not in git)
+├── 📄 .gitignore                    # Git ignore rules
+├── 📄 .pre-commit-config.yaml       # Pre-commit hooks configuration
+├── 📄 .pylintrc                     # Pylint configuration
+├── 📄 setup.cfg                     # Tool configurations (flake8, bandit, etc.)
+├── 📄 pyproject.toml                # Modern Python project configuration
+├── 📄 Dockerfile                    # Production Docker image
+├── 📄 docker-compose.yml            # Local development environment
+├── 📄 pytest.ini                    # Pytest configuration
+├── 📄 logging.conf                  # Logging configuration
+├── 📄 README.md                     # Project documentation
+├── 📄 CHANGELOG.md                  # Version history
+├── 📄 LICENSE                       # Project license
+└── 📁 venv/                         # Virtual environment (not in git)
 ```
+
+### 📋 Folder Descriptions
+
+#### 🎯 **Core Application (`src/`)**
+
+- **`api/`** - REST API endpoints organized by version and functionality
+- **`core/`** - Application configuration, database setup, security
+- **`models/`** - Database models (SQLAlchemy ORM models)
+- **`schemas/`** - Pydantic models for request/response validation
+- **`services/`** - Business logic layer (application services)
+- **`repository/`** - Data access layer (database operations)
+- **`utils/`** - Shared utility functions and helpers
+- **`middleware/`** - Custom FastAPI middleware components
+
+#### 🧪 **Testing (`tests/`)**
+
+- **`unit/`** - Unit tests for individual components
+- **`integration/`** - Integration tests for component interactions
+- **`e2e/`** - End-to-end tests for complete user workflows
+
+#### 🗄️ **Database (`alembic/`)**
+
+- **Database migration management** using Alembic
+- **Version control for database schema** changes
+
+#### 🐳 **Deployment (`docker/`, `.github/`)**
+
+- **Container configuration** for different environments
+- **CI/CD pipelines** for automated testing and deployment
+
+#### ⚙️ **Configuration Files**
+
+- **Development tools** configuration (linting, formatting, testing)
+- **Environment management** (`.env` files)
+- **Dependency management** (requirements files)
 
 ---
 
