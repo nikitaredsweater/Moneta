@@ -96,7 +96,7 @@ pip install -r requirements.txt
 If your app’s entry point is called `main.py` and it contains a FastAPI instance named `app`, use:
 
 ```bash
-fastapi dev main.py  
+fastapi dev src/main.py  
 ```
 ---
 

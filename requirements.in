@@ -1,2 +1,35 @@
 fastapi
 uvicorn
+
+# --- Formatters & Linters ---
+isort
+yapf
+unify
+flake8
+flake8-bugbear
+flake8-comprehensions
+flake8-isort
+flake8-quotes
+dlint
+darglint
+
+# --- Static Analysis & Security ---
+bandit
+pylint
+mypy
+
+# --- Pre-commit ---
+pre-commit
+
+# NOTE: The following are pre-commit hooks, not standalone packages:
+# - check-toml (provided by pre-commit-hooks)
+# - check-merge-conflict (provided by pre-commit-hooks)
+# - pretty-format-json (provided by pre-commit-hooks)
+# - check-yaml (provided by pre-commit-hooks)
+# - trailing-whitespace (provided by pre-commit-hooks)
+# - end-of-file-fixer (provided by pre-commit-hooks)
+# - requirements-txt-fixer (provided by pre-commit-hooks)
+# - detect-private-key (provided by pre-commit-hooks)
+# - name-tests-test (provided by pre-commit-hooks)
+# - check-shebang-scripts-are-executable (provided by pre-commit-hooks)
+# - debug-statement-hook (provided by pre-commit-hooks)
