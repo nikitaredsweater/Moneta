@@ -3,8 +3,8 @@ uvicorn
 
 # --- Formatters & Linters ---
 isort
-yapf
-unify
+black  # Using black instead of yapf for Python 3.13 compatibility
+# unify - removed due to Python 3.13 incompatibility (depends on lib2to3)
 flake8
 flake8-bugbear
 flake8-comprehensions
@@ -18,18 +18,9 @@ bandit
 pylint
 mypy
 
-# --- Pre-commit ---
+# --- Pre-commit and its dependencies ---
 pre-commit
 
-# NOTE: The following are pre-commit hooks, not standalone packages:
-# - check-toml (provided by pre-commit-hooks)
-# - check-merge-conflict (provided by pre-commit-hooks)
-# - pretty-format-json (provided by pre-commit-hooks)
-# - check-yaml (provided by pre-commit-hooks)
-# - trailing-whitespace (provided by pre-commit-hooks)
-# - end-of-file-fixer (provided by pre-commit-hooks)
-# - requirements-txt-fixer (provided by pre-commit-hooks)
-# - detect-private-key (provided by pre-commit-hooks)
-# - name-tests-test (provided by pre-commit-hooks)
-# - check-shebang-scripts-are-executable (provided by pre-commit-hooks)
-# - debug-statement-hook (provided by pre-commit-hooks)
+# --- Additional tools for local pre-commit hooks ---
+# Note: Most of the pre-commit hook tools are provided by the pre-commit-hooks package
+# and don't need to be installed separately as they're built into the pre-commit ecosystem

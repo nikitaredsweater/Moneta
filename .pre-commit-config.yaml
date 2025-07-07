@@ -1,39 +1,69 @@
 exclude: ^alembic/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
-      - id: check-merge-conflict
-      - id: check-toml
-      - id: check-yaml
-        exclude: chart/|charts/|werf-*
-      - id: end-of-file-fixer
+      - id: check-shebang-scripts-are-executable
+      - id: name-tests-test
+        args: [--pytest-test-first]
+      - id: detect-private-key
         exclude: cred.json
-      - id: trailing-whitespace
-        args: [--markdown-linebreak-ext=md]
-      - id: requirements-txt-fixer
+      - id: check-toml
+      - id: check-merge-conflict
       - id: pretty-format-json
         args: [--autofix, --indent=2]
         exclude: cred.json
+      - id: check-yaml
+        exclude: chart/|charts/|werf-*
+      - id: debug-statements
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        exclude: cred.json
 
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.12.0
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
     hooks:
       - id: isort
 
-  - repo: https://github.com/pre-commit/mirrors-yapf
-    rev: v0.40.2
-    hooks:
-      - id: yapf
-        args: [-i]
+  # unify removed due to Python 3.13 incompatibility (depends on lib2to3)
 
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
     hooks:
-      - id: pyupgrade
+      - id: black
+        args: [--line-length=80, --skip-string-normalization]
+
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.3.7
+    hooks:
+      - id: pylint
+        additional_dependencies:
+          - fastapi
+          - uvicorn
+          - pydantic
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - darglint
+          - dlint
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-isort
+          - flake8-quotes
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: ["-q", "--ini", "setup.cfg"]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.16.1
     hooks:
       - id: mypy
         args:
@@ -48,26 +78,3 @@ repos:
             --exclude,
             site-packages,
           ]
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - darglint
-          - dlint
-          - flake8-bugbear
-          - flake8-comprehensions
-          - flake8-isort
-          - flake8-quotes
-
-  - repo: https://github.com/PyCQA/pylint
-    rev: v3.0.3
-    hooks:
-      - id: pylint
-
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: ["-q", "--ini", "setup.cfg"]
