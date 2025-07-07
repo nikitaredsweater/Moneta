@@ -96,15 +96,8 @@ pip install -r requirements.txt
 If your app’s entry point is called `main.py` and it contains a FastAPI instance named `app`, use:
 
 ```bash
-uvicorn main:app --reload
+fastapi dev main.py  
 ```
-
-### Explanation:
-
-* `main` = filename (`main.py`)
-* `app` = FastAPI app instance (`app = FastAPI()`)
-* `--reload` = auto-reloads when you make code changes
-
 ---
 
 ## 📚 Step 4: View the API Documentation
