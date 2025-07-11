@@ -119,10 +119,9 @@ pip install -r requirements.txt
 
 ## 🚀 Step 3: Run the FastAPI App
 
-If your app's entry point is called `main.py` and it contains a FastAPI instance named `app`, use:
 
 ```bash
-fastapi dev src/main.py
+fastapi dev app/main.py
 ```
 
 ---
@@ -494,7 +493,7 @@ pip freeze > requirements.txt
 
 ```
 moneta-backend/
-├── 📁 src/                          # Main application source code
+├── 📁 app/                          # Main application source code
 │   ├── 📁 api/                      # API layer
 │   │   ├── 📁 v1/                   # API version 1
 │   │   │   ├── __init__.py

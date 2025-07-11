@@ -1,11 +1,13 @@
-"""Main FastAPI application module."""
+"""
+v1 API routes
+"""
 
-from fastapi import FastAPI
+from fastapi import APIRouter
 
-app = FastAPI()
+v1_router = APIRouter()
 
 
-@app.get('/')
+@v1_router.get('/')
 async def root() -> dict[str, str]:
     """
     Test endpoint.
