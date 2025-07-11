@@ -5,7 +5,7 @@ Order types enum, signalling the type of incoming order.
 from enum import Enum
 
 
-class OrderType(Enum):
+class OrderType(str, Enum):
     """
     Order type enum.
     """
