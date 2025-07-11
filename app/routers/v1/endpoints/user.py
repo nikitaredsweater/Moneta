@@ -4,15 +4,21 @@ User endpoints
 
 from fastapi import APIRouter
 
+from app import schemas
+
 user_router = APIRouter()
 
 
 @user_router.get('/')
-async def get_user() -> dict[str, str]:
+async def get_user() -> schemas.User:
     """
     Get user
 
     Returns:
-        dict[str, str]: A dictionary with a message key and value.
+        schemas.User: A user object.
     """
-    return {'message': 'User endpoint will be here one day'}
+    return schemas.User(
+        email='test@test.com',
+        first_name='John',
+        last_name='Doe',
+    )

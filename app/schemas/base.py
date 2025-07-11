@@ -2,22 +2,14 @@
 Base data transfer object
 """
 
-import os
 from datetime import datetime
-from typing import Optional
-from uuid import UUID
+from typing import Annotated
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-
-class MonetaID(UUID):
-    """Moneta Financial ID. Set up as uuid4"""
-
-    def __init__(self, from_str: Optional[str] = None) -> None:
-        if from_str:
-            super().__init__(from_str, version=4)
-        else:
-            super().__init__(bytes=os.urandom(16), version=4)
+# Use Pydantic's UUID4 with a custom factory
+MonetaID = Annotated[UUID, Field(default_factory=uuid4)]
 
 
 def _to_camel(string: str) -> str:
@@ -30,8 +22,8 @@ def _to_camel(string: str) -> str:
     Returns:
         str: The converted string
     """
-    str_split = string.split('_')
-    return str_split[0] + ''.join(word.capitalize() for word in str_split[1:])
+    str_split = string.split("_")
+    return str_split[0] + "".join(word.capitalize() for word in str_split[1:])
 
 
 class CamelModel(BaseModel):
@@ -39,22 +31,19 @@ class CamelModel(BaseModel):
     Base model that converts snake_case to camelCase
     """
 
-    class Config:
-        """
-        Config for the model
-        """
-
-        alias_generator = _to_camel
-        allow_population_by_field_name = True
+    model_config = {
+        'alias_generator': _to_camel,
+        'populate_by_name': True,
+    }
 
 
 class BaseDTO(CamelModel):
     """
-    Base Moneta Financial DT
+    Base Moneta Financial DTO
 
     This is a base class for all DTOs.
     It contains the id and created_at fields.
-    It also converts snake_case to camelCase.O
+    It also converts snake_case to camelCase.
 
     Make sure that the DTO fields match the ORM model fields.
 
@@ -62,12 +51,11 @@ class BaseDTO(CamelModel):
       deleted_at field.
     """
 
-    id: MonetaID = Field(default_factory=MonetaID)
+    id: MonetaID
     created_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        """
-        Config for the model
-        """
-
-        orm_mode = True
+    model_config = {
+        'from_attributes': True,  # Updated from orm_mode
+        'alias_generator': _to_camel,
+        'populate_by_name': True,
+    }
