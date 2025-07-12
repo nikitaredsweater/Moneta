@@ -3,15 +3,15 @@ version: "3.8"
 services:
   app:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: ./docker/Dockerfile
       target: ${TARGET:-development}
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/moneta
     ports:
       - "8080:8080"
     volumes:
-      - .:/app_root
+      - ..:/app_root
     depends_on:
       postgres:
         condition: service_healthy
@@ -19,21 +19,21 @@ services:
 
   lint:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: ./docker/Dockerfile
       target: lint
     volumes:
-      - .:/app_root
+      - ..:/app_root
 
   test:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: ./docker/Dockerfile
       target: test
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres_test:5432/moneta_test
     volumes:
-      - .:/app_root
+      - ..:/app_root
     depends_on:
       postgres_test:
         condition: service_healthy

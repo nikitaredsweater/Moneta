@@ -147,10 +147,10 @@ Docker provides a containerized environment for running your FastAPI application
 
 ```bash
 # Start the application in development mode
-docker-compose up --build
+docker-compose -f docker/docker-compose.yml up --build
 
 # Or run in detached mode (background)
-docker-compose up -d --build
+docker-compose -f docker/docker-compose.yml up -d --build
 ```
 
 This will:
@@ -164,7 +164,7 @@ This will:
 
 ```bash
 # Start the application in production mode
-TARGET=production docker-compose up --build
+TARGET=production docker-compose -f docker/docker-compose.yml up --build
 ```
 
 This runs the app with multiple workers for better performance.
@@ -185,61 +185,61 @@ Your `docker-compose.yml` includes:
 
 ```bash
 # Start all services
-docker-compose up
+docker-compose -f docker/docker-compose.yml up
 
 # Start services in background
-docker-compose up -d
+docker-compose -f docker/docker-compose.yml up -d
 
 # Stop all services
-docker-compose down
+docker-compose -f docker/docker-compose.yml down
 
 # View logs
-docker-compose logs -f
+docker-compose -f docker/docker-compose.yml logs -f
 
 # View logs for specific service
-docker-compose logs -f app
+docker-compose -f docker/docker-compose.yml logs -f app
 ```
 
 #### Development Commands
 
 ```bash
 # Run linting checks
-docker-compose run lint
+docker-compose -f docker/docker-compose.yml run lint
 
 # Run tests
-docker-compose run test
+docker-compose -f docker/docker-compose.yml run test
 
 # Rebuild and start (after code changes)
-docker-compose up --build
+docker-compose -f docker/docker-compose.yml up --build
 
 # Access app container shell
-docker-compose exec app bash
+docker-compose -f docker/docker-compose.yml exec app bash
 ```
 
 #### Database Operations
 
 ```bash
 # Connect to PostgreSQL database
-docker-compose exec postgres psql -U postgres -d moneta
+docker-compose -f docker/docker-compose.yml exec postgres psql -U postgres -d moneta
 
 # Connect to test database
-docker-compose exec postgres_test psql -U postgres -d moneta_test
+docker-compose -f docker/docker-compose.yml exec postgres_test psql -U postgres -d moneta_test
 
 # View database logs
-docker-compose logs postgres
+docker-compose -f docker/docker-compose.yml logs postgres
 ```
 
 #### Cleanup
 
 ```bash
 # Stop and remove containers, networks
-docker-compose down
+docker-compose -f docker/docker-compose.yml down
 
 # Remove containers, networks, and volumes
-docker-compose down -v
+docker-compose -f docker/docker-compose.yml down -v
 
 # Remove images as well
-docker-compose down --rmi all
+docker-compose -f docker/docker-compose.yml down --rmi all
 ```
 
 ### Environment Variables
