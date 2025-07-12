@@ -11,4 +11,4 @@
 ## Adding new model
 
 1. Create models in `app/models`
-2. Update `combine_metadata` function with new model metadata
+2. Import models in `app/utils/database.py` to ensure they're included in Base.metadata

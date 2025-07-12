@@ -4,7 +4,7 @@ Migrations core
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.orm.base import Base
+from app.utils.database import Base
 from conf import conf
 
 # this is the Alembic Config object, which provides
