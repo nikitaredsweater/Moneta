@@ -12,12 +12,17 @@ Welcome to this FastAPI project! This guide will walk you through setting up eve
   - [Option 1: Using requirements.txt](#option-1-using-requirementstxt-basic)
   - [Option 2: Using pip-tools](#option-2-using-pip-tools-recommended)
 - [🚀 Step 3: Run the FastAPI App](#-step-3-run-the-fastapi-app)
-- [📚 Step 4: View the API Documentation](#-step-4-view-the-api-documentation)
-- [🔍 Step 5: Set Up Automated Code Quality Checks](#-step-5-set-up-automated-code-quality-checks)
+- [🐳 Step 4: Docker Setup (Alternative)](#-step-4-docker-setup-alternative)
+  - [Docker Requirements](#docker-requirements)
+  - [Running with Docker](#running-with-docker)
+  - [Docker Services](#docker-services)
+  - [Docker Commands](#docker-commands)
+- [📚 Step 5: View the API Documentation](#-step-5-view-the-api-documentation)
+- [🔍 Step 6: Set Up Automated Code Quality Checks](#-step-6-set-up-automated-code-quality-checks)
   - [Setting Up Pre-commit Hooks](#️-setting-up-pre-commit-hooks)
   - [Manual Code Quality Checks](#-manual-code-quality-checks)
   - [Configuration Files](#-configuration-files)
-- [🌳 Step 6: Git Workflow and Branching Strategy](#-step-6-git-workflow-and-branching-strategy)
+- [🌳 Step 7: Git Workflow and Branching Strategy](#-step-7-git-workflow-and-branching-strategy)
   - [Branch Structure](#-branch-structure)
   - [Standard Development Workflow](#-standard-development-workflow)
   - [Commit Message Convention](#-commit-message-convention)
@@ -127,29 +132,181 @@ fastapi dev src/main.py
 
 ---
 
-## 📚 Step 4: View the API Documentation
+## 🐳 Step 4: Docker Setup (Alternative)
+
+Docker provides a containerized environment for running your FastAPI application with PostgreSQL database. This is an alternative to the local setup described in Steps 1-3.
+
+### Docker Requirements
+
+- Docker and Docker Compose installed on your machine
+- No need to install Python, PostgreSQL, or other dependencies locally
+
+### Running with Docker
+
+#### Development Mode (Default)
+
+```bash
+# Start the application in development mode
+docker-compose up --build
+
+# Or run in detached mode (background)
+docker-compose up -d --build
+```
+
+This will:
+
+- Build the FastAPI application container
+- Start PostgreSQL database container
+- Start the app with hot-reload enabled
+- Make the app available at `http://localhost:8080`
+
+#### Production Mode
+
+```bash
+# Start the application in production mode
+TARGET=production docker-compose up --build
+```
+
+This runs the app with multiple workers for better performance.
+
+### Docker Services
+
+Your `docker-compose.yml` includes:
+
+- **`app`**: FastAPI application container (Python 3.13)
+- **`postgres`**: PostgreSQL 15 database container
+- **`postgres_test`**: Separate PostgreSQL container for testing
+- **`lint`**: Container for running code quality checks
+- **`test`**: Container for running tests
+
+### Docker Commands
+
+#### Basic Operations
+
+```bash
+# Start all services
+docker-compose up
+
+# Start services in background
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# View logs for specific service
+docker-compose logs -f app
+```
+
+#### Development Commands
+
+```bash
+# Run linting checks
+docker-compose run lint
+
+# Run tests
+docker-compose run test
+
+# Rebuild and start (after code changes)
+docker-compose up --build
+
+# Access app container shell
+docker-compose exec app bash
+```
+
+#### Database Operations
+
+```bash
+# Connect to PostgreSQL database
+docker-compose exec postgres psql -U postgres -d moneta
+
+# Connect to test database
+docker-compose exec postgres_test psql -U postgres -d moneta_test
+
+# View database logs
+docker-compose logs postgres
+```
+
+#### Cleanup
+
+```bash
+# Stop and remove containers, networks
+docker-compose down
+
+# Remove containers, networks, and volumes
+docker-compose down -v
+
+# Remove images as well
+docker-compose down --rmi all
+```
+
+### Environment Variables
+
+The Docker setup uses these environment variables:
+
+- `DATABASE_URL`: PostgreSQL connection string for the app
+- `TARGET`: Build target (development, production, lint, test)
+
+### Database Access
+
+When running with Docker:
+
+- **Main database**: `postgresql://postgres:postgres@localhost:5432/moneta`
+- **Test database**: `postgresql://postgres:postgres@localhost:5433/moneta_test`
+
+### Docker vs Local Development
+
+| Aspect             | Docker                       | Local                                    |
+| ------------------ | ---------------------------- | ---------------------------------------- |
+| **Setup**          | Just run `docker-compose up` | Install Python, PostgreSQL, dependencies |
+| **Database**       | Included in containers       | Install and configure separately         |
+| **Consistency**    | Same environment everywhere  | May vary between machines                |
+| **Resource Usage** | Higher (containers overhead) | Lower (native execution)                 |
+| **Hot Reload**     | Supported via volume mounts  | Native support                           |
+
+---
+
+## 📚 Step 5: View the API Documentation
 
 FastAPI automatically provides interactive documentation!
 
-After running the app, open your browser and go to:
+After running the app (either locally or with Docker), open your browser and go to:
 
 ### Swagger UI:
+
+**Local development:**
 
 ```
 http://127.0.0.1:8000/docs
 ```
 
+**Docker development:**
+
+```
+http://127.0.0.1:8080/docs
+```
+
 ### ReDoc:
+
+**Local development:**
 
 ```
 http://127.0.0.1:8000/redoc
+```
+
+**Docker development:**
+
+```
+http://127.0.0.1:8080/redoc
 ```
 
 These pages let you explore and test your API directly from the browser.
 
 ---
 
-## 🔍 Step 5: Set Up Automated Code Quality Checks
+## 🔍 Step 6: Set Up Automated Code Quality Checks
 
 This project includes automated code quality checks and formatting tools to ensure consistent, high-quality code.
 
@@ -165,13 +322,13 @@ This project includes automated code quality checks and formatting tools to ensu
 
 Pre-commit hooks automatically run these checks before each git commit, ensuring code quality.
 
-#### Step 5.1: Install Pre-commit Hooks
+#### Step 6.1: Install Pre-commit Hooks
 
 ```bash
 pre-commit install
 ```
 
-#### Step 5.2: Run Checks on All Files (Optional)
+#### Step 6.2: Run Checks on All Files (Optional)
 
 To run all checks on your entire codebase:
 
@@ -241,7 +398,7 @@ The project includes configuration files for all tools:
 
 ---
 
-## 🌳 Step 6: Git Workflow and Branching Strategy
+## 🌳 Step 7: Git Workflow and Branching Strategy
 
 This project follows a structured branching strategy to ensure code quality and smooth deployments.
 
@@ -304,7 +461,7 @@ Our repository uses the following branch hierarchy:
 
 Follow these steps to contribute new code:
 
-#### Step 6.1: Start from Dev Branch
+#### Step 7.1: Start from Dev Branch
 
 ```bash
 # Switch to dev branch
@@ -314,7 +471,7 @@ git checkout dev
 git pull origin dev
 ```
 
-#### Step 6.2: Create a New Branch
+#### Step 7.2: Create a New Branch
 
 Use the following naming convention:
 
@@ -333,7 +490,7 @@ git pull origin main
 git checkout -b hotfix/critical-security-patch
 ```
 
-#### Step 6.3: Develop and Commit
+#### Step 7.3: Develop and Commit
 
 ```bash
 # Make your changes
@@ -346,7 +503,7 @@ git add .
 git commit -m "feat: add user authentication endpoint"
 ```
 
-#### Step 6.4: Push and Create Pull Request
+#### Step 7.4: Push and Create Pull Request
 
 ```bash
 # Push your branch
