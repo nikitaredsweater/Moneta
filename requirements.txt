@@ -12,6 +12,8 @@ anyio==4.9.0
     # via starlette
 astroid==3.3.10
     # via pylint
+asyncpg==0.30.0
+    # via -r requirements.in
 attrs==25.3.0
     # via flake8-bugbear
 bandit==1.8.6

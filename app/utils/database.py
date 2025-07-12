@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.utils.session import async_session
 from conf import conf
 
 # Create SQLAlchemy engine for synchronous operations (used by alembic)
@@ -41,6 +40,9 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     Yields:
         AsyncSession: An asynchronous database session.
     """
+    # Import here to avoid circular import during alembic runs
+    from app.utils.session import async_session
+
     async with async_session() as session:
         try:
             yield session
