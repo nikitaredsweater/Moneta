@@ -1,5 +1,7 @@
 version: "3.8"
 
+name: moneta-backend
+
 services:
   app:
     build:
