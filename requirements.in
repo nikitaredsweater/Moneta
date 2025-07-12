@@ -1,6 +1,10 @@
 fastapi
 uvicorn
 
+# --- Testing ---
+pytest
+pytest-asyncio
+
 # --- Formatters & Linters ---
 isort
 black  # Using black instead of yapf for Python 3.13 compatibility
