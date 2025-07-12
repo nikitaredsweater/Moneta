@@ -13,11 +13,15 @@ Welcome to this FastAPI project! This guide will walk you through setting up eve
   - [Option 2: Using pip-tools](#option-2-using-pip-tools-recommended)
 - [🚀 Step 3: Run the FastAPI App](#-step-3-run-the-fastapi-app)
 - [📚 Step 4: View the API Documentation](#-step-4-view-the-api-documentation)
-- [🔍 Step 5: Set Up Automated Code Quality Checks](#-step-5-set-up-automated-code-quality-checks)
+- [🗄️ Step 5: Database Setup and Migrations](#️-step-5-database-setup-and-migrations)
+  - [Prerequisites](#-prerequisites)
+  - [Running Migrations](#-running-migrations)
+  - [Creating New Migrations](#-creating-new-migrations)
+- [🔍 Step 6: Set Up Automated Code Quality Checks](#-step-6-set-up-automated-code-quality-checks)
   - [Setting Up Pre-commit Hooks](#️-setting-up-pre-commit-hooks)
   - [Manual Code Quality Checks](#-manual-code-quality-checks)
   - [Configuration Files](#-configuration-files)
-- [🌳 Step 6: Git Workflow and Branching Strategy](#-step-6-git-workflow-and-branching-strategy)
+- [🌳 Step 7: Git Workflow and Branching Strategy](#-step-7-git-workflow-and-branching-strategy)
   - [Branch Structure](#-branch-structure)
   - [Standard Development Workflow](#-standard-development-workflow)
   - [Commit Message Convention](#-commit-message-convention)
@@ -149,7 +153,70 @@ These pages let you explore and test your API directly from the browser.
 
 ---
 
-## 🔍 Step 5: Set Up Automated Code Quality Checks
+## 🗄️ Step 5: Database Setup and Migrations
+
+This project uses Alembic for database migrations with PostgreSQL as the database backend.
+
+### 📋 Prerequisites
+
+**⚠️ IMPORTANT: PostgreSQL Database Required**
+
+Before running migrations, you need a PostgreSQL database server running. You have several options:
+
+#### Option 1: Local PostgreSQL Installation
+
+- Install PostgreSQL locally on your machine
+- Create a database named `moneta`
+- Update `DATABASE_URL` in your `.env` file
+
+#### Option 2: Docker Compose (Recommended)
+
+```bash
+# If you have docker-compose.yml with PostgreSQL service
+docker-compose -f docker/docker-compose.yml up --build
+```
+
+### 🚀 Running Migrations
+
+**Important**: Ensure PostgreSQL is running before executing migrations!
+
+```bash
+# Run migrations
+alembic upgrade head
+```
+
+### 📝 Creating New Migrations
+
+When you add new models or modify existing ones:
+
+```bash
+# Create a new migration
+alembic revision --autogenerate -m "description_of_changes"
+```
+
+Do not forget to also apply the migrations.
+
+### 🔧 Configuration
+
+The database configuration is managed in `conf.py`:
+
+- **Sync Connection**: Used by Alembic for migrations
+- **Async Connection**: Used by FastAPI for application operations
+- **Environment Variables**: Set `DATABASE_URL` to override defaults
+
+### 🐛 Troubleshooting
+
+**Connection Refused Error**:
+
+```
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+```
+
+**Solution**: Ensure PostgreSQL is running on `localhost:5432` or update your `DATABASE_URL` environment variable.
+
+---
+
+## 🔍 Step 6: Set Up Automated Code Quality Checks
 
 This project includes automated code quality checks and formatting tools to ensure consistent, high-quality code.
 
@@ -165,13 +232,13 @@ This project includes automated code quality checks and formatting tools to ensu
 
 Pre-commit hooks automatically run these checks before each git commit, ensuring code quality.
 
-#### Step 5.1: Install Pre-commit Hooks
+#### Step 6.1: Install Pre-commit Hooks
 
 ```bash
 pre-commit install
 ```
 
-#### Step 5.2: Run Checks on All Files (Optional)
+#### Step 6.2: Run Checks on All Files (Optional)
 
 To run all checks on your entire codebase:
 
@@ -241,7 +308,7 @@ The project includes configuration files for all tools:
 
 ---
 
-## 🌳 Step 6: Git Workflow and Branching Strategy
+## 🌳 Step 7: Git Workflow and Branching Strategy
 
 This project follows a structured branching strategy to ensure code quality and smooth deployments.
 
@@ -304,7 +371,7 @@ Our repository uses the following branch hierarchy:
 
 Follow these steps to contribute new code:
 
-#### Step 6.1: Start from Dev Branch
+#### Step 7.1: Start from Dev Branch
 
 ```bash
 # Switch to dev branch
@@ -314,7 +381,7 @@ git checkout dev
 git pull origin dev
 ```
 
-#### Step 6.2: Create a New Branch
+#### Step 7.2: Create a New Branch
 
 Use the following naming convention:
 
@@ -333,7 +400,7 @@ git pull origin main
 git checkout -b hotfix/critical-security-patch
 ```
 
-#### Step 6.3: Develop and Commit
+#### Step 7.3: Develop and Commit
 
 ```bash
 # Make your changes
@@ -346,7 +413,7 @@ git add .
 git commit -m "feat: add user authentication endpoint"
 ```
 
-#### Step 6.4: Push and Create Pull Request
+#### Step 7.4: Push and Create Pull Request
 
 ```bash
 # Push your branch
