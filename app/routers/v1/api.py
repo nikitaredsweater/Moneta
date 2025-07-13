@@ -1,0 +1,24 @@
+"""
+v1 API routes
+"""
+
+from fastapi import APIRouter
+
+# Endpoints
+from app.routers.v1.endpoints.user import user_router
+
+v1_router = APIRouter()
+
+v1_router.include_router(user_router, prefix='/user')
+
+
+# Test endpoint -- Remove in the future
+@v1_router.get('/')
+async def root() -> dict[str, str]:
+    """
+    Test endpoint.
+
+    Returns:
+        dict[str, str]: A dictionary with a message key and value.
+    """
+    return {'message': 'Hello World'}
