@@ -146,7 +146,7 @@ Docker provides a containerized environment for running your FastAPI application
 
 ```bash
 # Start the application in development mode
-docker-compose -f docker/docker-compose.yml up --build
+docker-compose -f docker/docker-compose.yml up --build app
 
 # Or run in detached mode (background)
 docker-compose -f docker/docker-compose.yml up -d --build
@@ -325,7 +325,7 @@ Before running migrations, you need a PostgreSQL database server running. You ha
 
 ```bash
 # If you have docker-compose.yml with PostgreSQL service
-docker-compose -f docker/docker-compose.yml up --build
+docker-compose -f docker/docker-compose.yml up --build app
 ```
 
 ### 🚀 Running Migrations
