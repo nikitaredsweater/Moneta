@@ -2,35 +2,35 @@
 Base model that can be used to inherit from.
 """
 
+from datetime import datetime
+from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class BaseID:
+    id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), default=uuid4, primary_key=True
+    )
 
-    @declared_attr
-    def id(self) -> Column:
-        return Column(UUID(as_uuid=True), default=uuid4, primary_key=True)
 
-
-class BaseEntity(BaseID):  # pylint: disable=too-few-public-methods
+class BaseEntity(BaseID):
     """Base ORM entity"""
 
-    # TODO: Check if this is correct
-    @declared_attr
-    def created_at(self) -> Column:
-        return Column(
-            DateTime(timezone=True),
-            default=func.current_timestamp(),  # pylint: disable=not-callable
-            nullable=False,
-            index=True,
-        )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.current_timestamp(),  # [not-callable]
+        nullable=False,
+        index=True,
+    )
 
-    @declared_attr
-    def deleted_at(self) -> Column:
-        return Column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )

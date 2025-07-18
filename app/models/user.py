@@ -2,7 +2,8 @@
 User ORM model
 """
 
-from sqlalchemy import Column, String
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, BaseEntity
 
@@ -14,7 +15,7 @@ class User(Base, BaseEntity):
 
     __tablename__ = 'users'
 
-    email = Column(String(255), nullable=False, unique=True)
-    password = Column(String(255), nullable=False)
-    first_name = Column(String(255), nullable=False)
-    last_name = Column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(255), nullable=False)

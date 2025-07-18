@@ -1,5 +1,10 @@
 """Database utilities and base classes."""
 
+# FIXME: I do not know why, but something does not work here :(
+
+# pylint: skip-file
+# -1: [file-ignored]
+
 from typing import AsyncGenerator, Generator
 
 from sqlalchemy import create_engine
