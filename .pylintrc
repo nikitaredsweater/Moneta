@@ -6,7 +6,7 @@
 #   https://google.github.io/styleguide/pylintrc
 
 [MASTER]
-init-hook="import sys; sys.path.insert(0, './src')"
+init-hook="import sys; sys.path.insert(0, './app')"
 # Files or directories to be skipped. They should be base names, not paths.
 ignore=third_party
 

@@ -33,7 +33,9 @@ FROM base AS development
 COPY . .
 
 # Command to run the application in development mode
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+# fastapi dev app/main.py
+# TODO: Update in the future as needed?
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 # Lint stage
 FROM development AS lint
@@ -56,5 +58,7 @@ FROM base AS production
 # Copy source code
 COPY . .
 
-# Command to run the application in production mode
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+# Command to run the application in development mode
+# fastapi dev app/main.py
+# TODO: Untested. Test later
+CMD ["fastapi", "dev", "app/main.py"]

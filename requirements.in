@@ -1,6 +1,12 @@
 fastapi
 uvicorn
 
+# --- Database ---
+sqlalchemy
+alembic
+psycopg[binary]
+asyncpg
+
 # --- Testing ---
 pytest
 pytest-asyncio

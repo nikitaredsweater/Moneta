@@ -146,7 +146,7 @@ Docker provides a containerized environment for running your FastAPI application
 
 ```bash
 # Start the application in development mode
-docker-compose -f docker/docker-compose.yml up --build
+docker-compose -f docker/docker-compose.yml up --build app
 
 # Or run in detached mode (background)
 docker-compose -f docker/docker-compose.yml up -d --build
@@ -302,6 +302,69 @@ http://127.0.0.1:8080/redoc
 ```
 
 These pages let you explore and test your API directly from the browser.
+
+---
+
+## 🔍🗄️ Step 6: Database Setup and Migrations
+
+This project uses Alembic for database migrations with PostgreSQL as the database backend.
+
+### 📋 Prerequisites
+
+**⚠️ IMPORTANT: PostgreSQL Database Required**
+
+Before running migrations, you need a PostgreSQL database server running. You have several options:
+
+#### Option 1: Local PostgreSQL Installation
+
+- Install PostgreSQL locally on your machine
+- Create a database named `moneta`
+- Update `DATABASE_URL` in your `.env` file
+
+#### Option 2: Docker Compose (Recommended)
+
+```bash
+# If you have docker-compose.yml with PostgreSQL service
+docker-compose -f docker/docker-compose.yml up --build app
+```
+
+### 🚀 Running Migrations
+
+**Important**: Ensure PostgreSQL is running before executing migrations!
+
+```bash
+# Run migrations
+alembic upgrade head
+```
+
+### 📝 Creating New Migrations
+
+When you add new models or modify existing ones:
+
+```bash
+# Create a new migration
+alembic revision --autogenerate -m "description_of_changes"
+```
+
+Do not forget to also apply the migrations.
+
+### 🔧 Configuration
+
+The database configuration is managed in `conf.py`:
+
+- **Sync Connection**: Used by Alembic for migrations
+- **Async Connection**: Used by FastAPI for application operations
+- **Environment Variables**: Set `DATABASE_URL` to override defaults
+
+### 🐛 Troubleshooting
+
+**Connection Refused Error**:
+
+```
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+```
+
+**Solution**: Ensure PostgreSQL is running on `localhost:5432` or update your `DATABASE_URL` environment variable.
 
 ---
 

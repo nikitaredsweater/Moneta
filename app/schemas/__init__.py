@@ -1,4 +1,5 @@
 """
+DTO
 Schemas entrypoint.
 
 You can import entities from here as schemas.User to avoid collision

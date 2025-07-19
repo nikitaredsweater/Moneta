@@ -1,37 +1,74 @@
-"""
-Environment variables and defaults.
-"""
+"""Configuration module for the application."""
 
-from pydantic import BaseSettings
+import os
 
 
-class Settings(BaseSettings):
-    """
-    Environment variables and defaults.
+class Config:
+    """Application configuration."""
 
-    This is a singleton class that can be imported anywhere in the app.
-    """
+    def __init__(self) -> None:
+        self.connection_string = self._get_database_url()
+        self.asyncpg_connection_string = self._get_async_database_url()
+        self.pool_size = int(os.getenv('DB_POOL_SIZE', '10'))
 
-    # Database
-    DB_HOST: str = 'localhost'
-    DB_PORT: int = 5432
-    DB_USER: str = 'postgres'
-    DB_PASSWORD: str = 'postgres'
-    DB_NAME: str = 'moneta_financial'
-    DB_URL: str = (
-        f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-    )
+    def _get_database_url(self) -> str:
+        """
+        Get database URL from environment variables
+        for synchronous connections.
 
-    # API
-    API_VERSION: str = '0.0.1'
-    API_HOST: str = '0.0.0.0'
-    API_PORT: int = 8000
+        Returns:
+            str: The database URL for synchronous connections.
+        """
 
-    # Logging
-    LOG_LEVEL: str = 'INFO'
-    LOG_FILE: str = 'app.log'
-    LOG_MAX_BYTES: int = 1024 * 1024 * 5  # 5MB
-    LOG_BACKUP_COUNT: int = 5
+        # TODO: Add a support for the DATABASE_URL to be used from
+        # the environment variables.
+
+        # Try to get from environment first
+        database_url = os.getenv('DATABASE_URL')
+
+        if database_url:
+            # Replace psycopg2 with psycopg if present in the URL
+            if (
+                'postgresql://' in database_url
+                and 'psycopg2' not in database_url
+            ):
+                return database_url.replace(
+                    'postgresql://', 'postgresql+psycopg://'
+                )
+            return database_url
+
+        # Fallback to default development database with psycopg driver
+        return 'postgresql+psycopg://postgres:postgres@localhost:5432/moneta'
+
+    def _get_async_database_url(self) -> str:
+        """
+        Get async database URL from environment variables.
+
+        Returns:
+            str: The database URL for asynchronous connections.
+        """
+
+        # TODO: Add a support for the DATABASE_URL to be used from
+        # the environment variables.
+
+        # Try to get from environment first
+        database_url = os.getenv('DATABASE_URL')
+
+        if database_url:
+            # Convert to async format
+            if 'postgresql://' in database_url:
+                return database_url.replace(
+                    'postgresql://', 'postgresql+asyncpg://'
+                )
+            if 'postgresql+psycopg://' in database_url:
+                return database_url.replace(
+                    'postgresql+psycopg://', 'postgresql+asyncpg://'
+                )
+            return database_url
+
+        # Fallback to default development database with asyncpg driver
+        return 'postgresql+asyncpg://postgres:postgres@localhost:5432/moneta'
 
 
-conf = Settings()
+# Global configuration instance
+conf = Config()
