@@ -8,6 +8,7 @@ from datetime import date
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.models import User
 from app.models.base import Base, BaseEntity
 
 

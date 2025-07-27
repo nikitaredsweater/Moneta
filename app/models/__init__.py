@@ -14,9 +14,7 @@ from sqlalchemy import exc as sa_exc
 from app.models.company import Company
 from app.models.user import User
 
-# __all__ = [
-#     'User',
-# ]
+__all__ = ['User', 'Company']
 
 
 def combine_metadata(*args: MetaData) -> MetaData:
