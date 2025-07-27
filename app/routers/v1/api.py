@@ -4,7 +4,7 @@ v1 API routes
 
 from fastapi import APIRouter
 
-from app.routers.v1.endpoints.copmany import company_router
+from app.routers.v1.endpoints.company import company_router
 from app.routers.v1.endpoints.user import user_router
 
 v1_router = APIRouter()
