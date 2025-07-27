@@ -2,7 +2,7 @@
 User DTOs
 """
 
-from app.schemas.base import BaseDTO, MonetaID
+from app.schemas.base import BaseDTO, CamelModel, MonetaID
 
 
 class User(BaseDTO):
@@ -16,7 +16,7 @@ class User(BaseDTO):
     company_id: MonetaID
 
 
-class UserCreate(BaseDTO):
+class UserCreate(CamelModel):
     """
     User creation
     """
@@ -28,7 +28,7 @@ class UserCreate(BaseDTO):
     company_id: MonetaID
 
 
-class UserUpdate(BaseDTO):
+class UserUpdate(CamelModel):
     """
     User update
     """
@@ -39,7 +39,7 @@ class UserUpdate(BaseDTO):
     password: str
 
 
-class UserDelete(BaseDTO):
+class UserDelete(CamelModel):
     """
     User deletion
     """

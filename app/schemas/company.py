@@ -4,7 +4,7 @@ Company DTOs
 
 from datetime import date
 
-from app.schemas.base import BaseDTO
+from app.schemas.base import BaseDTO, CamelModel
 
 
 class Company(BaseDTO):
@@ -19,7 +19,7 @@ class Company(BaseDTO):
     incorporation_date: date
 
 
-class CompanyCreate(BaseDTO):
+class CompanyCreate(CamelModel):
     """
     Company profile
     """
