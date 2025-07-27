@@ -5,7 +5,6 @@ User ORM model
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models import Company
 from app.models.base import Base, BaseEntity
 
 

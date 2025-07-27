@@ -2,7 +2,7 @@
 User DTOs
 """
 
-from app.schemas.base import BaseDTO
+from app.schemas.base import BaseDTO, MonetaID
 
 
 class User(BaseDTO):
@@ -13,7 +13,7 @@ class User(BaseDTO):
     email: str
     first_name: str
     last_name: str
-    company_id: str
+    company_id: MonetaID
 
 
 class UserCreate(BaseDTO):
@@ -25,7 +25,7 @@ class UserCreate(BaseDTO):
     first_name: str
     last_name: str
     password: str
-    company_id: str
+    company_id: MonetaID
 
 
 class UserUpdate(BaseDTO):
