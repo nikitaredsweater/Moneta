@@ -13,6 +13,7 @@ class User(BaseDTO):
     email: str
     first_name: str
     last_name: str
+    company_id: str
 
 
 class UserCreate(BaseDTO):
@@ -24,6 +25,7 @@ class UserCreate(BaseDTO):
     first_name: str
     last_name: str
     password: str
+    company_id: str
 
 
 class UserUpdate(BaseDTO):
