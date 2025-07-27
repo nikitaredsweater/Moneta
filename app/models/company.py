@@ -3,7 +3,9 @@ Company ORM model
 Represents the legal financial institution that is registered on the platform.
 """
 
-from sqlalchemy import Date, String
+from datetime import date
+
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, BaseEntity
@@ -28,4 +30,4 @@ class Company(Base, BaseEntity):
     registration_number: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True
     )
-    incorporation_date: Mapped[Date] = mapped_column(nullable=False)
+    incorporation_date: Mapped[date] = mapped_column(nullable=False)
