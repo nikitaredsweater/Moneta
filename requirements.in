@@ -27,6 +27,7 @@ darglint
 bandit
 pylint
 mypy
+python-jose[cryptography]
 
 # --- Pre-commit and its dependencies ---
 pre-commit
