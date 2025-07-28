@@ -69,5 +69,22 @@ ROLE_PERMISSIONS = {
 
 
 def has_permission(role: UserRole, required: Iterable[Permission]) -> bool:
+    """
+    Check whether the given user role has at least one of the
+    required permissions.
+
+    This function compares the provided list of permissions against the set of
+    permissions allowed for the specified role.
+    It returns True if any one of the required permissions is present in the
+    role's permission set.
+
+    Args:
+        role (UserRole): The role of the user being checked.
+        required (Iterable[Permission]): A list or set of permissions to check.
+
+    Returns:
+        bool: True if the role has at least one of the required permissions, 
+            False otherwise.
+    """
     allowed = ROLE_PERMISSIONS.get(role, set())
     return any(p in allowed for p in required)
