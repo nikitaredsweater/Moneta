@@ -14,7 +14,6 @@ class Company(BaseDTO):
 
     legal_name: str
     trade_name: str
-    country: str
     registration_number: str
     incorporation_date: date
 
@@ -26,6 +25,5 @@ class CompanyCreate(CamelModel):
 
     legal_name: str
     trade_name: str
-    country: str
     registration_number: str
     incorporation_date: date

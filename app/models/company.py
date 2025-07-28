@@ -24,11 +24,11 @@ class Company(Base, BaseEntity):
     trade_name: Mapped[str] = mapped_column(
         String(255), nullable=True
     )  # Trade name may not always exist
-    country: Mapped[str] = mapped_column(
-        String(2), nullable=False
-    )  # ISO 3166-1 alpha-2 country code
     registration_number: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True
+    )
+    addresses: Mapped[list['CompanyAddress']] = relationship(
+        'CompanyAddress', back_populates='company', cascade='all, delete-orphan'
     )
     incorporation_date: Mapped[date] = mapped_column(nullable=False)
     users: Mapped[list['User']] = relationship(

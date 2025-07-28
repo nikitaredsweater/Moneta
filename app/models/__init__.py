@@ -12,9 +12,10 @@ from sqlalchemy import MetaData
 from sqlalchemy import exc as sa_exc
 
 from app.models.company import Company
+from app.models.company_address import CompanyAddress
 from app.models.user import User
 
-__all__ = ['User', 'Company']
+__all__ = ['User', 'Company', 'CompanyAddress']
 
 
 def combine_metadata(*args: MetaData) -> MetaData:
@@ -27,4 +28,6 @@ def combine_metadata(*args: MetaData) -> MetaData:
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=sa_exc.SAWarning)
-    combined_metadata = combine_metadata(User.metadata, Company.metadata)
+    combined_metadata = combine_metadata(
+        User.metadata, Company.metadata, CompanyAddress.metadata
+    )
