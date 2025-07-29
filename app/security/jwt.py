@@ -4,6 +4,7 @@ JWT module
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from app.schemas.base import MonetaID
 
 from jose import jwt
 
@@ -15,14 +16,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 
 def create_access_token(
-    user_id: str,
+    user_id: MonetaID,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """
     Creates a JWT token for a user.
 
     Args:
-        user_id: User's id
+        user_id: User's id MonetaID format
         expires_delta: delta for which the token is
             valid. Default is 15 minutes
 
