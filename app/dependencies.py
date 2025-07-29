@@ -50,8 +50,10 @@ async def get_current_user(request: Request) -> str:
     token = auth.split(' ')[1]
     print(token)
     try:
-        verify_access_token(token)
-        return 'user_id'
+        payload = verify_access_token(token)
+        user_id = payload.get('sub', '')
+        # TODO: Pull the user by id from the db
+        return user_id
 
     except JWTError:
         raise HTTPException(status_code=401, detail='Invalid or expired token')

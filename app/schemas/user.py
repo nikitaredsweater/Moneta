@@ -2,7 +2,7 @@
 User DTOs
 """
 
-from app.schemas.base import BaseDTO
+from app.schemas.base import BaseDTO, CamelModel
 
 
 class User(BaseDTO):
@@ -41,3 +41,12 @@ class UserDelete(BaseDTO):
     """
     User deletion
     """
+
+
+class UserLogin(CamelModel):
+    """
+    Used to login user and generate them JWT token
+    """
+
+    password: str
+    email: str
