@@ -668,3 +668,6 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudio,visualstudiocode,python,venv,dotenv,windows,linux
+
+# To store encryption keys
+app/keys

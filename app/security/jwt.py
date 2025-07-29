@@ -2,25 +2,20 @@
 JWT module
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import jwt
 
-# Load your keys securely
-with open('app/keys/private_key.pem', 'r', encoding='utf-8') as f:
-    PRIVATE_KEY = f.read()
-with open('app/keys/public_key.pem', 'r', encoding='utf-8') as f:
-    PUBLIC_KEY = f.read()
+from app.security.jwt_keys import jwt_keys
 
+# Don't store keys as module-level variables - access them when needed
 ALGORITHM = 'RS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 
-# TODO: When user roles are immplemented update this role field
 def create_access_token(
     user_id: str,
-    role: str,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """
@@ -28,27 +23,38 @@ def create_access_token(
 
     Args:
         user_id: User's id
-        role: role
         expires_delta: delta for which the token is
             valid. Default is 15 minutes
 
     Returns:
-        (str) - The Token
+        str: The JWT token
+
+    Raises:
+        RuntimeError: If private key is not available
+        Exception: If token encoding fails
     """
-    now = datetime.utcnow()
+    # Use timezone-aware datetime
+    now = datetime.now(timezone.utc)
     expire = now + (
         expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
+    # Use integer timestamps for JWT standard compliance
     to_encode = {
         'sub': user_id,
-        'role': 'TEST_ROLE',
-        'iat': now.timestamp(),
-        'exp': expire.timestamp(),
+        'iat': int(now.timestamp()),
+        'exp': int(expire.timestamp()),
     }
 
-    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    try:
+        # Get the private key when needed (not at module load time)
+        private_key = jwt_keys.private_key
+        encoded_jwt = jwt.encode(to_encode, private_key, algorithm=ALGORITHM)
+        return encoded_jwt
+    except RuntimeError as e:
+        raise RuntimeError(f'Failed to create access token: {e}')
+    except Exception as e:
+        raise Exception(f'Token encoding failed: {e}')
 
 
 def verify_access_token(token: str) -> dict:
@@ -59,7 +65,36 @@ def verify_access_token(token: str) -> dict:
         token: JWT token
 
     Returns:
-        (dict) parsed token
+        dict: Parsed token payload
+
+    Raises:
+        RuntimeError: If public key is not available
+        Exception: If token verification fails
     """
-    payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
-    return payload
+    try:
+        # Get the public key when needed (not at module load time)
+        public_key = jwt_keys.public_key
+        payload = jwt.decode(token, public_key, algorithms=[ALGORITHM])
+        return payload
+    except RuntimeError as e:
+        raise RuntimeError(f'Failed to verify access token: {e}')
+    except Exception as e:
+        raise Exception(f'Token verification failed: {e}')
+
+
+def get_token_payload(token: str) -> Optional[dict]:
+    """
+    Safely extracts payload from token without verification.
+    Useful for debugging or extracting expired token data.
+
+    Args:
+        token: JWT token
+
+    Returns:
+        dict: Token payload or None if extraction fails
+    """
+    try:
+        # Decode without verification for debugging
+        return jwt.get_unverified_claims(token)
+    except Exception:
+        return None

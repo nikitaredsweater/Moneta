@@ -2,10 +2,11 @@
 v1 API routes
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-# Endpoints
+from app.dependencies import get_current_user
 from app.routers.v1.endpoints.user import user_router
+from app.security.jwt import create_access_token
 
 v1_router = APIRouter()
 
@@ -22,3 +23,14 @@ async def root() -> dict[str, str]:
         dict[str, str]: A dictionary with a message key and value.
     """
     return {'message': 'Hello World'}
+
+
+@v1_router.get('/sample-token')
+async def make_key():
+    token = create_access_token(user_id='user.id')
+    return {'access_token': token, 'token_type': 'bearer'}
+
+
+@v1_router.get('/me')
+async def get_me(user_id=Depends(get_current_user)):
+    return user_id

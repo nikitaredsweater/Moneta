@@ -118,7 +118,28 @@ This generates a fully pinned `requirements.txt`.
 pip install -r requirements.txt
 ```
 
+## 🔧 Environment Setup
+
+Before running the application, you need to create a `.env` file with the required environment variables.
+
+You can copy the template file using the command below:
+
+```bash
+cp environment.config.example .env
+```
 > 💡 Update `requirements.in` when adding/removing dependencies, and re-run `pip-compile`.
+
+## 🔐 Generating JWT Keys
+
+To generate the RSA key pair used for JWT authentication, run the following commands in your terminal:
+
+```bash
+# Generate private key
+openssl genrsa -out app/keys/private.pem 2048
+
+# Generate public key from the private key
+openssl rsa -in app/keys/private.pem -pubout -out app/keys/public.pem
+```
 
 ---
 
