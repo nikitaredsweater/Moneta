@@ -16,7 +16,6 @@ from typing import (
     Type,
     TypeVar,
 )
-from uuid import UUID
 
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,6 +26,8 @@ from app.models.base import BaseEntity
 from app.schemas.base import BaseDTO, MonetaID
 
 T = TypeVar("T", bound=BaseDTO)
+
+# FIXME: Copmly with the code standards!
 
 
 class BasePGRepository(Generic[T]):

@@ -6,6 +6,8 @@ You can import entities from here as schemas.User to avoid collision
 with models module.
 """
 
+from app.schemas.company import Company, CompanyCreate
+from app.schemas.company_address import CompanyAddress, CompanyAddressCreate
 from app.schemas.user import User, UserCreate, UserDelete, UserUpdate
 
 __all__ = [
@@ -13,4 +15,8 @@ __all__ = [
     'UserCreate',
     'UserUpdate',
     'UserDelete',
+    'Company',
+    'CompanyCreate',
+    'CompanyAddress',
+    'CompanyAddressCreate',
 ]

@@ -5,6 +5,8 @@ security module related to the work with the roles and permissions
 from dataclasses import dataclass
 from typing import Iterable
 
+from fastapi import Depends, HTTPException, Request, status
+
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.enums import UserRole
@@ -68,7 +70,8 @@ ROLE_PERMISSIONS = {
 }
 
 
-def has_permission(role: UserRole, required: Iterable[Permission]) -> bool:
+# TODO: Move this dependency into a dependency folder/file
+def has_permission(required: Iterable[Permission]):
     """
     Check whether the given user role has at least one of the
     required permissions.
@@ -78,13 +81,33 @@ def has_permission(role: UserRole, required: Iterable[Permission]) -> bool:
     It returns True if any one of the required permissions is present in the
     role's permission set.
 
+    User data is assumed to be stored on a request.state.user
+
     Args:
-        role (UserRole): The role of the user being checked.
         required (Iterable[Permission]): A list or set of permissions to check.
 
     Returns:
         bool: True if the role has at least one of the required permissions,
             False otherwise.
     """
-    allowed = ROLE_PERMISSIONS.get(role, set())
-    return any(p in allowed for p in required)
+
+    def permission_dependency(request: Request):
+        """
+        logic
+        """
+        # TODO: Pull in the actual user data into this
+        user = getattr(request.state, 'user', None)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail='Unauthorized'
+            )
+
+        role: UserRole = user.role
+        allowed = ROLE_PERMISSIONS.get(role, set())
+        if not any(p in allowed for p in required):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Insufficient permissions',
+            )
+
+    return Depends(permission_dependency)

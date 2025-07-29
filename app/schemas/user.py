@@ -2,7 +2,8 @@
 User DTOs
 """
 
-from app.schemas.base import BaseDTO
+from app.enums import UserRole
+from app.schemas.base import BaseDTO, CamelModel, MonetaID
 
 
 class User(BaseDTO):
@@ -13,9 +14,11 @@ class User(BaseDTO):
     email: str
     first_name: str
     last_name: str
+    company_id: MonetaID
+    role: UserRole
 
 
-class UserCreate(BaseDTO):
+class UserCreate(CamelModel):
     """
     User creation
     """
@@ -24,9 +27,11 @@ class UserCreate(BaseDTO):
     first_name: str
     last_name: str
     password: str
+    company_id: MonetaID
+    role: UserRole
 
 
-class UserUpdate(BaseDTO):
+class UserUpdate(CamelModel):
     """
     User update
     """
@@ -37,7 +42,7 @@ class UserUpdate(BaseDTO):
     password: str
 
 
-class UserDelete(BaseDTO):
+class UserDelete(CamelModel):
     """
     User deletion
     """
