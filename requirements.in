@@ -38,3 +38,4 @@ sqlalchemy
 # --- Additional tools for local pre-commit hooks ---
 # Note: Most of the pre-commit hook tools are provided by the pre-commit-hooks package
 # and don't need to be installed separately as they're built into the pre-commit ecosystem
+python-dotenv

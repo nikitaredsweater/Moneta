@@ -13,6 +13,9 @@ from app.utils.session import async_session
 
 
 class UserRepository(BasePGRepository[schemas.User]):
+    """
+    User repository
+    """
     class Meta:
         response_model = schemas.User  # This should be your schema
         orm_model = models.User  # This should be your ORM model
@@ -21,17 +24,16 @@ class UserRepository(BasePGRepository[schemas.User]):
     async def get_by_email_exact(self, email: str) -> Optional[schemas.User]:
         """
         Get a user by exact email match (case-sensitive)
-        
+
         Args:
             email: The exact email address to search for
-            
+
         Returns:
             User if found, None otherwise
         """
-        return await self.get_one([
-            self.Meta.orm_model.email == email
-        ])
-    
+        return await self.get_one([self.Meta.orm_model.email == email])
+
+
 User = Annotated[
     UserRepository, Depends(UserRepository.make_fastapi_dep(async_session))
 ]

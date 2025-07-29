@@ -4,10 +4,10 @@ JWT module
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from app.schemas.base import MonetaID
 
 from jose import jwt
 
+from app.schemas.base import MonetaID
 from app.security.jwt_keys import jwt_keys
 
 # Don't store keys as module-level variables - access them when needed
@@ -42,7 +42,7 @@ def create_access_token(
 
     # Use integer timestamps for JWT standard compliance
     to_encode = {
-        'sub': user_id,
+        'sub': str(user_id),
         'iat': int(now.timestamp()),
         'exp': int(expire.timestamp()),
     }

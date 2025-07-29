@@ -142,6 +142,8 @@ pytest==8.4.1
     #   pytest-asyncio
 pytest-asyncio==1.0.0
     # via -r requirements.in
+python-dotenv==1.1.1
+    # via -r requirements.in
 python-jose[cryptography]==3.5.0
     # via -r requirements.in
 pyyaml==6.0.2

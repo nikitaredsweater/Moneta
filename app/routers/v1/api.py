@@ -4,9 +4,8 @@ v1 API routes
 
 from fastapi import APIRouter, Depends
 
-from app import schemas
 from app import repositories as repo
-
+from app import schemas
 from app.dependencies import get_current_user
 from app.routers.v1.endpoints.user import user_router
 from app.security.jwt import create_access_token
@@ -29,18 +28,17 @@ async def root() -> dict[str, str]:
 
 
 @v1_router.get('/sample-token')
-async def make_key(user_login: schemas.UserLogin,  user_repo: repo.User):
+async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     # In a sense, this function is equivalent to login route.
     # It is just for testing pusposes.
     #
     # In the future, feel free to move this logic into an appropriate
     # router handler
     # TODO: Add validation of the user data
-    user = user_repo.get_by_email_exact(user_login.email)
+    user = await user_repo.get_by_email_exact(user_login.email)
     if user is None:
         raise Exception("no user found aaaaaa")
-    
-    user_id = user.id  # TODO: Pull the correct id
+    user_id = user.id
     token = create_access_token(user_id=user_id)
     return {'access_token': token, 'token_type': 'bearer'}
 
