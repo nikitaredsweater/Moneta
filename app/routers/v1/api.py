@@ -7,12 +7,16 @@ from fastapi import APIRouter, Depends
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user
+from app.routers.v1.endpoints.company import company_router
+from app.routers.v1.endpoints.company_address import company_address_router
 from app.routers.v1.endpoints.user import user_router
 from app.security.jwt import create_access_token
 
 v1_router = APIRouter()
 
 v1_router.include_router(user_router, prefix='/user')
+v1_router.include_router(company_router, prefix='/company')
+v1_router.include_router(company_address_router, prefix='/company-address')
 
 
 # Test endpoint -- Remove in the future

@@ -2,8 +2,8 @@
 User ORM model
 """
 
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, BaseEntity
 
@@ -19,3 +19,7 @@ class User(Base, BaseEntity):
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    company_id: Mapped[int] = mapped_column(
+        ForeignKey('companies.id'), nullable=False
+    )
+    company: Mapped['Company'] = relationship(back_populates='users')
