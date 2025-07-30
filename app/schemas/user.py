@@ -2,6 +2,7 @@
 User DTOs
 """
 
+from app.enums import UserRole
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
 
 
@@ -14,6 +15,7 @@ class User(BaseDTO):
     first_name: str
     last_name: str
     company_id: MonetaID
+    role: UserRole
 
 
 class UserCreate(CamelModel):
@@ -26,6 +28,7 @@ class UserCreate(CamelModel):
     last_name: str
     password: str
     company_id: MonetaID
+    role: UserRole
 
 
 class UserUpdate(CamelModel):

@@ -1,6 +1,7 @@
 """
 module for enums for addresses of companies
 """
+
 from enum import Enum
 
 
