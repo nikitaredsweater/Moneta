@@ -5,12 +5,11 @@ JWT module
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import jwt
+from jose import JWTError, jwt
 
 from app.schemas.base import MonetaID
 from app.security.jwt_keys import jwt_keys
 
-# Don't store keys as module-level variables - access them when needed
 ALGORITHM = 'RS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
@@ -69,8 +68,7 @@ def verify_access_token(token: str) -> dict:
         dict: Parsed token payload
 
     Raises:
-        RuntimeError: If public key is not available
-        Exception: If token verification fails
+        JWTError: If public key is not available or if token verification fails
     """
     try:
         # Get the public key when needed (not at module load time)
@@ -78,9 +76,9 @@ def verify_access_token(token: str) -> dict:
         payload = jwt.decode(token, public_key, algorithms=[ALGORITHM])
         return payload
     except RuntimeError as e:
-        raise RuntimeError(f'Failed to verify access token: {e}')
+        raise JWTError(f'Failed to verify access token: {e}')
     except Exception as e:
-        raise Exception(f'Token verification failed: {e}')
+        raise JWTError(f'Token verification failed: {e}')
 
 
 def get_token_payload(token: str) -> Optional[dict]:

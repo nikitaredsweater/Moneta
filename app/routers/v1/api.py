@@ -39,7 +39,7 @@ async def root(_=Depends(VIEW_ALL_DATA_PERMISSION)) -> dict[str, str]:
     return {'message': 'Hello World'}
 
 
-@v1_router.get('/sample-token')
+@v1_router.post('/sample-token')
 async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     # In a sense, this function is equivalent to login route.
     # It is just for testing pusposes.
@@ -49,7 +49,7 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     # TODO: Add validation of the user data
     user = await user_repo.get_by_email_exact(user_login.email)
     if user is None:
-        raise Exception("no user found aaaaaa")
+        raise Exception('no user found aaaaaa')
     user_id = user.id
     token = create_access_token(user_id=user_id)
     return {'access_token': token, 'token_type': 'bearer'}
