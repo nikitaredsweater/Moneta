@@ -46,3 +46,12 @@ class UserDelete(CamelModel):
     """
     User deletion
     """
+
+
+class UserLogin(CamelModel):
+    """
+    Used to login user and generate them JWT token
+    """
+
+    password: str
+    email: str
