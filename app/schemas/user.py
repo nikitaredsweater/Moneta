@@ -18,6 +18,19 @@ class User(BaseDTO):
     role: UserRole
 
 
+class UserInternal(BaseDTO):
+    """
+    User Internal Datastructure
+    """
+
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    company_id: MonetaID
+    role: UserRole
+
+
 class UserCreate(CamelModel):
     """
     User creation
