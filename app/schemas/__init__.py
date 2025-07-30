@@ -8,7 +8,7 @@ with models module.
 
 from app.schemas.company import Company, CompanyCreate
 from app.schemas.company_address import CompanyAddress, CompanyAddressCreate
-from app.schemas.user import User, UserCreate, UserDelete, UserUpdate, UserLogin
+from app.schemas.user import User, UserCreate, UserDelete, UserLogin, UserUpdate
 
 __all__ = [
     'User',

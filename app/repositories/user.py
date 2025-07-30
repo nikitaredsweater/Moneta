@@ -16,6 +16,7 @@ class UserRepository(BasePGRepository[schemas.User]):
     """
     User repository
     """
+
     class Meta:
         response_model = schemas.User  # This should be your schema
         orm_model = models.User  # This should be your ORM model
