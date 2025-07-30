@@ -1,10 +1,9 @@
 """
-Middleware module for JWT parsing and setting `request.state.user_id`.
+Middleware module for JWT parsing and setting `request.state.user`.
 
-This middleware ensures that protected routes are only accessible
-to clients providing a valid JWT access token in the `Authorization` header.
-
-Excluded routes (defined by `EXCLUDED_PATH_PATTERNS`) bypass the JWT check.
+This middleware authenticates incoming requests using JWT tokens and
+loads the associated user object from the database. If valid, the
+user is attached to the request state for downstream access.
 """
 
 import fnmatch
@@ -17,20 +16,22 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
+from app.repositories.user import UserRepository
 from app.security.jwt import verify_access_token
+from app.utils.session import async_session
 
 EXCLUDED_PATH_PATTERNS = ['/', '/v1/sample-token', '/openapi.json', '/docs']
 
 
 def _is_path_excluded(path: str) -> bool:
     """
-    Checks whether the request path matches any pattern in the exclusion list.
+    Determines whether a given path should be excluded from authentication.
 
     Args:
-        path (str): The request path to check.
+        path (str): The request path.
 
     Returns:
-        bool: True if the path should bypass authentication, False otherwise.
+        bool: True if the path is excluded from JWT authentication.
     """
     for pattern in EXCLUDED_PATH_PATTERNS:
         if fnmatch.fnmatch(path, pattern):
@@ -40,10 +41,12 @@ def _is_path_excluded(path: str) -> bool:
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to extract and verify JWT tokens from the Authorization header.
+    Middleware to authenticate requests using JWT tokens.
 
-    If a valid token is present, it sets `request.state.user_id`
-    for downstream use. Requests to excluded paths bypass this check.
+    If a request includes a valid JWT in the `Authorization` header, the
+    associated user is fetched from the database and stored in `request.state.user`.
+
+    Requests to excluded paths bypass authentication.
     """
 
     def __init__(self, app: ASGIApp):
@@ -51,14 +54,18 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         """
-        Processes incoming requests to validate the JWT and inject user ID.
+        Processes each incoming request.
+
+        Verifies the JWT token, fetches the corresponding user, and stores the
+        user object in `request.state.user`. If the token is invalid or missing,
+        returns a 401 Unauthorized response. Bypasses paths marked as excluded.
 
         Args:
             request (Request): The incoming HTTP request.
-            call_next (Callable): The next middleware or route handler.
+            call_next (Callable): The next middleware or endpoint handler.
 
         Returns:
-            Response: The HTTP response after processing or an error response.
+            Response: The HTTP response after processing or early rejection.
         """
         if _is_path_excluded(request.url.path):
             return await call_next(request)
@@ -71,25 +78,37 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             )
 
         token = auth.split(' ')[1]
-        print(token)
         try:
             payload = verify_access_token(token)
             user_id_str = payload.get('sub')
-
-            # TODO: Pull the user by id from the db
-
             if not user_id_str:
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={'detail': 'Token missing subject (sub)'},
                 )
 
-            # Set the user ID on the request.state for downstream usage
-            request.state.user_id = UUID(user_id_str)
+            user_id = UUID(user_id_str)
+            user_repo = UserRepository(async_session)
+            user = await user_repo.get_by_id(user_id)
+            if not user:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={'detail': 'User not found'},
+                )
+
+            # Attach full user object to request.state
+            request.state.user = user
+
             return await call_next(request)
 
         except (JWTError, ValueError):
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={'detail': 'Invalid or expired token'},
+            )
+        except Exception:
+            # Add general exception handling for database issues
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={'detail': 'Internal server error'},
             )

@@ -23,7 +23,7 @@ v1_router.include_router(company_address_router, prefix='/company-address')
 
 
 VIEW_ALL_DATA_PERMISSION = has_permission(
-    [Permission(Verb.VIEW, Entity.ALL_DATA)]
+    [Permission(Verb.VIEW, Entity.COMPANY)]
 )
 
 
@@ -56,5 +56,5 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
 
 
 @v1_router.get('/me')
-async def get_me(user_id=Depends(get_current_user)):
-    return user_id
+async def get_me(current_user=Depends(get_current_user)):
+    return current_user
