@@ -2,9 +2,10 @@
 User ORM model
 """
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Enum, ForeignKey, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.enums import UserRole
 from app.models.base import Base, BaseEntity
 
 
@@ -23,3 +24,9 @@ class User(Base, BaseEntity):
         ForeignKey('companies.id'), nullable=False
     )
     company: Mapped['Company'] = relationship(back_populates='users')
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole),
+        nullable=False,
+        default=UserRole.BUYER,
+        server_default=text("'BUYER'"),
+    )
