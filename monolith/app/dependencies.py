@@ -4,11 +4,10 @@ Dependencies module
 
 from uuid import UUID
 
-from fastapi import HTTPException, Request, status
-from jose import JWTError
-
 from app.repositories.user import User
 from app.security.jwt import verify_access_token
+from fastapi import HTTPException, Request, status
+from jose import JWTError
 
 
 async def get_current_user(request: Request) -> object:

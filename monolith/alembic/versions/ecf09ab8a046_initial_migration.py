@@ -3,13 +3,12 @@
 Initial migration
 
 Revision ID: ecf09ab8a046
-Revises: 
+Revises:
 Create Date: 2025-07-12 11:37:56.774214
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'ecf09ab8a046'

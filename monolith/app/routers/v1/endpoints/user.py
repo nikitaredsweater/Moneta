@@ -4,13 +4,12 @@ User endpoints
 
 from typing import List, Optional
 
-from fastapi import APIRouter
-
 from app import repositories as repo
 from app import schemas
 
 # Example usage
 from app.security import encrypt_password, verify_password
+from fastapi import APIRouter
 
 user_router = APIRouter()
 

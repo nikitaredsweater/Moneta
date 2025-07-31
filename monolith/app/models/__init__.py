@@ -8,12 +8,11 @@ with schemas module.
 
 import warnings
 
-from sqlalchemy import MetaData
-from sqlalchemy import exc as sa_exc
-
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
 from app.models.user import User
+from sqlalchemy import MetaData
+from sqlalchemy import exc as sa_exc
 
 __all__ = ['User', 'Company', 'CompanyAddress']
 

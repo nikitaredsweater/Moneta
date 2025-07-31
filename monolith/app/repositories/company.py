@@ -5,11 +5,10 @@ All of the interaction with the user table should be done through this module.
 
 from typing import Annotated
 
-from fastapi import Depends
-
 from app import models, schemas
 from app.repositories.base import BasePGRepository
 from app.utils.session import async_session
+from fastapi import Depends
 
 
 class CompanyRepository(BasePGRepository[schemas.Company]):

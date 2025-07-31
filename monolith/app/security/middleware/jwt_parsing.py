@@ -9,16 +9,15 @@ user is attached to the request state for downstream access.
 import fnmatch
 from uuid import UUID
 
+from app.repositories.user import UserRepository
+from app.security.jwt import verify_access_token
+from app.utils.session import async_session
 from fastapi import status
 from jose import JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
-
-from app.repositories.user import UserRepository
-from app.security.jwt import verify_access_token
-from app.utils.session import async_session
 
 EXCLUDED_PATH_PATTERNS = ['/', '/v1/sample-token', '/openapi.json', '/docs']
 

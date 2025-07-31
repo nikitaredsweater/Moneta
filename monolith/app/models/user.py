@@ -2,11 +2,10 @@
 User ORM model
 """
 
-from sqlalchemy import Enum, ForeignKey, String, text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.enums import UserRole
 from app.models.base import Base, BaseEntity
+from sqlalchemy import Enum, ForeignKey, String, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class User(Base, BaseEntity):

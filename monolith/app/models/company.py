@@ -5,10 +5,9 @@ Represents the legal financial institution that is registered on the platform.
 
 from datetime import date
 
+from app.models.base import Base, BaseEntity
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.base import Base, BaseEntity
 
 
 class Company(Base, BaseEntity):
