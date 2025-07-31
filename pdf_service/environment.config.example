@@ -1,0 +1,22 @@
+# Environment Configuration for PDF Microservice
+# For Moneta Financial Backend
+
+# ==============================================
+# MinIO Configuration
+# ==============================================
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+BUCKET_NAME=documents
+
+# ==============================================
+# Celery Configuration
+# ==============================================
+CELERY_BROKER_URL=redis://redis:6379/0
+
+# ==============================================
+# MongoDB Configuration
+# ==============================================
+MONGO_URI=mongodb://mongo:27017/
+MONGO_DB_NAME=pdf_service
+MONGO_COLLECTION=documents
