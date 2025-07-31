@@ -16,12 +16,15 @@ class UserRepository(BasePGRepository[schemas.User]):
     """
     User repository
     """
+
     class Meta:
-        response_model = schemas.User  # This should be your schema
+        response_model = schemas.UserInternal  # This should be your schema
         orm_model = models.User  # This should be your ORM model
         exclusion_fields = None  # Optional: set fields to exclude
 
-    async def get_by_email_exact(self, email: str) -> Optional[schemas.User]:
+    async def get_by_email_exact(
+        self, email: str
+    ) -> Optional[schemas.UserInternal]:
         """
         Get a user by exact email match (case-sensitive)
 

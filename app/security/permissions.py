@@ -1,11 +1,14 @@
 """
-security module related to the work with the roles and permissions
+Security module for managing user roles and permissions.
+
+Provides utilities for defining permissions, mapping roles to allowed actions,
+and a FastAPI dependency for enforcing permission checks on requests.
 """
 
 from dataclasses import dataclass
 from typing import Iterable
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
@@ -14,10 +17,25 @@ from app.enums import UserRole
 
 @dataclass(frozen=True)
 class Permission:
+    """
+    Represents a specific permission, defined by an action (verb) on an entity.
+
+    Attributes:
+        verb (PermissionVerb): The action permitted (e.g., VIEW, CREATE).
+        entity (PermissionEntity): The target entity of the action
+                (e.g., COMPANY).
+    """
+
     verb: Verb
     entity: Entity
 
     def __str__(self) -> str:
+        """
+        Render the permission as a string in the format 'VERB.ENTITY'.
+
+        Returns:
+            str: The string representation of the permission.
+        """
         return f'{self.verb}.{self.entity}'
 
 
@@ -73,27 +91,40 @@ ROLE_PERMISSIONS = {
 # TODO: Move this dependency into a dependency folder/file
 def has_permission(required: Iterable[Permission]):
     """
-    Check whether the given user role has at least one of the
-    required permissions.
+    Create a FastAPI dependency that enforces at least one required permission.
 
-    This function compares the provided list of permissions against the set of
-    permissions allowed for the specified role.
-    It returns True if any one of the required permissions is present in the
-    role's permission set.
-
-    User data is assumed to be stored on a request.state.user
+    This dependency inspects the incoming request's `state.user` attribute,
+    retrieves the user's role, and checks whether the role's permission set
+    includes any of the permissions specified in `required`. If the user is
+    not authenticated or lacks the necessary permission, an HTTPException is
+    raised.
 
     Args:
-        required (Iterable[Permission]): A list or set of permissions to check.
+        required (Iterable[Permission]): An iterable of Permission instances
+            to check.
 
     Returns:
-        bool: True if the role has at least one of the required permissions,
-            False otherwise.
+        Callable: A dependency function to be used with FastAPI's Depends.
+
+    Raises:
+        HTTPException:
+            - 401 Unauthorized if no user is found on request.state.user.
+            - 403 Forbidden if the user lacks all of the required permissions.
     """
 
-    def permission_dependency(request: Request):
+    def permission_dependency(request: Request) -> None:
         """
-        logic
+        FastAPI dependency that performs the permission check on the request.
+
+        Args:
+            request (Request): The incoming FastAPI request, expected to have
+                a `state.user` attribute with `role: UserRole`.
+
+        Raises:
+            HTTPException:
+                - 401 Unauthorized if `request.state.user` is missing.
+                - 403 Forbidden if the user's role does not grant any of the
+                  required permissions.
         """
         # TODO: Pull in the actual user data into this
         user = getattr(request.state, 'user', None)
@@ -110,4 +141,4 @@ def has_permission(required: Iterable[Permission]):
                 detail='Insufficient permissions',
             )
 
-    return Depends(permission_dependency)
+    return permission_dependency
