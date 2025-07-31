@@ -21,7 +21,11 @@ class BaseHTTPException(HTTPException):
         super().__init__(status_code or self.status_code, detail or self.detail)
 
 
-# Example custom exception -- Currently unused.
+################################################################################
+#                              ENTITY EXCPETIONS
+################################################################################
+
+
 class WasNotFoundException(BaseHTTPException):
     """
     Exception raised when an entity was not found.
@@ -31,10 +35,45 @@ class WasNotFoundException(BaseHTTPException):
     detail = 'Entity was not found'
 
 
+class EntityAlreadyExistsException(BaseHTTPException):
+    """
+    Exception raised when an entity was not found.
+    """
+
+    status_code = status.HTTP_409_CONFLICT
+    detail = 'Entity with such unique fields already exists'
+
+
+################################################################################
+#                              AUTH EXCPETIONS
+################################################################################
+
+
 class InvalidCredentialsException(BaseHTTPException):
     """
     Exception raised when request has invalid credentials.
     """
 
     status_code = status.HTTP_401_UNAUTHORIZED
-    detail = 'Invalid credentials.'
+    detail = 'Invalid credentials'
+
+
+class InsufficientPermissionsException(BaseHTTPException):
+    """
+    Excpetion raised when the user has no permission to access a given endpoint.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = 'Insufficient permissions'
+
+
+################################################################################
+#                              SERVER EXCPETIONS
+################################################################################
+class FailedToCreateEntityException(BaseHTTPException):
+    """
+    Excpetion raised when server was not able to add an entity to the database.
+    """
+
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = 'Failed to save the entity'
