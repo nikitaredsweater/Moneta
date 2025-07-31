@@ -18,6 +18,8 @@ attrs==25.3.0
     # via flake8-bugbear
 bandit==1.8.6
     # via -r requirements.in
+bcrypt==4.3.0
+    # via -r requirements.in
 black==25.1.0
     # via -r requirements.in
 cffi==1.17.1

@@ -9,6 +9,9 @@ from fastapi import APIRouter
 from app import repositories as repo
 from app import schemas
 
+# Example usage
+from app.security import encrypt_password, verify_password
+
 user_router = APIRouter()
 
 
@@ -41,5 +44,6 @@ async def create_user(
     Returns:
         UserSchema: The created user object
     """
+    user_data.password = encrypt_password(user_data.password)
     user = await user_repo.create(user_data)
     return user
