@@ -15,18 +15,16 @@ from app.exceptions import (
     FailedToCreateEntityException,
     WasNotFoundException,
 )
-
-from app.security import (
-    Permission,
-    encrypt_password,
-    has_permission,
-)
+from app.security import Permission, encrypt_password, has_permission
 
 user_router = APIRouter()
 
 
 @user_router.get('/', response_model=List[schemas.User])
-async def get_users(user_repo: repo.User) -> Optional[List[schemas.User]]:
+async def get_users(
+    user_repo: repo.User,
+    _=Depends(has_permission([Permission(Verb.VIEW, Entity.ALL_USERS)])),
+) -> Optional[List[schemas.User]]:
     """
     Get all users
 
