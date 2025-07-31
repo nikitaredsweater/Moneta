@@ -23,7 +23,7 @@ v1_router.include_router(company_address_router, prefix='/company-address')
 
 
 VIEW_ALL_DATA_PERMISSION = has_permission(
-    [Permission(Verb.VIEW, Entity.ALL_DATA)]
+    [Permission(Verb.VIEW, Entity.COMPANY)]
 )
 
 
@@ -50,15 +50,17 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     user = await user_repo.get_by_email_exact(user_login.email)
     if user is None:
         raise Exception('no user found aaaaaa')
+
     if not verify_password(
         password=user_login.password, hashed_password=user.password
     ):
         raise Exception('Wrong Credentials')
+        
     user_id = user.id
     token = create_access_token(user_id=user_id)
     return {'access_token': token, 'token_type': 'bearer'}
 
 
 @v1_router.get('/me')
-async def get_me(user_id=Depends(get_current_user)):
-    return user_id
+async def get_me(current_user=Depends(get_current_user)):
+    return current_user

@@ -135,7 +135,7 @@ def has_permission(required: Iterable[Permission]):
 
         role: UserRole = user.role
         allowed = ROLE_PERMISSIONS.get(role, set())
-        if not any(p in allowed for p in required):
+        if not any((p.verb, p.entity) in allowed for p in required):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail='Insufficient permissions',
