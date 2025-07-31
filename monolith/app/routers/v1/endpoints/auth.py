@@ -4,12 +4,11 @@ Authentication endpoints.
 Provides routes for user login and token generation using JWT.
 """
 
-from fastapi import APIRouter
-
 from app import repositories as repo
 from app import schemas
 from app.exceptions import InvalidCredentialsException
 from app.security import create_access_token, verify_password
+from fastapi import APIRouter
 
 auth_router = APIRouter()
 

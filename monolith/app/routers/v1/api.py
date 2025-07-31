@@ -2,19 +2,18 @@
 v1 API routes
 """
 
-from fastapi import APIRouter, Depends
-
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
+from app.routers.v1.endpoints.auth import auth_router
 from app.routers.v1.endpoints.company import company_router
 from app.routers.v1.endpoints.company_address import company_address_router
 from app.routers.v1.endpoints.instrument import instrument_router
 from app.routers.v1.endpoints.user import user_router
 from app.security import Permission, has_permission
-from app.routers.v1.endpoints.auth import auth_router
+from fastapi import APIRouter, Depends
 
 v1_router = APIRouter()
 

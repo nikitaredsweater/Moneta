@@ -4,8 +4,6 @@ User endpoints
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
-
 from app import repositories as repo
 from app import schemas
 from app.enums import PermissionEntity as Entity
@@ -16,6 +14,7 @@ from app.exceptions import (
     WasNotFoundException,
 )
 from app.security import Permission, encrypt_password, has_permission
+from fastapi import APIRouter, Depends
 
 user_router = APIRouter()
 

@@ -4,13 +4,12 @@ Company endpoints
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
-
 from app import repositories as repo
 from app import schemas
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.security import Permission, has_permission
+from fastapi import APIRouter, Depends
 
 company_router = APIRouter()
 
