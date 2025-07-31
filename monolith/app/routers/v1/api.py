@@ -41,6 +41,6 @@ async def root(_=Depends(VIEW_ALL_DATA_PERMISSION)) -> dict[str, str]:
     return {'message': 'Hello World'}
 
 
-@v1_router.get('/me')
+@v1_router.get('/me', response_model=schemas.User)
 async def get_me(current_user=Depends(get_current_user)):
     return current_user

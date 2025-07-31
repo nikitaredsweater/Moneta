@@ -46,7 +46,13 @@ async def create_company(
     Returns:
         Company: The created user object
     """
-    instrument_data.issuer = current_user.company_id
-    instrument_data.creator = current_user.id
-    instrument = await instrument_repo.create(instrument_data)
+    
+    internal_data = schemas.InstrumentCreateInternal(
+        **instrument_data.dict(),
+        issuer_id=current_user.company_id,
+        created_by=current_user.id,
+    )
+    # print(f"Trvwgjhbknlkerwnjkbhjvghwqhcfgvjwhbekjnlkfrjbhj, {internal_data}")
+    instrument = await instrument_repo.create(internal_data)
+    print(f"Trvwgjhbknlkerwnjkbhjvghwqhcfgvjwhbekjnlkfrjbhj, {instrument}")
     return instrument
