@@ -29,3 +29,12 @@ class WasNotFoundException(BaseHTTPException):
 
     status_code = status.HTTP_404_NOT_FOUND
     detail = 'Entity was not found'
+
+
+class InvalidCredentialsException(BaseHTTPException):
+    """
+    Exception raised when request has invalid credentials.
+    """
+
+    status_code = status.HTTP_401_UNAUTHORIZED
+    detail = 'Invalid credentials.'
