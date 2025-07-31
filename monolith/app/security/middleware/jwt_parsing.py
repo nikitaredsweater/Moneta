@@ -20,7 +20,8 @@ from app.repositories.user import UserRepository
 from app.security.jwt import verify_access_token
 from app.utils.session import async_session
 
-EXCLUDED_PATH_PATTERNS = ['/', '/v1/sample-token', '/openapi.json', '/docs']
+# TODO: Set /* to /
+EXCLUDED_PATH_PATTERNS = ['/*', '/v1/sample-token', '/openapi.json', '/docs']
 
 
 def _is_path_excluded(path: str) -> bool:
