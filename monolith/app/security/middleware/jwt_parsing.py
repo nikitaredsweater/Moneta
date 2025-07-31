@@ -20,8 +20,7 @@ from app.repositories.user import UserRepository
 from app.security.jwt import verify_access_token
 from app.utils.session import async_session
 
-# TODO: Set /* to /
-EXCLUDED_PATH_PATTERNS = ['/*', '/v1/sample-token', '/openapi.json', '/docs']
+EXCLUDED_PATH_PATTERNS = ['/', '/v1/auth/login', '/openapi.json', '/docs']
 
 
 def _is_path_excluded(path: str) -> bool:
@@ -45,7 +44,8 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
     Middleware to authenticate requests using JWT tokens.
 
     If a request includes a valid JWT in the `Authorization` header, the
-    associated user is fetched from the database and stored in `request.state.user`.
+    associated user is fetched from the database and stored in
+    `request.state.user`.
 
     Requests to excluded paths bypass authentication.
     """
