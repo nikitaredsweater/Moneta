@@ -33,6 +33,7 @@ pre-commit
 
 # --- Database ---
 sqlalchemy
+minio
 
 # --- Additional tools for local pre-commit hooks ---
 # Note: Most of the pre-commit hook tools are provided by the pre-commit-hooks package

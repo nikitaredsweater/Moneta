@@ -10,6 +10,10 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
     # via starlette
+argon2-cffi==25.1.0
+    # via minio
+argon2-cffi-bindings==25.1.0
+    # via argon2-cffi
 astroid==3.3.10
     # via pylint
 asyncpg==0.30.0
@@ -22,8 +26,12 @@ bcrypt==4.3.0
     # via -r requirements.in
 black==25.1.0
     # via -r requirements.in
+certifi==2025.7.14
+    # via minio
 cffi==1.17.1
-    # via cryptography
+    # via
+    #   argon2-cffi-bindings
+    #   cryptography
 cfgv==3.4.0
     # via pre-commit
 click==8.2.1
@@ -87,6 +95,8 @@ mccabe==0.7.0
     #   pylint
 mdurl==0.1.2
     # via markdown-it-py
+minio==7.2.16
+    # via -r requirements.in
 mypy==1.16.1
     # via -r requirements.in
 mypy-extensions==1.1.0
@@ -126,6 +136,8 @@ pycodestyle==2.14.0
     # via flake8
 pycparser==2.22
     # via cffi
+pycryptodome==3.23.0
+    # via minio
 pydantic==2.11.7
     # via fastapi
 pydantic-core==2.33.2
@@ -174,6 +186,7 @@ typing-extensions==4.14.1
     # via
     #   alembic
     #   fastapi
+    #   minio
     #   mypy
     #   pydantic
     #   pydantic-core
@@ -181,6 +194,8 @@ typing-extensions==4.14.1
     #   typing-inspection
 typing-inspection==0.4.1
     # via pydantic
+urllib3==2.5.0
+    # via minio
 uvicorn==0.35.0
     # via -r requirements.in
 virtualenv==20.31.2
