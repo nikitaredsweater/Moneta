@@ -1,0 +1,90 @@
+services:
+  app:
+    build:
+      context: ./monolith
+      dockerfile: Dockerfile
+      target: ${TARGET:-development}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./monolith:/app_root
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/moneta
+      # Add this to allow monolith to talk to minio
+      - MINIO_ENDPOINT=minio:9000
+      - MONGO_URL=mongodb://mongodb:27017
+
+  pdf_service:
+    build:
+      context: ./pdf_service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8000"
+    depends_on:
+      - minio
+      - redis
+      - mongodb
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - REDIS_URL=redis://redis:6379/0
+      - MONGO_URL=mongodb://mongodb:27017
+
+  celery_worker:
+    build:
+      context: ./pdf_service
+      dockerfile: Dockerfile
+    command: celery -A app.workers.celery_app worker --loglevel=info --queues=pdf-tasks
+    depends_on:
+      - redis
+      - pdf_service
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./pdf_service:/pdf_service
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  redis:
+    image: redis:7
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moneta
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  mongo_data:
+  minio_data:
