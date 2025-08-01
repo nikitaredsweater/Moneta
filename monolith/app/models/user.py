@@ -29,3 +29,6 @@ class User(Base, BaseEntity):
         default=UserRole.BUYER,
         server_default=text("'BUYER'"),
     )
+    instruments: Mapped[list['Instrument']] = relationship(
+    back_populates='creator', cascade='all, delete-orphan'
+    )

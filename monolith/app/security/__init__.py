@@ -2,6 +2,7 @@
 Security module
 """
 
+from app.security.jwt import create_access_token
 from app.security.password import encrypt_password, verify_password
 from app.security.permissions import (
     ROLE_PERMISSIONS,
@@ -15,4 +16,5 @@ __all__ = [
     'Permission',
     'ROLE_PERMISSIONS',
     'has_permission',
+    'create_access_token',
 ]

@@ -11,7 +11,12 @@ from typing import Iterable
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.enums import UserRole
-from fastapi import HTTPException, Request, status
+from app.exceptions import (
+    InsufficientPermissionsException,
+    InvalidCredentialsException,
+)
+from fastapi import Request
+
 
 
 @dataclass(frozen=True)
@@ -125,19 +130,13 @@ def has_permission(required: Iterable[Permission]):
                 - 403 Forbidden if the user's role does not grant any of the
                   required permissions.
         """
-        # TODO: Pull in the actual user data into this
         user = getattr(request.state, 'user', None)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail='Unauthorized'
-            )
+            raise InvalidCredentialsException()
 
         role: UserRole = user.role
         allowed = ROLE_PERMISSIONS.get(role, set())
         if not any((p.verb, p.entity) in allowed for p in required):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='Insufficient permissions',
-            )
+            raise InsufficientPermissionsException()
 
     return permission_dependency

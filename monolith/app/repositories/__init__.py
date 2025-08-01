@@ -8,6 +8,7 @@ from app.repositories.company_address import (
     CompanyAddressRepository,
 )
 from app.repositories.user import User, UserRepository
+from app.repositories.instrument import InstrumentRepository, Instrument
 
 __all__ = [
     'UserRepository',
@@ -16,4 +17,6 @@ __all__ = [
     'Company',
     'CompanyAddressRepository',
     'CompanyAddress',
+    'InstrumentRepository',
+    'Instrument'
 ]

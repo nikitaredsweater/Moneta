@@ -16,6 +16,7 @@ from app.schemas.user import (
     UserLogin,
     UserUpdate,
 )
+from app.schemas.instrument import Instrument, InstrumentCreate, InstrumentCreateInternal
 
 __all__ = [
     'User',
@@ -28,4 +29,7 @@ __all__ = [
     'CompanyAddress',
     'CompanyAddressCreate',
     'UserInternal',
+    'Instrument',
+    'InstrumentCreate',
+    'InstrumentCreateInternal',
 ]
