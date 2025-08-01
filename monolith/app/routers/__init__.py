@@ -2,9 +2,8 @@
 Routers module
 """
 
-from fastapi import APIRouter
-
 from app.routers.v1.api import v1_router
+from fastapi import APIRouter
 
 # TODO: Add v2 router
 # TODO: Add health router

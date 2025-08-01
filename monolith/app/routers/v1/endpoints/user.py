@@ -13,8 +13,9 @@ from app.exceptions import (
     FailedToCreateEntityException,
     WasNotFoundException,
 )
-from app.security import Permission, encrypt_password, has_permission
+from app.security import Permission, encrypt_password, has_permission, verify_password
 from fastapi import APIRouter, Depends
+
 
 user_router = APIRouter()
 

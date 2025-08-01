@@ -2,11 +2,10 @@
 A sub-entity of the comapny
 """
 
-from sqlalchemy import Enum, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.enums import AddressType
 from app.models.base import Base, BaseEntity
+from sqlalchemy import Enum, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class CompanyAddress(Base, BaseEntity):

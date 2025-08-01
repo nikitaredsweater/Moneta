@@ -18,6 +18,7 @@ from app.exceptions import (
 from fastapi import Request
 
 
+
 @dataclass(frozen=True)
 class Permission:
     """

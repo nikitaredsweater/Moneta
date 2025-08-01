@@ -22,6 +22,7 @@ from starlette.types import ASGIApp
 EXCLUDED_PATH_PATTERNS = ['/', '/v1/auth/login', '/openapi.json', '/docs']
 
 
+
 def _is_path_excluded(path: str) -> bool:
     """
     Determines whether a given path should be excluded from authentication.

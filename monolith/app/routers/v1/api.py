@@ -12,7 +12,9 @@ from app.routers.v1.endpoints.company import company_router
 from app.routers.v1.endpoints.company_address import company_address_router
 from app.routers.v1.endpoints.instrument import instrument_router
 from app.routers.v1.endpoints.user import user_router
-from app.security import Permission, has_permission
+from app.security import Permission, has_permission, verify_password
+from app.security.jwt import create_access_token
+
 from fastapi import APIRouter, Depends
 
 v1_router = APIRouter()
@@ -41,6 +43,28 @@ async def root(_=Depends(VIEW_ALL_DATA_PERMISSION)) -> dict[str, str]:
     return {'message': 'Hello World'}
 
 
-@v1_router.get('/me', response_model=schemas.User)
+@v1_router.post('/sample-token')
+async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
+    # In a sense, this function is equivalent to login route.
+    # It is just for testing pusposes.
+    #
+    # In the future, feel free to move this logic into an appropriate
+    # router handler
+    # TODO: Add validation of the user data
+    user = await user_repo.get_by_email_exact(user_login.email)
+    if user is None:
+        raise Exception('no user found aaaaaa')
+
+    if not verify_password(
+        password=user_login.password, hashed_password=user.password
+    ):
+        raise Exception('Wrong Credentials')
+
+    user_id = user.id
+    token = create_access_token(user_id=user_id)
+    return {'access_token': token, 'token_type': 'bearer'}
+
+
+@v1_router.get('/me')
 async def get_me(current_user=Depends(get_current_user)):
     return current_user

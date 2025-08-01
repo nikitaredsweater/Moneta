@@ -11,6 +11,7 @@ from app.enums import PermissionVerb as Verb
 from app.security import Permission, has_permission
 from fastapi import APIRouter, Depends
 
+
 company_router = APIRouter()
 
 

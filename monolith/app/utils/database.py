@@ -7,12 +7,11 @@
 
 from typing import AsyncGenerator, Generator
 
+from conf import conf
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
-
-from conf import conf
 
 # Create SQLAlchemy engine for synchronous operations (used by alembic)
 engine = create_engine(conf.connection_string)

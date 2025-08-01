@@ -2,10 +2,9 @@
 Routers module
 """
 
-from fastapi import APIRouter
-
 from app.api.v1 import v1_router
 from app.workers.tasks import parse_pdf_task
+from fastapi import APIRouter
 
 # TODO: Add v2 router
 # TODO: Add health router

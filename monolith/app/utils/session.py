@@ -1,9 +1,8 @@
 """SQLAlchemy session"""
 
+from conf import conf
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-
-from conf import conf
 
 engine = create_async_engine(
     conf.asyncpg_connection_string,

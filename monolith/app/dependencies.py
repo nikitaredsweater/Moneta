@@ -2,13 +2,15 @@
 Dependencies module
 """
 
+from typing import Generator
 from uuid import UUID
-
-from fastapi import HTTPException, Request, status
-from jose import JWTError
 
 from app.repositories.user import User
 from app.security.jwt import verify_access_token
+from app.utils.minio_client import minio_client
+from fastapi import HTTPException, Request, status
+from jose import JWTError
+from minio import Minio
 
 
 async def get_current_user(request: Request) -> object:
@@ -93,3 +95,13 @@ async def get_current_user_from_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Invalid or expired token',
         )
+
+
+def get_minio_client() -> Generator[Minio, None, None]:
+    """
+    FastAPI-compatible dependency that returns the shared MinIO client.
+
+    Yields:
+        Minio: A MinIO client session.
+    """
+    yield minio_client

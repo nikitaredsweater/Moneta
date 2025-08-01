@@ -17,13 +17,12 @@ from typing import (
     TypeVar,
 )
 
+from app.models.base import BaseEntity
+from app.schemas.base import BaseDTO, MonetaID
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
-
-from app.models.base import BaseEntity
-from app.schemas.base import BaseDTO, MonetaID
 
 T = TypeVar("T", bound=BaseDTO)
 

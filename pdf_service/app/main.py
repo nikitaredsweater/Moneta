@@ -2,13 +2,14 @@
 Main FastAPI application module.
 """
 
-from fastapi import FastAPI
 from app.api import app_router
 from app.utils import minio_client
+from fastapi import FastAPI
 
 app = FastAPI()
 
 REQUIRED_BUCKETS = ["documents"]
+
 
 @app.on_event("startup")
 def ensure_bucket():
@@ -16,7 +17,9 @@ def ensure_bucket():
         if not minio_client.bucket_exists(bucket):
             minio_client.make_bucket(bucket)
 
+
 app.include_router(app_router)
+
 
 @app.get("/")
 def read_root():
