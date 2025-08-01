@@ -8,11 +8,10 @@ and a FastAPI dependency for enforcing permission checks on requests.
 from dataclasses import dataclass
 from typing import Iterable
 
-from fastapi import HTTPException, Request, status
-
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.enums import UserRole
+from fastapi import HTTPException, Request, status
 
 
 @dataclass(frozen=True)

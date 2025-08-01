@@ -5,10 +5,9 @@ JWT module
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import JWTError, jwt
-
 from app.schemas.base import MonetaID
 from app.security.jwt_keys import jwt_keys
+from jose import JWTError, jwt
 
 ALGORITHM = 'RS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 15

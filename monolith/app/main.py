@@ -2,10 +2,9 @@
 Main FastAPI application module.
 """
 
-from fastapi import FastAPI
-
 from app.routers import app_router
 from app.security.middleware import JWTAuthMiddleware
+from fastapi import FastAPI
 
 app = FastAPI(
     title='Platform API',

@@ -4,10 +4,9 @@ Company address endpoints
 
 from typing import List, Optional
 
-from fastapi import APIRouter
-
 from app import repositories as repo
 from app import schemas
+from fastapi import APIRouter
 
 company_address_router = APIRouter()
 
