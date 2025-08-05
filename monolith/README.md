@@ -167,10 +167,7 @@ Docker provides a containerized environment for running your FastAPI application
 
 ```bash
 # Start the application in development mode
-docker-compose -f docker/docker-compose.yml up --build app
-
-# Or run in detached mode (background)
-docker-compose -f docker/docker-compose.yml up -d --build
+docker-compose up --build
 ```
 
 This will:

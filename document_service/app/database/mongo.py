@@ -12,7 +12,7 @@ def insert_document(doc: dict) -> str:
 
 
 def update_document(query: dict, update_data: dict):
-    collection.update_one(query, {"$set": update_data})
+    collection.update_one(query, {'$set': update_data})
 
 
 def get_document(query: dict) -> dict:

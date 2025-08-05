@@ -18,5 +18,5 @@ CELERY_BROKER_URL=redis://redis:6379/0
 # MongoDB Configuration
 # ==============================================
 MONGO_URI=mongodb://mongo:27017/
-MONGO_DB_NAME=pdf_service
+MONGO_DB_NAME=document_service
 MONGO_COLLECTION=documents

@@ -10,11 +10,11 @@ from app.enums import PermissionVerb as Verb
 from app.routers.v1.endpoints.auth import auth_router
 from app.routers.v1.endpoints.company import company_router
 from app.routers.v1.endpoints.company_address import company_address_router
+from app.routers.v1.endpoints.document import document_router
 from app.routers.v1.endpoints.instrument import instrument_router
 from app.routers.v1.endpoints.user import user_router
 from app.security import Permission, has_permission, verify_password
 from app.security.jwt import create_access_token
-
 from fastapi import APIRouter, Depends
 
 v1_router = APIRouter()
@@ -24,6 +24,7 @@ v1_router.include_router(company_router, prefix='/company')
 v1_router.include_router(company_address_router, prefix='/company-address')
 v1_router.include_router(instrument_router, prefix='/instrument')
 v1_router.include_router(auth_router, prefix='/auth')
+v1_router.include_router(document_router, prefix='/document')
 
 
 VIEW_ALL_DATA_PERMISSION = has_permission(

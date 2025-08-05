@@ -17,9 +17,9 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MONGO_URL=mongodb://mongodb:27017
 
-  pdf_service:
+  document_service:
     build:
-      context: ./pdf_service
+      context: ./document_service
       dockerfile: Dockerfile
     ports:
       - "8081:8000"
@@ -34,16 +34,16 @@ services:
 
   celery_worker:
     build:
-      context: ./pdf_service
+      context: ./document_service
       dockerfile: Dockerfile
     command: celery -A app.workers.celery_app worker --loglevel=info --queues=pdf-tasks
     depends_on:
       - redis
-      - pdf_service
+      - document_service
     environment:
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - ./pdf_service:/pdf_service
+      - ./document_service:/document_service
 
   minio:
     image: minio/minio

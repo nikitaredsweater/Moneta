@@ -4,11 +4,10 @@ Instrument endpoints
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
-
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user
+from fastapi import APIRouter, Depends
 
 instrument_router = APIRouter()
 
@@ -18,13 +17,13 @@ async def get_companies(
     instrument_repo: repo.Instrument,
 ) -> Optional[List[schemas.Instrument]]:
     """
-    Get all companies
+    Get all instruments
 
     Args:
-        company_repo (repo.Company): dependency injection of the User Repository
+        instrument_repo (repo.Company): dependency injection of the User Repository
 
     Returns:
-        schemas.Company: A user object.
+        schemas.Instrument: An Instrument object.
     """
     instruments = await instrument_repo.get_all()
     return instruments
@@ -34,19 +33,20 @@ async def get_companies(
 async def create_company(
     instrument_data: schemas.InstrumentCreate,
     instrument_repo: repo.Instrument,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ) -> schemas.Instrument:
     """
     Create a new user
 
     Args:
-        company_data: Company creation data
-        company_repo: Company repository dependency
+        instrument_data: Company creation data
+        instrument_repo: Company repository dependency
+        current_user: Current User
 
     Returns:
-        Company: The created user object
+        Instrument: The created instrument
     """
-    
+
     internal_data = schemas.InstrumentCreateInternal(
         **instrument_data.dict(),
         issuer_id=current_user.company_id,

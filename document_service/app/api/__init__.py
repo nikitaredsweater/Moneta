@@ -14,7 +14,7 @@ app_router = APIRouter()
 app_router.include_router(v1_router, prefix='/v1')
 
 
-@app_router.post("/parse")
+@app_router.post('/parse')
 def trigger_parsing(file_key: str):
     parse_pdf_task.delay(file_key)
-    return {"status": "queued"}
+    return {'status': 'queued'}
