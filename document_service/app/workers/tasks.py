@@ -24,3 +24,11 @@ def parse_pdf_task(file_key: str):
 
     # Here you'd add logic to fetch from MinIO, parse, store metadata, etc.
     return f'Parsed {file_key}'
+
+
+@celery_app.task
+def handle_minio_event(payload: dict):
+    # payload is the parsed JSON from MinIO
+    print("[📥] New object in MinIO:", payload)
+    logger.info("[📥] New object in MinIO:", payload)
+    # … add your document‐processing logic here …

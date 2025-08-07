@@ -4,6 +4,10 @@
 #
 #    pip-compile requirements.in
 #
+aio-pika==9.5.7
+    # via -r requirements.in
+aiormq==6.9.0
+    # via aio-pika
 alembic==1.16.4
     # via -r requirements.in
 amqp==5.3.1
@@ -85,7 +89,9 @@ h11==0.16.0
 identify==2.6.12
     # via pre-commit
 idna==3.10
-    # via anyio
+    # via
+    #   anyio
+    #   yarl
 iniconfig==2.1.0
     # via pytest
 isort==6.0.1
@@ -109,6 +115,8 @@ mdurl==0.1.2
     # via markdown-it-py
 minio==7.2.16
     # via -r requirements.in
+multidict==6.6.3
+    # via yarl
 mypy==1.17.1
     # via -r requirements.in
 mypy-extensions==1.1.0
@@ -122,6 +130,8 @@ packaging==25.0
     #   black
     #   kombu
     #   pytest
+pamqp==3.3.0
+    # via aiormq
 pathspec==0.12.1
     # via
     #   black
@@ -138,10 +148,12 @@ pluggy==1.6.0
 pre-commit==4.2.0
     # via -r requirements.in
 prompt-toolkit==3.0.51
+    # via click-repl
+propcache==0.3.2
+    # via yarl
+psycopg[binary]==3.2.9
     # via -r requirements.in
 psycopg-binary==3.2.9
-    # via click-repl
-psycopg[binary]==3.2.9
     # via psycopg
 pycodestyle==2.14.0
     # via flake8
@@ -220,6 +232,10 @@ virtualenv==20.32.0
     # via pre-commit
 wcwidth==0.2.13
     # via prompt-toolkit
+yarl==1.20.1
+    # via
+    #   aio-pika
+    #   aiormq
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

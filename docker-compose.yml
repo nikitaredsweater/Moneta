@@ -27,21 +27,25 @@ services:
       - minio
       - redis
       - mongodb
+      - rabbitmq
     environment:
       - MINIO_ENDPOINT=minio:9000
       - REDIS_URL=redis://redis:6379/0
       - MONGO_URL=mongodb://mongodb:27017
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
 
   celery_worker:
     build:
       context: ./document_service
       dockerfile: Dockerfile
-    command: celery -A app.workers.celery_app worker --loglevel=info --queues=pdf-tasks
+    command: celery -A app.workers.celery_app:celery_app worker --loglevel=info
     depends_on:
       - redis
       - document_service
+      - rabbitmq
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
     volumes:
       - ./document_service:/document_service
 
@@ -51,14 +55,39 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_USER:     minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+
+      # —————— AMQP notifier via env vars ——————
+      MINIO_NOTIFY_AMQP_ENABLE_PRIMARY:       "on"
+      MINIO_NOTIFY_AMQP_URL_PRIMARY:          "amqp://rabbitmq:5672"
+      MINIO_NOTIFY_AMQP_EXCHANGE_PRIMARY:     "minio-events"
+      MINIO_NOTIFY_AMQP_EXCHANGE_TYPE_PRIMARY: "direct"
+      MINIO_NOTIFY_AMQP_ROUTING_KEY_PRIMARY:  "document_tasks"
+      MINIO_NOTIFY_AMQP_FORMAT_PRIMARY:       "json"
+      MINIO_NOTIFY_AMQP_DURABLE_PRIMARY:       "on"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+  
+  mc:
+    image: minio/mc
+    entrypoint: ["sleep", "infinity"]
+    depends_on:
+      - minio
+      - redis
 
   redis:
     image: redis:7
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 
   mongodb:
     image: mongo:7
