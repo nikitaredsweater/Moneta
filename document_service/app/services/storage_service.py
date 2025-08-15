@@ -13,7 +13,7 @@ def generate_presigned_upload_url(key: str) -> str:
 
     Arguments:
         key (str) - name of the file as it will appear in the bucket
-    
+
     Returns:
         str - full URL that a client can use to load the file into the system
     """

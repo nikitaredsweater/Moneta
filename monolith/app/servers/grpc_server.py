@@ -15,7 +15,7 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
         self, request: pb.CreateDocumentRowRequest, context
     ):
         """
-        Method will add to the database the information about the new files
+        Method will add to the database the information about a new file
         """
         if (
             not request.company_id
