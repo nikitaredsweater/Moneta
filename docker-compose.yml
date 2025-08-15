@@ -27,6 +27,7 @@ services:
       - rabbitmq
       - minio
       - mongodb
+      - app
     environment:
       - RABBIT_URL=amqp://guest:guest@rabbitmq:5672//
       - RABBIT_EXCHANGE=minio-events
@@ -55,7 +56,7 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
-  
+
   mc:
     image: minio/mc
     entrypoint: ["sleep", "infinity"]

@@ -70,6 +70,12 @@ flake8-isort==6.1.2
     # via -r requirements.in
 flake8-quotes==3.4.0
     # via -r requirements.in
+grpcio==1.74.0
+    # via
+    #   -r requirements.in
+    #   grpcio-tools
+grpcio-tools==1.74.0
+    # via -r requirements.in
 h11==0.16.0
     # via uvicorn
 identify==2.6.12
@@ -124,8 +130,10 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via -r requirements.in
-psycopg-binary==3.2.9
+protobuf==6.32.0
     # via -r requirements.in
+psycopg-binary==3.2.9
+    # via grpcio-tools
 psycopg[binary]==3.2.9
     # via psycopg
 pyasn1==0.6.1

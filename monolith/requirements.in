@@ -44,3 +44,7 @@ python-dotenv
 # --- Security ---
 bcrypt
 python-jose[cryptography]
+
+# -- gRPC --
+grpcio
+grpcio-tools
