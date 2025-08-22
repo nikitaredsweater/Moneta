@@ -10,8 +10,10 @@ import warnings
 
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
-from app.models.user import User
+from app.models.documents.document import Document
+from app.models.documents.document_version import DocumentVersion
 from app.models.instrument import Instrument
+from app.models.user import User
 from sqlalchemy import MetaData
 from sqlalchemy import exc as sa_exc
 
@@ -32,5 +34,7 @@ with warnings.catch_warnings():
         User.metadata,
         Company.metadata,
         CompanyAddress.metadata,
-        Instrument.metadata
+        Instrument.metadata,
+        Document.metadata,
+        DocumentVersion.metadata,
     )
