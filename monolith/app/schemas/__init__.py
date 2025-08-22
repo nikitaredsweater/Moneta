@@ -8,6 +8,13 @@ with models module.
 
 from app.schemas.company import Company, CompanyCreate
 from app.schemas.company_address import CompanyAddress, CompanyAddressCreate
+from app.schemas.documents.document import Document
+from app.schemas.documents.document_version import DocumentVersion
+from app.schemas.instrument import (
+    Instrument,
+    InstrumentCreate,
+    InstrumentCreateInternal,
+)
 from app.schemas.user import (
     User,
     UserCreate,
@@ -16,7 +23,6 @@ from app.schemas.user import (
     UserLogin,
     UserUpdate,
 )
-from app.schemas.instrument import Instrument, InstrumentCreate, InstrumentCreateInternal
 
 __all__ = [
     'User',
@@ -32,4 +38,6 @@ __all__ = [
     'Instrument',
     'InstrumentCreate',
     'InstrumentCreateInternal',
+    'Document',
+    'DocumentVersion',
 ]
