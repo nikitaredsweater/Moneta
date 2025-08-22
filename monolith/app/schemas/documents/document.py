@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
-
+from pydantic import Field
 
 class Document(BaseDTO):
     """
@@ -31,3 +31,4 @@ class DocumentCreate(CamelModel):
     storage_bucket: str
     storage_object_key: str
     created_by: MonetaID
+    created_at: datetime = Field(default_factory=datetime.now)

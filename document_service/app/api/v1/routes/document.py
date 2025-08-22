@@ -23,10 +23,9 @@ async def request_upload_link(document_data: DocumentUploadRequest):
     '''
     # Example -- Get a key
     key = generate_secure_key(
-        doc_type=document_data.document_type,
-        user_id='user-123',
-        instrument_id='instr-789',
+        user_id='70b30fbc-3856-4f2f-89cd-c1c5688ca7c9',
         extension=document_data.extension,
+        company_id='company-1234'
     )
 
     # Save the key on the redis DB? <-- skipping this for now

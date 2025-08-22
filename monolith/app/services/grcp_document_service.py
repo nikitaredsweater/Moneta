@@ -4,6 +4,7 @@ Call these functions upon gRPC request beeing received.
 """
 
 import uuid
+from datetime import datetime
 
 import app.models as models
 import app.schemas as schemas
@@ -17,6 +18,7 @@ async def save_document(
     storage_bucket: str,
     storage_object_key: str,
     created_by_user_id: uuid.UUID,
+    created_at: datetime
 ) -> schemas.Document:
     """
     Saves document in the database
@@ -29,7 +31,8 @@ async def save_document(
         mime=mime,
         storage_bucket=storage_bucket,
         storage_object_key=storage_object_key,
-        created_by=created_by_user_id,  # must match some real user_id
+        created_by=created_by_user_id,
+        created_at=created_at
     )
 
     document_repo = DocumentRepository(async_session)

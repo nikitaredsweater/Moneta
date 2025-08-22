@@ -6,10 +6,13 @@ import asyncio
 import logging
 import os
 
-import app.gen.document_ingest_pb2 as pb
+
 from app.api import app_router
 from app.clients import MonolithGrpcClient, PikaClient
 from fastapi import FastAPI
+
+from app.utils.minio_event_parsing import MinIOEvent, parse_minio_event
+from app.services import handle_new_document_creation
 
 app = FastAPI()
 app.include_router(app_router)
@@ -31,25 +34,16 @@ QUEUE_NAME = 'document_tasks'
 
 
 async def handle_minio_event(event):
-    # Your document processing logic here
-    # TODO: Only for test we do not see what type of event this is
-    logger.info('📦 Received event: %s', event)
-
-    async with MonolithGrpcClient(
-        # target='monolith.internal:50061',
-        metadata=[('authorization', 'Bearer <token>')],
-        timeout_sec=3.0,
-    ) as client:
-
-        resp = await client.save_document(
-            company_id='2a2f45f7-0b21-4b36-b0ad-0b2d1c2ad111',
-            user_id='d4a50a3f-98f0-45a9-8b20-8b6d3d7a1f22',
-            document_type=pb.USER_DOCUMENT,  # or pb.COMPANY_DOCUMENT, etc.
-        )
-        # Handle CREATED / ALREADY_EXISTS as your app's success states:
-        logger.info(
-            f'Received gRPC respone: {resp.status}, {resp.row_id}, {resp.message}'
-        )
+    """
+    Handler for general event. For now we assume that all
+    events are minio events.
+    """
+    minio_event = parse_minio_event(event)
+    logger.info('📦 Received event: %s', minio_event)
+    
+    # Handle the new document being created
+    if minio_event.event_name == 's3:ObjectCreated:Put':
+        await handle_new_document_creation(minio_event)
 
 
 @app.on_event('startup')

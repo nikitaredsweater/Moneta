@@ -2,34 +2,30 @@ syntax = "proto3";
 
 package docingest;
 
-// Enum for document type
-enum DocumentType {
-  DOCUMENT_TYPE_UNSPECIFIED = 0;
-  USER_DOCUMENT = 1;                // For user persona verification
-  COMPANY_DOCUMENT = 2;             // For verifying company's legitimacy
-  INSTRUMENT_RAW_DOCUMENT = 3;      // Raw instrument-related documents (highly restricted)
-  INSTRUMENT_PROCESSED_DOCUMENT = 4;// Processed instrument documents (for investment decisions)
+import "google/protobuf/timestamp.proto";
+
+// Request mirrors your DocumentCreate model
+message CreateDocumentRequest {
+  string internal_filename = 1;
+  string mime               = 2;
+  string storage_bucket     = 3;
+  string storage_object_key = 4;
+  string created_by         = 5; // MonetaID as string/UUID
+  google.protobuf.Timestamp created_at = 6;
 }
 
-message CreateDocumentRowRequest {
-  string company_id = 1;    // UUID or numeric string
-  string user_id = 2;       // UUID or numeric string
-  DocumentType document_type = 3;
-}
-
-message CreateDocumentRowResponse {
+message CreateDocumentResponse {
   enum CreateStatus {
     CREATE_STATUS_UNSPECIFIED = 0;
-    CREATED = 1;
-    ALREADY_EXISTS = 2;
-    FAILED = 3;
+    CREATED                   = 1;
+    ALREADY_EXISTS            = 2;
+    FAILED                    = 3;
   }
-
   CreateStatus status = 1;
-  string row_id = 2;   // Internal DB PK
-  string message = 3;  // Optional human-readable message
+  string row_id       = 2; // Internal DB PK
+  string message      = 3; // Optional human-readable message
 }
 
 service DocumentIngest {
-  rpc CreateDocumentRow(CreateDocumentRowRequest) returns (CreateDocumentRowResponse);
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
 }
