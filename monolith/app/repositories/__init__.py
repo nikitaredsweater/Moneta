@@ -7,8 +7,13 @@ from app.repositories.company_address import (
     CompanyAddress,
     CompanyAddressRepository,
 )
+from app.repositories.documents.document import Document, DocumentRepository
+from app.repositories.documents.document_version import (
+    DocumentVersion,
+    DocumentVersionRepository,
+)
+from app.repositories.instrument import Instrument, InstrumentRepository
 from app.repositories.user import User, UserRepository
-from app.repositories.instrument import InstrumentRepository, Instrument
 
 __all__ = [
     'UserRepository',
@@ -18,5 +23,9 @@ __all__ = [
     'CompanyAddressRepository',
     'CompanyAddress',
     'InstrumentRepository',
-    'Instrument'
+    'Instrument',
+    'DocumentRepository',
+    'Document',
+    'DocumentVersionRepository',
+    'DocumentVersion',
 ]

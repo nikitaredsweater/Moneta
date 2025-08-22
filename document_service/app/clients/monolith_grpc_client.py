@@ -104,7 +104,7 @@ class MonolithGrpcClient:
         """
         if not self._stub:
             raise RuntimeError(
-                'Client not started. Call await client.start() or use 'async with'.'
+                "Client not started. Call await client.start() or use 'async with'."
             )
 
         req = pb.CreateDocumentRowRequest(

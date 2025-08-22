@@ -5,7 +5,7 @@ Document DTOs
 from datetime import datetime
 from typing import Optional
 
-from app.schemas.base import BaseDTO, MonetaID
+from app.schemas.base import BaseDTO, CamelModel, MonetaID
 
 
 class Document(BaseDTO):
@@ -19,3 +19,15 @@ class Document(BaseDTO):
     storage_object_key: str
     created_by: MonetaID
     updated_at: Optional[datetime]
+
+
+class DocumentCreate(CamelModel):
+    """
+    Model for document creation
+    """
+
+    internal_filename: str
+    mime: str
+    storage_bucket: str
+    storage_object_key: str
+    created_by: MonetaID
