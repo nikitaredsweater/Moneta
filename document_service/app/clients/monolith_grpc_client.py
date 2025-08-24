@@ -130,6 +130,45 @@ class MonolithGrpcClient:
 
         return await self._stub.CreateDocument(req, timeout=deadline, metadata=md)
 
+    async def save_document_version(
+            self,
+            *,
+            document_id: str,          # UUID string
+            version_number: int,        # >= 1
+            storage_version_id: str,    # MinIO/S3 versionId
+            created_by: str,            # UUID string
+            created_at: Optional[datetime] = None,
+            extra_metadata: Optional[Dict[str, str]] = None,
+            timeout_sec: Optional[float] = None,
+        ) -> pb.CreateDocumentVersionResponse:
+            """Create a new document version row."""
+            if not self._stub:
+                raise RuntimeError(
+                    "Client not started. Call await client.start() or use 'async with'."
+                )
+
+            if created_at is None:
+                created_at = datetime.now(timezone.utc)
+            elif created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+
+            ts = Timestamp()
+            ts.FromDatetime(created_at)
+
+            req = pb.CreateDocumentVersionRequest(
+                document_id=document_id,
+                version_number=version_number,
+                storage_version_id=storage_version_id,
+                created_by=created_by,
+                created_at=ts,
+            )
+
+            md = list(self.metadata)
+            if extra_metadata:
+                md.extend(extra_metadata.items())
+
+            deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
+            return await self._stub.CreateDocumentVersion(req, timeout=deadline, metadata=md)
 
 # --------------------------
 # Optional: simple sync helper
@@ -165,3 +204,28 @@ def save_document_blocking(
             )
 
     return asyncio.run(_run())
+
+def save_document_version_blocking(
+    *,
+    document_id: str,
+    version_number: int,
+    storage_version_id: str,
+    created_by: str,
+    created_at: Optional[datetime] = None,
+    target: Optional[str] = None,
+    timeout_sec: float = 3.0,
+    metadata: Optional[Iterable[Tuple[str, str]]] = None,
+) -> pb.CreateDocumentVersionResponse:
+    async def _run():
+        async with MonolithGrpcClient(
+            target=target, timeout_sec=timeout_sec, metadata=metadata
+        ) as client:
+            return await client.save_document_version(
+                document_id=document_id,
+                version_number=version_number,
+                storage_version_id=storage_version_id,
+                created_by=created_by,
+                created_at=created_at,
+            )
+    return asyncio.run(_run())
+

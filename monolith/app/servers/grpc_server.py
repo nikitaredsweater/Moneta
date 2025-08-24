@@ -14,7 +14,7 @@ import app.gen.document_ingest_pb2 as pb
 import app.gen.document_ingest_pb2_grpc as pbg
 
 # NOTE: your module name says "grcp" (typo?). Keeping it as-is to match your codebase.
-from app.services.grcp_document_service import save_document
+from app.services.grcp_document_service import save_document, save_document_version
 
 
 def _to_uuid(value: str) -> uuid.UUID:
@@ -114,5 +114,46 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
         return pb.CreateDocumentResponse(
             status=pb.CreateDocumentResponse.CREATED,
             row_id=str(getattr(doc, "id", "")),
+            message="Created",
+        )
+    
+    async def CreateDocumentVersion(
+        self, request: pb.CreateDocumentVersionRequest, context
+    ):
+        missing = []
+        if not request.document_id:        missing.append("document_id")
+        if request.version_number == 0:    missing.append("version_number (>=1)")
+        if not request.storage_version_id: missing.append("storage_version_id")
+        if not request.created_by:         missing.append("created_by")
+        if missing:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Missing: {', '.join(missing)}")
+
+        # Validate IDs
+        try:
+            doc_uuid = _to_uuid(request.document_id)
+            created_by_uuid = _to_uuid(request.created_by)
+        except Exception:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "document_id and created_by must be UUIDs")
+
+        created_at = _ts_to_datetime(request.created_at) if request.HasField("created_at") else datetime.now(timezone.utc)
+
+        try:
+            v = await save_document_version(
+                document_id=doc_uuid,
+                version_number=int(request.version_number),
+                storage_version_id=request.storage_version_id,
+                created_by=created_by_uuid,
+                created_at=created_at,
+            )
+        except Exception as e:
+            return pb.CreateDocumentVersionResponse(
+                status=pb.CreateDocumentResponse.FAILED,
+                version_id="",
+                message=str(e),
+            )
+
+        return pb.CreateDocumentVersionResponse(
+            status=pb.CreateDocumentResponse.CREATED,
+            version_id=str(getattr(v, "id", "")),
             message="Created",
         )

@@ -38,6 +38,7 @@ async def handle_minio_event(event):
     Handler for general event. For now we assume that all
     events are minio events.
     """
+    logger.info('📦 Received NEW event: %s', event)
     minio_event = parse_minio_event(event)
     logger.info('📦 Received event: %s', minio_event)
     

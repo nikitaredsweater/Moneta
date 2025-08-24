@@ -50,3 +50,21 @@ async def handle_new_document_creation(event:MinIOEvent):
         logger.info(
             f'Received gRPC respone: {resp.status}, {resp.row_id}, {resp.message}'
         )
+
+        # TODO: Add a check that the previous command has sucessfully executed
+
+        if event.version_id is None:
+            event.version_id = ""
+
+        resp_ver = await client.save_document_version(
+            document_id=resp.row_id,
+            version_number=1, # Deafult, but should use the actual version from the event
+            storage_version_id=event.version_id,
+            created_by=user_id,
+            created_at=event.event_time_dt
+        )
+
+        logger.info(
+            f'Received gRPC respone: {resp_ver.status}, {resp_ver.version_id}, {resp_ver.message}'
+        )
+

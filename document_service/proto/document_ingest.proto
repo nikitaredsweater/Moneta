@@ -26,6 +26,22 @@ message CreateDocumentResponse {
   string message      = 3; // Optional human-readable message
 }
 
+message CreateDocumentVersionRequest {
+  string document_id        = 1; // UUID (existing document PK)
+  uint32 version_number     = 2; // >= 1
+  string storage_version_id = 3; // S3/MinIO versionId (required)
+  string created_by         = 4; // UUID
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message CreateDocumentVersionResponse {
+  // Reuse the same status semantics as CreateDocumentResponse
+  CreateDocumentResponse.CreateStatus status = 1;
+  string version_id = 2; // Version row PK
+  string message    = 3; // Optional
+}
+
 service DocumentIngest {
   rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+  rpc CreateDocumentVersion(CreateDocumentVersionRequest) returns (CreateDocumentVersionResponse);
 }

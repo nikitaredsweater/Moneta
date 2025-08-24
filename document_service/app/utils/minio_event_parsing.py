@@ -80,6 +80,9 @@ class MinIOEvent:
 
     # User metadata
     user_metadata: Optional[Dict[str, str]] = None
+    
+    # Version (if versioning is enabled)
+    version_id: Optional[str] = None
 
     # Convenience (from key)
     filename: Optional[str] = None
@@ -192,6 +195,9 @@ def parse_minio_event(event: Dict[str, Any]) -> MinIOEvent:
     user_metadata_raw = obj.get("userMetadata") or event.get("UserMetadata") or {}
     user_metadata = {str(k).lower(): v for k, v in user_metadata_raw.items()} if user_metadata_raw else None
 
+    # Versioning
+    version_id = obj.get('versionId') or ''
+
     # Effective MIME
     if object_content_type and object_content_type.lower() != "binary/octet-stream":
         mime = object_content_type
@@ -236,6 +242,7 @@ def parse_minio_event(event: Dict[str, Any]) -> MinIOEvent:
         object_storage_class=object_storage_class,
         object_checksum_algorithm=object_checksum_algorithm,
         user_metadata=user_metadata,
+        version_id=version_id,
         filename=filename,
         file_path=file_path,
     )

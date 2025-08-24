@@ -9,6 +9,7 @@ from app.models.base import Base, BaseEntity
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    UniqueConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -44,5 +45,15 @@ class DocumentVersion(Base, BaseEntity):
     __table_args__ = (
         CheckConstraint(
             'version_number > 0', name='ck_version_number_positive'
+        ),
+        UniqueConstraint(
+            "document_id",
+            "version_number",
+            name="uq_document_versions_doc_ver",
+        ),
+        UniqueConstraint(
+            "document_id",
+            "storage_version_id",
+            name="uq_document_versions_doc_storage_ver",
         ),
     )

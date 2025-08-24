@@ -86,3 +86,19 @@ docker-compose exec mc mc event add localminio/documents \
   arn:minio:sqs::PRIMARY:amqp --event put
 
 docker-compose exec mc mc admin service restart localminio
+
+
+# 0) Point mc at your MinIO (adjust URL/creds/alias as needed)
+docker-compose exec mc mc alias set localminio http://minio:9000 minioadmin minioadmin
+
+# 1) (If needed) create the bucket
+docker-compose exec mc mc mb localminio/documents
+
+# 2) Enable versioning on the bucket
+docker-compose exec mc mc version enable localminio/documents
+
+# 3) Verify
+docker-compose exec mc mc version info localminio/documents
+
+# 4) (Optional) See versions of an object after a couple overwrites
+docker-compose exec mc mc ls --versions localminio/documents/path/to/file.txt
