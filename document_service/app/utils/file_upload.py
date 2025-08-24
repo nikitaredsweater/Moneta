@@ -1,10 +1,7 @@
 import uuid
 from datetime import datetime
 
-from app.enums import DocumentType
 
-
-# TODO: Turn these errors into excpetions in a separate file
 def generate_secure_key(
     user_id: str,
     extension: str,
