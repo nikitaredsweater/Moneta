@@ -69,7 +69,7 @@ docker-compose exec mc sh -c '\
     format=json && \
   mc admin service restart localminio \
 '
-  
+
 docker-compose exec mc mc event list localminio/documents
 docker-compose exec mc mc event remove localminio/documents --force
 
@@ -84,6 +84,12 @@ docker-compose exec mc mc admin config get notify_amqp
 docker-compose exec mc mc alias set localminio http://minio:9000 minioadmin minioadmin
 docker-compose exec mc mc event add localminio/documents \
   arn:minio:sqs::PRIMARY:amqp --event put
+
+docker-compose exec mc mc admin service restart localminio
+
+<!-- Command for all events to be passed to rabbit mq -->
+docker-compose exec mc mc event add localminio/documents \
+  arn:minio:sqs::PRIMARY:amqp --event "put,get,delete,replica,ilm,scanner"
 
 docker-compose exec mc mc admin service restart localminio
 
