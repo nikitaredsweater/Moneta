@@ -63,8 +63,73 @@ Requests a presigned upload URL for direct file upload to MinIO storage. This is
 
 **Important Notes:**
 - This is a synchronous, blocking call to ensure you receive the upload link immediately
-- The presigned URL has a limited lifetime (typically 15 minutes)
+- The presigned URL has a limited lifetime (typically 10 minutes)
 - After uploading to the presigned URL, the system automatically processes the document and creates database entries
+
+### Document Access
+
+#### `POST /v1/document/access/request`
+Requests a presigned download URL to access a document by its exact name.
+
+**Request Body:**
+```json
+{
+  "documentName": "20240822-1234-abcd.pdf"
+}
+```
+
+**Parameters:**
+- `documentName` (required): Exact name of the document as stored in MinIO
+
+**Response:**
+```json
+{
+  "access_url": "https://minio:9000/documents/company-1234/70b30fbc-3856-4f2f-89cd-c1c5688ca7c9/20240822-1234-abcd.pdf?X-Amz-Algorithm=..."
+}
+```
+
+**What to do with the response:**
+1. Use the returned `access_url` (presigned URL) to download the document directly from MinIO
+2. Perform a GET request to this URL to retrieve the file
+3. The URL is valid for 10 minutes
+
+### Document Version Upload
+
+#### `POST /v1/document/version/upload/request`
+Requests a presigned upload URL to upload a new version of an existing document.
+
+**Request Body:**
+```json
+{
+  "documentName": "original-document.pdf",
+  "extension": "pdf"
+}
+```
+
+**Parameters:**
+- `documentName` (required): Name of the base document you're creating a version of
+- `extension` (required): File extension for the new version (e.g., "pdf", "jpg", "png")
+
+**Response:**
+```json
+{
+  "upload_url": "https://minio:9000/documents/company-1234/70b30fbc-3856-4f2f-89cd-c1c5688ca7c9/20240822-1456-efgh.pdf?X-Amz-Algorithm=...",
+  "version_key": "company-1234/70b30fbc-3856-4f2f-89cd-c1c5688ca7c9/20240822-1456-efgh.pdf",
+  "base_document": "original-document.pdf"
+}
+```
+
+**What to do with the response:**
+1. Use the returned `upload_url` (presigned URL) to upload the new version directly to MinIO
+2. Perform a PUT request to this URL with your file as the request body
+3. The `version_key` shows the storage path for the new version
+4. The system will automatically process this as a new document version
+
+**Important Notes for All Endpoints:**
+- All endpoints currently use hardcoded user and company IDs for development
+- No authentication/authorization is implemented yet
+- All presigned URLs have a 10-minute expiration time
+- The document naming structure follows: `{company_id}/{user_id}/{timestamp}_{uuid}.{extension}`
 
 ## gRPC Messages
 

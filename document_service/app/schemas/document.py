@@ -17,8 +17,18 @@ class DocumentUploadRequest(CamelModel):
     extension: str
 
 
-# TODO: Maybe I need to make a new model without the created_at field
-class DocumentDownloadRequest(BaseDTO):
+class DocumentAccessRequest(CamelModel):
     """
-    Schema to request document download
+    Schema to request document access by exact name
     """
+
+    document_name: str
+
+
+class DocumentVersionUploadRequest(CamelModel):
+    """
+    Schema to request upload of a new document version
+    """
+
+    document_name: str
+    extension: str

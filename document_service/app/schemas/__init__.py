@@ -2,6 +2,14 @@
 DTO Schemas entrypoint.
 """
 
-from app.schemas.document import DocumentDownloadRequest, DocumentUploadRequest
+from app.schemas.document import (
+    DocumentAccessRequest,
+    DocumentUploadRequest,
+    DocumentVersionUploadRequest,
+)
 
-__all__ = ['DocumentDownloadRequest', 'DocumentUploadRequest']
+__all__ = [
+    'DocumentUploadRequest',
+    'DocumentAccessRequest',
+    'DocumentVersionUploadRequest',
+]
