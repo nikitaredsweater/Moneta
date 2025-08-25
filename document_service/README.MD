@@ -1,54 +1,232 @@
-Dev branch
+# Document Service
 
+The Document Service is a microservice responsible for handling document uploads, storage, and metadata management within the Moneta financial platform. It provides REST API endpoints for frontend developers and uses gRPC to communicate with the monolith service for database operations.
 
-Дым табачный воздух выл
-Комната глава в Кручиныховсом аде
-Вспомни, за этим окном впервые
-Руки твои иступленно гладил
+## Table of Contents
 
-Сегодня сидим, вот, сердце в железе
-День еще - выгонишь, может быть изругав
-В мутный передней больще не влезит
-Сломанная дрожью рука в рукав
+- [API Endpoints](#api-endpoints)
+- [gRPC Messages](#grpc-messages)  
+- [Setup Instructions](#setup-instructions)
+- [Docker Configuration](#docker-configuration)
 
-Выбегу тело в улицу брошу
-Я дикий обезумлюсь отчаением иссечясь
-не надо этого, дорогая хорошая
-Давай простимся сейчас
+## API Endpoints
 
-Все равно любовь моя - тяжкая гиря, ведь
-Висит на тебе куда б не бежала б
-Дай хоть в последнем крике выреветь
-Горечь обиженных жалоб
+The service exposes the following REST API endpoints for frontend integration:
 
-Если быка трудом уморит
-Он уйдет,разляжется в холодных водах
-Кроме любви твоей мне нету моря
-А у любви твоей и плачем не вымолишь отдых
+### Base URL
+All endpoints are prefixed with `/v1`
 
-Захочет покоя уставший слон
-Царственно ляжет в оббожжаренном песке
-Кроме любви мне нету солнца,
-А я не знаю где ты и с кем
+### Health Check
 
-Если б так поэта измучело
-Он любимую на деньги и славу выменял,
-А мне не один не радостен звон,
-кроме звона твоего любимого имени!
+#### `GET /v1/health/`
+Simple health check endpoint to verify service status.
 
-И в пролет не брощусь, и не выпью яда
-И курок над виском не смогу нажать
-Надо мною, кроме твоего взгляда,
-Не властно лезвие ни одного ножа
+**Response:**
+```json
+{
+  "status": "healthy"
+}
+```
 
-Завтра забудешь что тебя короновал
-Что душу твою любовью выжжег
-И суетных дней, зметенный карнавал
-Растреплит страницы твоих книжек
+### Document Upload
 
-Слов моих сухия листья ли,
-Заставят остонится жадно дыша.
-Дай хоть в последней нежности выстелить
-Твой уходящий шаг
+#### `POST /v1/document/upload/request`
+Requests a presigned upload URL for direct file upload to MinIO storage. This is step 1 of the 2-step upload process.
 
--- Маяк.
+**Request Body:**
+```json
+{
+  "documentType": "USER_DOCUMENT",
+  "extension": "pdf"
+}
+```
+
+**Parameters:**
+- `documentType` (required): Type of document being uploaded. Must be one of:
+  - `USER_DOCUMENT` - For user verification documents (passport, trading permissions, etc.)
+  - `COMPANY_DOCUMENT` - For company verification documents (legal documents, background checks)
+  - `INSTRUMENT_RAW_DOCUMENT` - Raw documents for instrument creation (high security)
+  - `INSTRUMENT_PROCESSED_DOCUMENT` - Processed documents supporting instruments
+- `extension` (required): File extension (e.g., "pdf", "jpg", "png")
+
+**Response:**
+```json
+{
+  "key": "https://minio:9000/documents/user_docs/70b30fbc-3856-4f2f-89cd-c1c5688ca7c9/20240822-1234-abcd.pdf?X-Amz-Algorithm=..."
+}
+```
+
+**What to do with the response:**
+1. Use the returned `key` (presigned URL) to upload your file directly to MinIO storage
+2. Perform a PUT request to this URL with your file as the request body
+3. The service will automatically detect the upload via MinIO events and create database records
+
+**Important Notes:**
+- This is a synchronous, blocking call to ensure you receive the upload link immediately
+- The presigned URL has a limited lifetime (typically 15 minutes)
+- After uploading to the presigned URL, the system automatically processes the document and creates database entries
+
+## gRPC Messages
+
+The service communicates with the monolith service using gRPC for database operations. The proto file defines the following service and messages:
+
+### Service Definition
+
+```protobuf
+service DocumentIngest {
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+  rpc CreateDocumentVersion(CreateDocumentVersionRequest) returns (CreateDocumentVersionResponse);
+}
+```
+
+### Message Structures
+
+#### CreateDocumentRequest
+Used to create a new document record in the database.
+
+```protobuf
+message CreateDocumentRequest {
+  string internal_filename = 1;     // Generated secure filename
+  string mime = 2;                  // MIME type (e.g., "application/pdf")
+  string storage_bucket = 3;        // MinIO bucket name (e.g., "documents")
+  string storage_object_key = 4;    // Full object path in storage
+  string created_by = 5;            // User UUID who uploaded the document
+  google.protobuf.Timestamp created_at = 6; // Upload timestamp
+}
+```
+
+#### CreateDocumentResponse
+Response when creating a document record.
+
+```protobuf
+message CreateDocumentResponse {
+  enum CreateStatus {
+    CREATE_STATUS_UNSPECIFIED = 0;
+    CREATED = 1;                    // Successfully created new document
+    ALREADY_EXISTS = 2;             // Document already exists (idempotent)
+    FAILED = 3;                     // Creation failed
+  }
+  CreateStatus status = 1;          // Operation result
+  string row_id = 2;               // Database primary key of created document
+  string message = 3;              // Optional human-readable message
+}
+```
+
+#### CreateDocumentVersionRequest
+Used to create a new version of an existing document.
+
+```protobuf
+message CreateDocumentVersionRequest {
+  string document_id = 1;          // UUID of existing document
+  uint32 version_number = 2;       // Version number (>= 1)
+  string storage_version_id = 3;   // MinIO version ID
+  string created_by = 4;           // User UUID who created this version
+  google.protobuf.Timestamp created_at = 5; // Version creation timestamp
+}
+```
+
+#### CreateDocumentVersionResponse
+Response when creating a document version.
+
+```protobuf
+message CreateDocumentVersionResponse {
+  CreateDocumentResponse.CreateStatus status = 1; // Operation result (reuses enum)
+  string version_id = 2;           // Database primary key of created version
+  string message = 3;              // Optional human-readable message
+}
+```
+
+### When gRPC Messages Are Used
+
+1. **Document Creation**: When a file is uploaded to MinIO, the service receives a MinIO event notification via RabbitMQ
+2. **Automatic Processing**: The `handle_new_document_creation` event handler automatically calls:
+   - `CreateDocument` RPC to create the document metadata record
+   - `CreateDocumentVersion` RPC to create the initial version record
+3. **Version Management**: For subsequent uploads of the same document, only `CreateDocumentVersion` is called
+
+### gRPC Connection Details
+- **Target**: Configured via `MONOLITH_GRPC_TARGET` environment variable (default: `app:50061`)
+- **Authentication**: Uses Bearer token in metadata (`authorization: Bearer <token>`)
+- **Timeout**: 3 seconds per RPC call
+- **Transport**: Insecure channel (TLS configuration available)
+
+## Setup Instructions
+
+Before running the service in Docker, you must complete the following setup steps:
+
+### 1. Generate Protocol Buffer Files
+
+The service uses gRPC for communication with the monolith service. You must generate the Python gRPC files from the proto definitions.
+
+**Important**: Run this from the root of the document_service directory:
+
+```bash
+# Navigate to document_service root
+cd document_service
+
+# Make sure you're in the virtual environment
+source venv/bin/activate
+
+# Run the proto generation script
+./scripts/generate_protos.sh
+```
+
+This script will:
+- Create the `app/gen/` directory if it doesn't exist
+- Generate `document_ingest_pb2.py` (message classes)
+- Generate `document_ingest_pb2_grpc.py` (service stubs)
+
+### 2. Fix Generated Import
+
+After running the proto generation script, you **must manually fix** the import in the generated gRPC file:
+
+**File**: `app/gen/document_ingest_pb2_grpc.py`
+
+**Find this line:**
+```python
+import gen.document_ingest_pb2 as document__ingest__pb2
+```
+
+**Change it to:**
+```python
+import app.gen.document_ingest_pb2 as document__ingest__pb2
+```
+
+This fix is necessary because the generated import doesn't include the `app.` prefix required for the module structure.
+
+### 3. Verify Generated Files
+
+After completing steps 1-2, verify that these files exist:
+- `app/gen/document_ingest_pb2.py`
+- `app/gen/document_ingest_pb2_grpc.py`
+
+### 4. Install Dependencies
+
+Make sure all Python dependencies are installed:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Docker Configuration
+
+The service is designed to run in Docker. The `Dockerfile` includes:
+
+1. Python 3.11 slim base image
+2. Dependency installation
+3. Full source code copy (including generated proto files)
+4. Uvicorn server on port 8000
+
+### Important Docker Notes
+
+- **Proto files must be generated BEFORE building the Docker image**
+- The container expects the `app/gen/` directory with generated proto files to exist
+- Make sure to run the setup steps on your host machine before `docker build`
+
+### Running with Docker Compose
+
+The service integrates with the following dependencies:
+- **MinIO**: Object storage for documents
+- **RabbitMQ**: Message queue for MinIO event notifications  
+- **Monolith**: Main application providing gRPC document service
+- **MongoDB**: Document metadata storage (optional/legacy)
