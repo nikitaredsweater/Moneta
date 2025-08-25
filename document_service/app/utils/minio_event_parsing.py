@@ -1,12 +1,28 @@
 """
-Helper functions to parse different minIO events into dictioanries
+Utilities for parsing MinIO/S3 event payloads into a unified structure.
+
+This module provides:
+  - A `MinIOEvent` dataclass that captures common fields across MinIO/S3
+    ObjectCreated/ObjectRemoved (and similar) events.
+  - Helper functions to safely parse/convert timestamps and integers.
+  - `parse_minio_event()` to normalize raw MinIO/S3 event dictionaries
+    (both AWS-style with `Records` and simpler MinIO formats) into `MinIOEvent`.
+
+Notes:
+  - When present, `event_time_dt` is a timezone-aware `datetime` parsed from
+    the event's ISO 8601 timestamp (e.g., `2024-01-01T12:00:00Z`).
+  - URL-encoded object keys are automatically decoded
+    (via `urllib.parse.unquote`).
+  - MIME type is derived from the event’s `contentType` if usable, otherwise
+    guessed from the filename using `mimetypes.guess_type`.
 """
+
+import mimetypes
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from urllib.parse import unquote
 from pathlib import PurePosixPath
-import mimetypes
+from typing import Any, Dict, List, Optional
+from urllib.parse import unquote
 
 
 @dataclass
@@ -45,8 +61,8 @@ class MinIOEvent:
     configuration_id: Optional[str] = None
 
     # Identity
-    user_identity_principal_id: Optional[str] = None   # uploader's identity
-    request_principal_id: Optional[str] = None         # principal from request
+    user_identity_principal_id: Optional[str] = None  # uploader's identity
+    request_principal_id: Optional[str] = None  # principal from request
 
     # Request/source
     source_ip_address: Optional[str] = None
@@ -66,12 +82,12 @@ class MinIOEvent:
     bucket_owner_principal_id: Optional[str] = None
 
     # Object
-    object_key: Optional[str] = None           # decoded, human-readable path
-    object_key_raw: Optional[str] = None       # raw from event
+    object_key: Optional[str] = None  # decoded, human-readable path
+    object_key_raw: Optional[str] = None  # raw from event
     object_size: Optional[int] = None
     object_etag: Optional[str] = None
     object_content_type: Optional[str] = None  # raw event content-type
-    mime: Optional[str] = None                 # effective/guessed mime
+    mime: Optional[str] = None  # effective/guessed mime
     object_sequencer: Optional[str] = None
     object_version_id: Optional[str] = None
     object_is_delete_marker: Optional[bool] = None
@@ -80,7 +96,7 @@ class MinIOEvent:
 
     # User metadata
     user_metadata: Optional[Dict[str, str]] = None
-    
+
     # Version (if versioning is enabled)
     version_id: Optional[str] = None
 
@@ -91,14 +107,23 @@ class MinIOEvent:
 
 def _parse_iso_time(value: Optional[str]) -> Optional[datetime]:
     """
-    Parse an ISO8601 timestamp string from MinIO into a datetime.
-    Returns None if parsing fails.
+    Parse an ISO 8601 timestamp string from MinIO into a `datetime`.
+
+    If `value` ends with 'Z', it is converted to '+00:00' before parsing.
+    Returns `None` if the input is empty or parsing fails.
+
+    Args:
+        value (str | None): ISO 8601 timestamp (e.g., '2024-01-01T12:00:00Z').
+
+    Returns:
+        datetime | None: A timezone-aware `datetime` if parsing succeeds;
+            otherwise `None`.
     """
     if not value:
         return None
     try:
-        if value.endswith("Z"):
-            value = value[:-1] + "+00:00"
+        if value.endswith('Z'):
+            value = value[:-1] + '+00:00'
         return datetime.fromisoformat(value)
     except Exception:
         return None
@@ -106,7 +131,15 @@ def _parse_iso_time(value: Optional[str]) -> Optional[datetime]:
 
 def _to_int(v: Any) -> Optional[int]:
     """
-    Safely cast a value to int. Returns None if not possible.
+    Safely cast a value to `int`.
+
+    Returns `None` if the value is `None` or cannot be converted.
+
+    Args:
+        v (Any): Value to convert.
+
+    Returns:
+        int | None: The integer representation, or `None` if conversion fails.
     """
     try:
         return int(v) if v is not None else None
@@ -116,74 +149,89 @@ def _to_int(v: Any) -> Optional[int]:
 
 def parse_minio_event(event: Dict[str, Any]) -> MinIOEvent:
     """
-    Convert a raw MinIO/S3 event dictionary into a MinIOEvent object.
+    Normalize a raw MinIO/S3 event dictionary into a `MinIOEvent` instance.
 
-    This function supports events with the AWS-style "Records" array as well
-    as simpler top-level MinIO formats. It extracts and normalizes all
-    possible fields into a single dataclass.
+    Supports both AWS-style events with a `Records` list and simplified MinIO
+    formats where fields may be present at the top level.
+
+    Extraction includes:
+      - Event metadata (name, source, version, region, time)
+      - Identity and request information
+      - Response elements
+      - Bucket and object details (key, size, content-type, version, etc.)
+      - User metadata (keys normalized to lower-case)
+      - Convenience fields (`filename`, `file_path`)
 
     Args:
-        event: Raw event dictionary from MinIO/S3 notification.
+        event (dict[str, Any]): Raw event dictionary from MinIO/S3 notification.
 
     Returns:
-        MinIOEvent: Populated object with as many fields as could be parsed.
+        MinIOEvent: Populated dataclass with parsed/normalized fields.
     """
     # Use first record if available
-    if isinstance(event.get("Records"), list) and event["Records"]:
-        rec = event["Records"][0]
+    if isinstance(event.get('Records'), list) and event['Records']:
+        rec = event['Records'][0]
     else:
         rec = event  # fallback to top-level keys
 
     # Top-level info
-    event_name = rec.get("eventName") or event.get("EventName")
-    key_top = event.get("Key")
-    aws_region = rec.get("awsRegion") or (rec.get("requestParameters") or {}).get("region") or event.get("Region")
-    event_time_raw = rec.get("eventTime") or event.get("EventTime")
+    event_name = rec.get('eventName') or event.get('EventName')
+    key_top = event.get('Key')
+    aws_region = (
+        rec.get('awsRegion')
+        or (rec.get('requestParameters') or {}).get('region')
+        or event.get('Region')
+    )
+    event_time_raw = rec.get('eventTime') or event.get('EventTime')
     event_time_dt = _parse_iso_time(event_time_raw)
 
     # Identity and request info
-    user_identity_principal_id = (rec.get("userIdentity") or {}).get("principalId")
-    request_params = rec.get("requestParameters") or {}
-    request_principal_id = request_params.get("principalId")
-    source_ip_address = request_params.get("sourceIPAddress")
-    source_block = rec.get("source") or {}
-    source_host = source_block.get("host")
-    source_port = source_block.get("port")
-    user_agent = source_block.get("userAgent")
+    user_identity_principal_id = (rec.get('userIdentity') or {}).get(
+        'principalId'
+    )
+    request_params = rec.get('requestParameters') or {}
+    request_principal_id = request_params.get('principalId')
+    source_ip_address = request_params.get('sourceIPAddress')
+    source_block = rec.get('source') or {}
+    source_host = source_block.get('host')
+    source_port = source_block.get('port')
+    user_agent = source_block.get('userAgent')
 
     # Response elements
-    resp = rec.get("responseElements") or {}
-    amz_id_2 = resp.get("x-amz-id-2")
-    request_id = resp.get("x-amz-request-id")
-    deployment_id = resp.get("x-minio-deployment-id")
-    origin_endpoint = resp.get("x-minio-origin-endpoint")
+    resp = rec.get('responseElements') or {}
+    amz_id_2 = resp.get('x-amz-id-2')
+    request_id = resp.get('x-amz-request-id')
+    deployment_id = resp.get('x-minio-deployment-id')
+    origin_endpoint = resp.get('x-minio-origin-endpoint')
 
     # S3 structure
-    s3 = rec.get("s3") or {}
-    s3_schema_version = s3.get("s3SchemaVersion")
-    configuration_id = s3.get("configurationId")
+    s3 = rec.get('s3') or {}
+    s3_schema_version = s3.get('s3SchemaVersion')
+    configuration_id = s3.get('configurationId')
 
     # Bucket
-    bucket_info = s3.get("bucket") or {}
-    bucket_name = bucket_info.get("name") or event.get("Bucket")
-    bucket_arn = bucket_info.get("arn") or event.get("BucketArn")
-    bucket_owner_principal_id = (bucket_info.get("ownerIdentity") or {}).get("principalId")
+    bucket_info = s3.get('bucket') or {}
+    bucket_name = bucket_info.get('name') or event.get('Bucket')
+    bucket_arn = bucket_info.get('arn') or event.get('BucketArn')
+    bucket_owner_principal_id = (bucket_info.get('ownerIdentity') or {}).get(
+        'principalId'
+    )
 
     # Object info
-    obj = s3.get("object") or {}
-    object_key_raw = obj.get("key") or key_top
+    obj = s3.get('object') or {}
+    object_key_raw = obj.get('key') or key_top
     object_key = unquote(object_key_raw) if object_key_raw else None
     filename = PurePosixPath(object_key).name if object_key else None
     file_path = str(PurePosixPath(object_key).parent) if object_key else None
 
-    object_size = _to_int(obj.get("size") or event.get("Size"))
-    object_etag = obj.get("eTag") or event.get("ETag")
-    object_content_type = obj.get("contentType") or event.get("ContentType")
-    object_sequencer = obj.get("sequencer")
-    object_version_id = obj.get("versionId") or event.get("VersionId")
-    object_is_delete_marker = obj.get("isDeleteMarker")
-    object_storage_class = obj.get("storageClass")
-    checksum_alg = obj.get("checksumAlgorithm")
+    object_size = _to_int(obj.get('size') or event.get('Size'))
+    object_etag = obj.get('eTag') or event.get('ETag')
+    object_content_type = obj.get('contentType') or event.get('ContentType')
+    object_sequencer = obj.get('sequencer')
+    object_version_id = obj.get('versionId') or event.get('VersionId')
+    object_is_delete_marker = obj.get('isDeleteMarker')
+    object_storage_class = obj.get('storageClass')
+    checksum_alg = obj.get('checksumAlgorithm')
     if isinstance(checksum_alg, str):
         object_checksum_algorithm: Optional[List[str]] = [checksum_alg]
     elif isinstance(checksum_alg, list):
@@ -192,26 +240,35 @@ def parse_minio_event(event: Dict[str, Any]) -> MinIOEvent:
         object_checksum_algorithm = None
 
     # User metadata (normalize keys to lower-case)
-    user_metadata_raw = obj.get("userMetadata") or event.get("UserMetadata") or {}
-    user_metadata = {str(k).lower(): v for k, v in user_metadata_raw.items()} if user_metadata_raw else None
+    user_metadata_raw = (
+        obj.get('userMetadata') or event.get('UserMetadata') or {}
+    )
+    user_metadata = (
+        {str(k).lower(): v for k, v in user_metadata_raw.items()}
+        if user_metadata_raw
+        else None
+    )
 
     # Versioning
     version_id = obj.get('versionId') or ''
 
     # Effective MIME
-    if object_content_type and object_content_type.lower() != "binary/octet-stream":
+    if (
+        object_content_type
+        and object_content_type.lower() != 'binary/octet-stream'
+    ):
         mime = object_content_type
     elif filename:
         guessed, _ = mimetypes.guess_type(filename)
-        mime = guessed or "application/octet-stream"
+        mime = guessed or 'application/octet-stream'
     else:
         mime = None
 
     return MinIOEvent(
         event_name=event_name,
         key=key_top,
-        event_version=rec.get("eventVersion") or event.get("EventVersion"),
-        event_source=rec.get("eventSource") or event.get("EventSource"),
+        event_version=rec.get('eventVersion') or event.get('EventVersion'),
+        event_source=rec.get('eventSource') or event.get('EventSource'),
         aws_region=aws_region,
         event_time=event_time_raw,
         event_time_dt=event_time_dt,

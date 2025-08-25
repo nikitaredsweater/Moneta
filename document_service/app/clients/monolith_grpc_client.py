@@ -1,6 +1,33 @@
 """
-gRPC client that can be used to make calls to monolith.
+gRPC client for the monolith's DocumentIngest service.
+
+This module exposes an async-friendly client (`MonolithGrpcClient`) plus a few
+synchronous helper functions for occasional script/CLI usage. It wraps the
+generated gRPC stubs and handles common concerns:
+
+- Channel lifecycle (secure or insecure)
+- Per-RPC deadlines
+- Attaching request metadata (e.g., auth headers)
+- Converting `datetime` to `google.protobuf.Timestamp`
+
+Environment:
+    MONOLITH_GRPC_TARGET: if unset, defaults to 'app:50061'
+
+TLS:
+    Provide `tls_root_cert` to enable TLS (secure channel); otherwise an
+    insecure channel is used.
+
+Typical async usage:
+    async with MonolithGrpcClient(metadata=[('authorization', 'Bearer <token>')]) as client:
+        resp = await client.save_document(
+            internal_filename='file-123.pdf',
+            mime='application/pdf',
+            storage_bucket='documents',
+            storage_object_key='user_docs/u-123/file-123.pdf',
+            created_by='70b30fbc-3856-4f2f-89cd-c1c5688ca7c9',
+        )
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -8,29 +35,34 @@ import os
 from datetime import datetime, timezone
 from typing import Dict, Iterable, Optional, Tuple
 
-import grpc
-from grpc import aio
-from google.protobuf.timestamp_pb2 import Timestamp
-
 # Generated modules (re-run your protoc script after changing the .proto)
 import app.gen.document_ingest_pb2 as pb
 import app.gen.document_ingest_pb2_grpc as pbg
+import grpc
+from google.protobuf.timestamp_pb2 import Timestamp
+from grpc import aio
 
 
 class MonolithGrpcClient:
     """
     Thin, reusable client wrapper for the DocumentIngest gRPC service.
 
-    Usage (async):
-        async with MonolithGrpcClient() as client:
-            resp = await client.save_document(
-                internal_filename="20250822-0652-...txt",
-                mime="text/plain",
-                storage_bucket="documents",
-                storage_object_key="user_docs/user-123/20250822-....txt",
-                created_by="70b30fbc-3856-4f2f-89cd-c1c5688ca7c9",
-                # created_at optional; defaults to now (UTC)
-            )
+    Manages an `grpc.aio.Channel` and a `DocumentIngestStub`, and provides
+    typed async helpers for CreateDocument, CreateDocumentVersion, and
+    GetDocument RPCs.
+
+    Example:
+        async with MonolithGrpcClient(
+            metadata=[('authorization', 'Bearer <token>')],
+            timeout_sec=3.0,
+        ) as client:
+            resp = await client.get_document(internal_filename='file-123.pdf')
+            if resp.status == pb.GetDocumentResponse.FOUND:
+                ...
+
+    Notes:
+        - All per-RPC deadlines default to `timeout_sec` unless overridden.
+        - If you need TLS, pass `tls_root_cert` (PEM bytes) to the constructor.
     """
 
     def __init__(
@@ -39,12 +71,21 @@ class MonolithGrpcClient:
         timeout_sec: float = 3.0,
         metadata: Optional[Iterable[Tuple[str, str]]] = None,
         tls_root_cert: Optional[bytes] = None,
-    ):
+    ) -> None:
         """
-        :param target: host:port of the gRPC server. Defaults to env MONOLITH_GRPC_TARGET or 'app:50061'.
-        :param timeout_sec: per-RPC deadline (seconds).
-        :param metadata: iterable of (key, value) tuples to attach to each RPC (e.g., auth).
-        :param tls_root_cert: if provided, uses TLS with given root cert; otherwise insecure channel.
+        Initialize a client with channel configuration.
+
+        Args:
+            target (str | None): host:port of the gRPC server.
+                Defaults to env `MONOLITH_GRPC_TARGET` or 'app:50061'.
+            timeout_sec (float): Default per-RPC deadline (in seconds).
+            metadata (Iterable[tuple[str, str]] | None): Static metadata to attach
+                to each RPC (e.g., authorization).
+            tls_root_cert (bytes | None): If provided, uses a secure channel with
+                these root certificates; otherwise an insecure channel is used.
+
+        Returns:
+            None
         """
         self.target = target or os.getenv('MONOLITH_GRPC_TARGET', 'app:50061')
         self.timeout_sec = timeout_sec
@@ -53,27 +94,43 @@ class MonolithGrpcClient:
         self._stub: Optional[pbg.DocumentIngestStub] = None
         self._tls_root_cert = tls_root_cert
 
-    async def start(self) -> None:
+    async def start(self) -> None
+        """
+        Create and open the underlying channel and stub.
+
+        Returns:
+            None
+        """
         if self._channel:
             return
         if self._tls_root_cert:
-            creds = grpc.ssl_channel_credentials(root_certificates=self._tls_root_cert)
+            creds = grpc.ssl_channel_credentials(
+                root_certificates=self._tls_root_cert
+            )
             self._channel = aio.secure_channel(self.target, creds)
         else:
             self._channel = aio.insecure_channel(self.target)
         self._stub = pbg.DocumentIngestStub(self._channel)
 
     async def close(self) -> None:
+    """
+    Close the underlying channel (if open) and clear the stub.
+
+    Returns:
+        None
+    """
         if self._channel:
             await self._channel.close()
             self._channel = None
             self._stub = None
 
-    async def __aenter__(self) -> "MonolithGrpcClient":
+    async def __aenter__(self) -> 'MonolithGrpcClient':
+        """Start the client when entering an async context manager."""
         await self.start()
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
+        """Close the client when exiting an async context manager."""
         await self.close()
 
     # --------------------------
@@ -95,15 +152,33 @@ class MonolithGrpcClient:
         """
         Create (or idempotently upsert) a document row.
 
-        Returns pb.CreateDocumentResponse with status/row_id/message.
-        Raises grpc.aio.AioRpcError on transport/status failures.
+        Args:
+            internal_filename (str): System-assigned filename used as a stable key.
+            mime (str): MIME type (e.g., 'application/pdf').
+            storage_bucket (str): Object store bucket name.
+            storage_object_key (str): Object key/path within the bucket.
+            created_by (str): UUID (string) of the user who created/uploaded the doc.
+            created_at (datetime | None): If None, defaults to now(UTC).
+                Naive datetimes are assumed to be UTC.
+            extra_metadata (dict[str, str] | None): Extra metadata to attach to the RPC.
+            timeout_sec (float | None): Per-call timeout in seconds; falls back to
+                the client's default if None.
+
+        Returns:
+            pb.CreateDocumentResponse: Contains:
+                - status (CreateStatus)
+                - row_id (str; UUID) when created/found
+                - message (str) with additional info
+
+        Raises:
+            RuntimeError: If the client has not been started.
         """
         if not self._stub:
             raise RuntimeError(
-                "Client not started. Call await client.start() or use 'async with'."
+                'Client not started. Call await client.start() or use 'async with'.'
             )
 
-        # Default created_at to "now" in UTC if not provided
+        # Default created_at to 'now' in UTC if not provided
         if created_at is None:
             created_at = datetime.now(timezone.utc)
         elif created_at.tzinfo is None:
@@ -128,51 +203,120 @@ class MonolithGrpcClient:
 
         deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
 
-        return await self._stub.CreateDocument(req, timeout=deadline, metadata=md)
+        return await self._stub.CreateDocument(
+            req, timeout=deadline, metadata=md
+        )
 
     async def save_document_version(
-            self,
-            *,
-            document_id: str,          # UUID string
-            version_number: int,        # >= 1
-            storage_version_id: str,    # MinIO/S3 versionId
-            created_by: str,            # UUID string
-            created_at: Optional[datetime] = None,
-            extra_metadata: Optional[Dict[str, str]] = None,
-            timeout_sec: Optional[float] = None,
-        ) -> pb.CreateDocumentVersionResponse:
-            """Create a new document version row."""
-            if not self._stub:
-                raise RuntimeError(
-                    "Client not started. Call await client.start() or use 'async with'."
-                )
+        self,
+        *,
+        document_id: str,  # UUID string
+        version_number: int,  # >= 1
+        storage_version_id: str,  # MinIO/S3 versionId
+        created_by: str,  # UUID string
+        created_at: Optional[datetime] = None,
+        extra_metadata: Optional[Dict[str, str]] = None,
+        timeout_sec: Optional[float] = None,
+    ) -> pb.CreateDocumentVersionResponse:
+        """
+        Create a new document version row.
 
-            if created_at is None:
-                created_at = datetime.now(timezone.utc)
-            elif created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=timezone.utc)
+        Args:
+            document_id (str): Parent document UUID (string).
+            version_number (int): Version number (>= 1). May be ignored if
+                the server computes the next version.
+            storage_version_id (str): Object store version ID (e.g., MinIO versionId).
+            created_by (str): UUID (string) of the user who created this version.
+            created_at (datetime | None): If None, defaults to now(UTC).
+                Naive datetimes are assumed to be UTC.
+            extra_metadata (dict[str, str] | None): Extra metadata to attach to the RPC.
+            timeout_sec (float | None): Per-call timeout in seconds; falls back to
+                the client's default if None.
 
-            ts = Timestamp()
-            ts.FromDatetime(created_at)
+        Returns:
+            pb.CreateDocumentVersionResponse: Contains:
+                - status (CreateStatus)
+                - version_id (str; UUID) on success
+                - message (str)
 
-            req = pb.CreateDocumentVersionRequest(
-                document_id=document_id,
-                version_number=version_number,
-                storage_version_id=storage_version_id,
-                created_by=created_by,
-                created_at=ts,
+        Raises:
+            RuntimeError: If the client has not been started.
+        """
+        if not self._stub:
+            raise RuntimeError(
+                'Client not started. Call await client.start() or use 'async with'.'
             )
 
-            md = list(self.metadata)
-            if extra_metadata:
-                md.extend(extra_metadata.items())
+        if created_at is None:
+            created_at = datetime.now(timezone.utc)
+        elif created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
 
-            deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
-            return await self._stub.CreateDocumentVersion(req, timeout=deadline, metadata=md)
+        ts = Timestamp()
+        ts.FromDatetime(created_at)
+
+        req = pb.CreateDocumentVersionRequest(
+            document_id=document_id,
+            version_number=version_number,
+            storage_version_id=storage_version_id,
+            created_by=created_by,
+            created_at=ts,
+        )
+
+        md = list(self.metadata)
+        if extra_metadata:
+            md.extend(extra_metadata.items())
+
+        deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
+        return await self._stub.CreateDocumentVersion(
+            req, timeout=deadline, metadata=md
+        )
+
+    async def get_document(
+        self,
+        *,
+        internal_filename: str,
+        extra_metadata: Optional[Dict[str, str]] = None,
+        timeout_sec: Optional[float] = None,
+    ) -> pb.GetDocumentResponse:
+        """
+        Retrieve a document by its internal filename.
+
+        Args:
+            internal_filename (str): The system-internal filename (unique lookup key).
+            extra_metadata (dict[str, str] | None): Extra metadata to attach to the RPC.
+            timeout_sec (float | None): Per-call timeout in seconds; falls back to
+                the client's default if None.
+
+        Returns:
+            pb.GetDocumentResponse: Contains:
+                - status (FOUND | NOT_FOUND | FAILED)
+                - document fields populated when FOUND
+                - message (str)
+
+        Raises:
+            RuntimeError: If the client has not been started.
+        """
+        if not self._stub:
+            raise RuntimeError(
+                'Client not started. Call await client.start() or use 'async with'.'
+            )
+
+        req = pb.GetDocumentRequest(internal_filename=internal_filename)
+
+        md = list(self.metadata)
+        if extra_metadata:
+            md.extend(extra_metadata.items())
+
+        deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
+
+        return await self._stub.GetDocument(req, timeout=deadline, metadata=md)
+
 
 # --------------------------
 # Optional: simple sync helper
 # --------------------------
+
 
 def save_document_blocking(
     *,
@@ -187,7 +331,26 @@ def save_document_blocking(
     metadata: Optional[Iterable[Tuple[str, str]]] = None,
 ) -> pb.CreateDocumentResponse:
     """
-    For occasional sync contexts (scripts, management commands).
+    Synchronous convenience wrapper for `save_document()`.
+
+    Warning:
+        Uses `asyncio.run(...)`. Do **not** call from a running event loop
+        (e.g., within an async framework or some REPLs/Jupyter) or it will raise
+        `RuntimeError: asyncio.run() cannot be called from a running event loop`.
+
+    Args:
+        internal_filename (str): See `save_document()`.
+        mime (str): See `save_document()`.
+        storage_bucket (str): See `save_document()`.
+        storage_object_key (str): See `save_document()`.
+        created_by (str): See `save_document()`.
+        created_at (datetime | None): See `save_document()`.
+        target (str | None): Override gRPC target for this call.
+        timeout_sec (float): Per-RPC deadline.
+        metadata (Iterable[tuple[str, str]] | None): Extra metadata headers.
+
+    Returns:
+        pb.CreateDocumentResponse: Same as `save_document()`.
     """
 
     async def _run():
@@ -205,6 +368,7 @@ def save_document_blocking(
 
     return asyncio.run(_run())
 
+
 def save_document_version_blocking(
     *,
     document_id: str,
@@ -216,6 +380,25 @@ def save_document_version_blocking(
     timeout_sec: float = 3.0,
     metadata: Optional[Iterable[Tuple[str, str]]] = None,
 ) -> pb.CreateDocumentVersionResponse:
+    """
+    Synchronous convenience wrapper for `save_document_version()`.
+
+    Warning:
+        Uses `asyncio.run(...)`. Do **not** call from a running event loop.
+
+    Args:
+        document_id (str): See `save_document_version()`.
+        version_number (int): See `save_document_version()`.
+        storage_version_id (str): See `save_document_version()`.
+        created_by (str): See `save_document_version()`.
+        created_at (datetime | None): See `save_document_version()`.
+        target (str | None): Override gRPC target for this call.
+        timeout_sec (float): Per-RPC deadline.
+        metadata (Iterable[tuple[str, str]] | None): Extra metadata headers.
+
+    Returns:
+        pb.CreateDocumentVersionResponse: Same as `save_document_version()`.
+    """
     async def _run():
         async with MonolithGrpcClient(
             target=target, timeout_sec=timeout_sec, metadata=metadata
@@ -227,5 +410,39 @@ def save_document_version_blocking(
                 created_by=created_by,
                 created_at=created_at,
             )
+
     return asyncio.run(_run())
 
+
+def get_document_blocking(
+    *,
+    internal_filename: str,
+    target: Optional[str] = None,
+    timeout_sec: float = 3.0,
+    metadata: Optional[Iterable[Tuple[str, str]]] = None,
+) -> pb.GetDocumentResponse:
+    """
+    Synchronous convenience wrapper for `get_document()`.
+
+    Warning:
+        Uses `asyncio.run(...)`. Do **not** call from a running event loop.
+
+    Args:
+        internal_filename (str): See `get_document()`.
+        target (str | None): Override gRPC target for this call.
+        timeout_sec (float): Per-RPC deadline.
+        metadata (Iterable[tuple[str, str]] | None): Extra metadata headers.
+
+    Returns:
+        pb.GetDocumentResponse: Same as `get_document()`.
+    """
+
+    async def _run():
+        async with MonolithGrpcClient(
+            target=target, timeout_sec=timeout_sec, metadata=metadata
+        ) as client:
+            return await client.get_document(
+                internal_filename=internal_filename
+            )
+
+    return asyncio.run(_run())

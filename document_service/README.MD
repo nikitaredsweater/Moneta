@@ -141,6 +141,7 @@ The service communicates with the monolith service using gRPC for database opera
 service DocumentIngest {
   rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
   rpc CreateDocumentVersion(CreateDocumentVersionRequest) returns (CreateDocumentVersionResponse);
+  rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
 }
 ```
 
@@ -201,13 +202,48 @@ message CreateDocumentVersionResponse {
 }
 ```
 
+#### GetDocumentRequest
+Used to retrieve a document by its internal filename.
+
+```protobuf
+message GetDocumentRequest {
+  string internal_filename = 1;   // Filename to search for
+}
+```
+
+#### GetDocumentResponse
+Response when retrieving a document by filename.
+
+```protobuf
+message GetDocumentResponse {
+  enum GetStatus {
+    GET_STATUS_UNSPECIFIED = 0;
+    FOUND = 1;                     // Document found successfully
+    NOT_FOUND = 2;                 // Document not found
+    FAILED = 3;                    // Retrieval failed
+  }
+  GetStatus status = 1;            // Operation result
+  string document_id = 2;          // Document UUID if found
+  string internal_filename = 3;    // Original filename
+  string mime = 4;                 // MIME type
+  string storage_bucket = 5;       // Storage bucket
+  string storage_object_key = 6;   // Storage object key
+  string created_by = 7;           // Creator UUID
+  google.protobuf.Timestamp created_at = 8; // Creation timestamp
+  string message = 9;              // Optional human-readable message
+}
+```
+
 ### When gRPC Messages Are Used
 
 1. **Document Creation**: When a file is uploaded to MinIO, the service receives a MinIO event notification via RabbitMQ
-2. **Automatic Processing**: The `handle_new_document_creation` event handler automatically calls:
-   - `CreateDocument` RPC to create the document metadata record
-   - `CreateDocumentVersion` RPC to create the initial version record
-3. **Version Management**: For subsequent uploads of the same document, only `CreateDocumentVersion` is called
+2. **Automatic Processing**: The `handle_new_document_creation` event handler follows this flow:
+   - `GetDocument` RPC to check if a document with the same internal_filename already exists
+   - If document NOT found: calls `CreateDocument` RPC to create the document metadata record
+   - If document IS found: skips document creation and uses existing document_id
+   - Always calls `CreateDocumentVersion` RPC to create a new version record (version_number set to 1)
+3. **Enhanced Logic**: The system now prevents duplicate document records by checking existence first
+4. **Version Management**: Every upload creates a new version, regardless of whether the document already existed
 
 ### gRPC Connection Details
 - **Target**: Configured via `MONOLITH_GRPC_TARGET` environment variable (default: `app:50061`)

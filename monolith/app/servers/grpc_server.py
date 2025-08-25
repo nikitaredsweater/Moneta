@@ -1,5 +1,19 @@
 """
-gRPC server (updated for CreateDocument)
+gRPC server for document ingestion.
+
+This module defines the asynchronous gRPC servicer that handles creation and
+retrieval of documents and their versions. It validates incoming protobuf
+requests, converts types (UUIDs, timestamps), delegates persistence to service
+functions, and maps failures to appropriate gRPC statuses or response codes.
+
+Responsibilities:
+    - CreateDocument: insert new document metadata
+    - CreateDocumentVersion: add a version entry for an existing document
+    - GetDocument: fetch a document by its internal filename
+
+All returned datetimes are normalized to aware UTC values. Validation errors
+abort the RPC with INVALID_ARGUMENT; unexpected failures are mapped to FAILED
+statuses in the response message.
 """
 
 from __future__ import annotations
@@ -7,18 +21,25 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-import grpc
-from google.protobuf.timestamp_pb2 import Timestamp
-
 import app.gen.document_ingest_pb2 as pb
 import app.gen.document_ingest_pb2_grpc as pbg
-
-# NOTE: your module name says "grcp" (typo?). Keeping it as-is to match your codebase.
-from app.services.grcp_document_service import save_document, save_document_version
+import grpc
+from app.services.grpc_document_service import (get_document_by_filename,
+                                                save_document,
+                                                save_document_version)
+from google.protobuf.timestamp_pb2 import Timestamp
 
 
 def _to_uuid(value: str) -> uuid.UUID:
-    """Validate/convert a string to UUID or raise INVALID_ARGUMENT upstream."""
+    """
+    Convert a string to a UUID.
+
+    Args:
+        value (str): The UUID string.
+
+    Returns:
+        uuid.UUID: Parsed UUID instance.
+    """
     return uuid.UUID(value)
 
 
@@ -26,6 +47,12 @@ def _ts_to_datetime(ts: Timestamp | None) -> datetime:
     """
     Convert google.protobuf.Timestamp -> aware UTC datetime.
     If ts is None/not set, return now(UTC).
+
+    Args:
+        ts (Timestamp | None): Protobuf timestamp; if None, returns now(UTC).
+
+    Returns:
+        datetime: A timezone-aware datetime in UTC.
     """
     if ts is None:
         return datetime.now(timezone.utc)
@@ -38,41 +65,76 @@ def _ts_to_datetime(ts: Timestamp | None) -> datetime:
     return dt
 
 
+def _datetime_to_ts(dt: datetime) -> Timestamp:
+    """
+    Convert datetime to google.protobuf.Timestamp.
+
+    Args:
+        dt (datetime): A timezone-aware datetime.
+
+    Returns:
+        Timestamp: A protobuf timestamp.
+    """
+    ts = Timestamp()
+    # Ensure timezone-aware datetime
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ts.FromDatetime(dt)
+    return ts
+
+
 class DocumentIngestService(pbg.DocumentIngestServicer):
+    """
+    gRPC servicer implementing document ingestion operations.
+
+    This class provides async RPC handlers that:
+      - Validate request payloads
+      - Convert types (UUIDs, timestamps)
+      - Delegate to service-layer functions for persistence
+      - Map exceptions to gRPC errors or FAILED response statuses
+    """
     def __init__(self) -> None:
+    """
+    Initialize the servicer. Currently a no-op.
+    """
         pass
 
     async def CreateDocument(self, request: pb.CreateDocumentRequest, context):
         """
-        Create a document row in the database.
+        Create a new document row in the database.
 
-        Required fields:
-          - internal_filename
-          - mime
-          - storage_bucket
-          - storage_object_key
-          - created_by (UUID string)
+        Error Handling:
+            - On missing/invalid arguments: aborts with INVALID_ARGUMENT.
+            - On unexpected errors: returns FAILED with error message.
 
-        Optional:
-          - created_at (protobuf Timestamp); defaults to now(UTC)
+        Args:
+            request (pb.CreateDocumentRequest): The request message
+                containing document metadata.
+            context (grpc.ServicerContext): The context for the RPC call.
+
+        Returns:
+            pb.CreateDocumentResponse:
+                - status: CREATED on success; FAILED otherwise.
+                - row_id: The created document UUID (string) on success.
+                - message: Contextual information on the outcome.
         """
         # --- Validation ---
         missing = []
         if not request.internal_filename:
-            missing.append("internal_filename")
+            missing.append('internal_filename')
         if not request.mime:
-            missing.append("mime")
+            missing.append('mime')
         if not request.storage_bucket:
-            missing.append("storage_bucket")
+            missing.append('storage_bucket')
         if not request.storage_object_key:
-            missing.append("storage_object_key")
+            missing.append('storage_object_key')
         if not request.created_by:
-            missing.append("created_by")
+            missing.append('created_by')
 
         if missing:
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                f"Missing required fields: {', '.join(missing)}",
+                f'Missing required fields: {', '.join(missing)}',
             )
 
         # Validate created_by as UUID
@@ -81,13 +143,13 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
         except Exception:
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                "created_by must be a valid UUID",
+                'created_by must be a valid UUID',
             )
 
         # created_at: use provided or default to now(UTC)
         created_at_dt = (
             _ts_to_datetime(request.created_at)
-            if request.HasField("created_at")
+            if request.HasField('created_at')
             else datetime.now(timezone.utc)
         )
 
@@ -98,49 +160,79 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                 mime=request.mime,
                 storage_bucket=request.storage_bucket,
                 storage_object_key=request.storage_object_key,
-                created_by_user_id=created_by_uuid,  # map to your current service signature
-                created_at=created_at_dt,            # if your service accepts/uses it
+                created_by_user_id=created_by_uuid,
+                created_at=created_at_dt,
             )
         except Exception as e:
-            # Map unknown failures to FAILED status; include message for debugging
             return pb.CreateDocumentResponse(
                 status=pb.CreateDocumentResponse.FAILED,
-                row_id="",
+                row_id='',
                 message=str(e),
             )
 
-        # If your save_document can signal idempotent "already exists", map it here.
-        # For now, assume created/upserted successfully.
         return pb.CreateDocumentResponse(
             status=pb.CreateDocumentResponse.CREATED,
-            row_id=str(getattr(doc, "id", "")),
-            message="Created",
+            row_id=str(getattr(doc, 'id', '')),
+            message='Created',
         )
-    
+
     async def CreateDocumentVersion(
         self, request: pb.CreateDocumentVersionRequest, context
     ):
+        """
+        Add a new version entry for an existing document.
+
+        Error Handling:
+            - On missing/invalid arguments: aborts with INVALID_ARGUMENT.
+            - On unexpected errors: returns FAILED with error message.
+
+        Args:
+            request (pb.CreateDocumentVersionRequest): The request message
+                containing document version metadata.
+            context (grpc.ServicerContext): The context for the RPC call.
+
+        Returns:
+            pb.CreateDocumentVersionResponse:
+                - status: CREATED on success; FAILED otherwise.
+                - version_id: The created document version UUID
+                    (string) on success.
+                - message: Contextual information on the outcome.
+        """
+        # --- Validation ---
         missing = []
-        if not request.document_id:        missing.append("document_id")
-        if request.version_number == 0:    missing.append("version_number (>=1)")
-        if not request.storage_version_id: missing.append("storage_version_id")
-        if not request.created_by:         missing.append("created_by")
+        if not request.document_id:
+            missing.append('document_id')
+        if request.version_number == 0:
+            missing.append('version_number (>=1)')
+        if not request.storage_version_id:
+            missing.append('storage_version_id')
+        if not request.created_by:
+            missing.append('created_by')
         if missing:
-            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Missing: {', '.join(missing)}")
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                f'Missing: {', '.join(missing)}',
+            )
 
         # Validate IDs
         try:
             doc_uuid = _to_uuid(request.document_id)
             created_by_uuid = _to_uuid(request.created_by)
         except Exception:
-            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "document_id and created_by must be UUIDs")
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                'document_id and created_by must be UUIDs',
+            )
 
-        created_at = _ts_to_datetime(request.created_at) if request.HasField("created_at") else datetime.now(timezone.utc)
+        created_at = (
+            _ts_to_datetime(request.created_at)
+            if request.HasField('created_at')
+            else datetime.now(timezone.utc)
+        )
 
         try:
             v = await save_document_version(
                 document_id=doc_uuid,
-                version_number=int(request.version_number),
                 storage_version_id=request.storage_version_id,
                 created_by=created_by_uuid,
                 created_at=created_at,
@@ -148,12 +240,84 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
         except Exception as e:
             return pb.CreateDocumentVersionResponse(
                 status=pb.CreateDocumentResponse.FAILED,
-                version_id="",
+                version_id='',
                 message=str(e),
             )
 
         return pb.CreateDocumentVersionResponse(
             status=pb.CreateDocumentResponse.CREATED,
-            version_id=str(getattr(v, "id", "")),
-            message="Created",
+            version_id=str(getattr(v, 'id', '')),
+            message='Created',
         )
+
+    async def GetDocument(self, request: pb.GetDocumentRequest, context):
+        """
+        Retrieve a document by its internal filename.
+
+        Error Handling:
+            - On missing argument: aborts with INVALID_ARGUMENT.
+            - On unexpected errors: returns FAILED with error message.
+
+        Args:
+            request (pb.GetDocumentRequest): The request message
+                containing the internal filename.
+            context (grpc.ServicerContext): The context for the RPC call.
+
+        Returns:
+            pb.GetDocumentResponse:
+                - status: FOUND, NOT_FOUND, or FAILED.
+                - document_id, internal_filename, mime, storage_*:
+                    Populated on FOUND.
+                - created_by (str, UUID) and created_at (Timestamp):
+                     Populated on FOUND.
+                - message: Contextual information on the outcome.
+        """
+        # --- Validation ---
+        if not request.internal_filename:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                'Missing required field: internal_filename',
+            )
+
+        # --- Retrieve ---
+        try:
+            document = await get_document_by_filename(request.internal_filename)
+
+            if document is None:
+                # Document not found
+                return pb.GetDocumentResponse(
+                    status=pb.GetDocumentResponse.NOT_FOUND,
+                    document_id='',
+                    internal_filename=request.internal_filename,
+                    mime='',
+                    storage_bucket='',
+                    storage_object_key='',
+                    created_by='',
+                    message='Document not found',
+                )
+
+            # Document found - populate response
+            return pb.GetDocumentResponse(
+                status=pb.GetDocumentResponse.FOUND,
+                document_id=str(document.id),
+                internal_filename=document.internal_filename,
+                mime=document.mime,
+                storage_bucket=document.storage_bucket,
+                storage_object_key=document.storage_object_key,
+                created_by=str(document.created_by),
+                created_at=_datetime_to_ts(document.created_at),
+                message='Document found',
+            )
+
+        except Exception as e:
+            # Map unknown failures to FAILED status
+            return pb.GetDocumentResponse(
+                status=pb.GetDocumentResponse.FAILED,
+                document_id='',
+                internal_filename=request.internal_filename,
+                mime='',
+                storage_bucket='',
+                storage_object_key='',
+                created_by='',
+                message=f'Error retrieving document: {str(e)}',
+            )
