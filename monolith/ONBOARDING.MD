@@ -4,6 +4,7 @@ This file will help you to quickly understand some core ideas that are a part of
 
 ## Table of Contents
 
+- [Project Structure Overview](#project-structure-overview)
 - [Authentication Middleware](#authentication-middleware)
 - [Endpoint Permissions](#endpoint-permissions)
 - [Repository Pattern and Data Access](#repository-pattern-and-data-access)
@@ -11,6 +12,257 @@ This file will help you to quickly understand some core ideas that are a part of
 - [Schema Validation System](#schema-validation-system)
 - [Exception Handling](#exception-handling)
 - [Dual Protocol Architecture](#dual-protocol-architecture)
+
+## Project Structure Overview
+
+Understanding the folder hierarchy is crucial for navigating the codebase efficiently. Here's a comprehensive overview of the monolith project structure:
+
+### Root Level Structure
+
+```
+monolith/
+├── app/                    # Main application code
+├── alembic/               # Database migration scripts
+├── proto/                 # Protocol buffer definitions
+├── scripts/               # Utility scripts
+├── venv/                  # Virtual environment (created during setup)
+├── __pycache__/           # Python bytecode cache
+├── requirements.txt       # Python dependencies
+├── requirements.in        # Dependency source definitions
+├── Dockerfile             # Docker container definition
+├── alembic.ini           # Alembic configuration
+├── conf.py               # Application configuration
+├── pytest.ini            # Testing configuration
+├── setup.cfg             # Package configuration
+├── .gitignore            # Git ignore rules
+├── .pre-commit-config.yaml # Pre-commit hooks
+├── .pylintrc            # Pylint configuration
+├── .flake8               # Flake8 configuration
+└── LICENSE               # Project license
+```
+
+### App Directory Structure
+
+```
+app/
+├── __init__.py           # Package initialization
+├── main.py               # Application entry point
+├── dependencies.py       # FastAPI dependency functions
+├── exceptions.py         # Custom exception classes
+├── routers/              # API route definitions
+│   ├── __init__.py
+│   └── v1/               # Version 1 API routes
+│       ├── __init__.py
+│       ├── api.py        # Main API router
+│       └── endpoints/    # Individual endpoint handlers
+├── schemas/              # Pydantic data models
+│   ├── __init__.py
+│   ├── base.py           # Base schema classes
+│   ├── company.py
+│   ├── company_address.py
+│   ├── documents/        # Document-related schemas
+│   ├── instrument.py
+│   └── user.py
+├── models/               # SQLAlchemy ORM models
+│   ├── __init__.py
+│   ├── base.py           # Base model classes
+│   ├── company.py
+│   ├── company_address.py
+│   ├── documents/        # Document-related models
+│   ├── instrument.py
+│   └── user.py
+├── repositories/         # Data access layer
+│   ├── __init__.py
+│   ├── base.py           # Base repository class
+│   ├── company.py
+│   ├── company_address.py
+│   ├── documents/        # Document repositories
+│   ├── instrument.py
+│   ├── interfaces/       # Repository interfaces
+│   └── user.py
+├── security/             # Authentication & authorization
+│   ├── __init__.py
+│   ├── jwt_keys.py       # JWT key management
+│   ├── jwt.py            # JWT token operations
+│   ├── middleware/       # Authentication middleware
+│   │   └── jwt_parsing.py
+│   ├── password.py       # Password hashing utilities
+│   └── permissions.py    # Permission system
+├── servers/              # Server implementations
+│   └── grpc_server.py   # gRPC server
+├── services/             # Business logic layer
+│   └── grpc_document_service.py
+├── utils/                # Utility functions
+│   ├── __init__.py
+│   ├── database.py       # Database utilities
+│   ├── minio_client.py   # MinIO storage client
+│   └── session.py        # Database session management
+├── enums/                # Enumeration definitions
+│   ├── __init__.py
+│   ├── address_types.py  # Address type enums
+│   ├── instrument_status.py
+│   ├── maturity_status.py
+│   ├── order_types.py
+│   ├── permissions.py    # Permission enums
+│   └── roles.py          # User role enums
+└── keys/                 # JWT encryption keys (created during setup)
+```
+
+### Folder Purpose Overview
+
+#### **Core Application Folders**
+
+**`app/`** - Contains all application source code
+
+- **`main.py`** - FastAPI application initialization and startup logic
+- **`dependencies.py`** - Reusable FastAPI dependency functions for authentication and resource injection
+- **`exceptions.py`** - Custom exception classes with proper HTTP status codes
+
+**`routers/`** - API route definitions following REST principles
+
+- **`v1/`** - Version 1 of the API (allows for future versioning)
+- **`endpoints/`** - Individual endpoint handlers grouped by resource type
+- **`api.py`** - Main router that combines all endpoint routers
+
+**`schemas/`** - Pydantic data validation models
+
+- **`base.py`** - Common base classes like `CamelModel` and `BaseDTO`
+- Entity-specific schemas for request/response validation
+- Ensures type safety and automatic serialization
+
+**`models/`** - SQLAlchemy ORM database models
+
+- **`base.py`** - Base model with common fields (id, timestamps, soft deletes)
+- Database table definitions with relationships
+- Used by repositories for database operations
+
+**`repositories/`** - Data access layer implementing repository pattern
+
+- **`base.py`** - Generic repository with CRUD operations
+- Entity-specific repositories extending the base
+- Handles database transactions and query building
+
+#### **Supporting Folders**
+
+**`security/`** - Complete authentication and authorization system
+
+- JWT token generation, validation, and parsing
+- Role-based permission system
+- Middleware for automatic user authentication
+
+**`servers/`** - Server implementations for different protocols
+
+- **`grpc_server.py`** - gRPC server for inter-service communication
+
+**`services/`** - Business logic layer
+
+- Contains complex business operations
+- Separates business logic from data access
+
+**`utils/`** - Shared utility functions
+
+- Database connection management
+- External service clients (MinIO)
+- Helper functions used across the application
+
+**`enums/`** - Strongly typed enumeration definitions
+
+- **`roles.py`** - User roles (ADMIN, BUYER, SELLER, ISSUER)
+- **`permissions.py`** - Permission verbs and entities
+- **`address_types.py`** - Address type classifications
+- **`instrument_status.py`** & **`maturity_status.py`** - Financial instrument states
+
+#### **Configuration and Migration Folders**
+
+**`alembic/`** - Database migration management
+
+- Migration scripts for schema changes
+- Version control for database structure
+- Rollback capabilities for deployments
+
+**`proto/`** - Protocol buffer definitions
+
+- `.proto` files defining gRPC service interfaces
+- Used for generating client/server code
+
+**`scripts/`** - Utility scripts for development
+
+- **`generate_protos.sh`** - Generates Python code from proto files
+
+### The Importance of `__init__.py` Files
+
+**`__init__.py` files are crucial for Python package management and development:**
+
+#### **Package Recognition**
+
+```python
+# Without __init__.py, Python treats directories as regular folders
+# With __init__.py, Python recognizes them as packages
+
+from app.routers.v1.endpoints.user import user_router  # ✅ Works
+# vs.
+from app.routers.v1.endpoints import user  # ❌ Fails without __init__.py
+```
+
+#### **Import Organization**
+
+- **`__init__.py` files control what gets imported** when using `from package import *`
+- **They serve as package documentation** with module docstrings
+- **They can re-export important classes/functions** for cleaner imports
+
+```python
+# app/__init__.py
+from .main import app  # Re-export for easier imports
+
+# app/routers/__init__.py
+from .v1.api import v1_router as router  # Simplified import path
+```
+
+#### **Development Benefits**
+
+1. **IDE Support**: Enables proper autocomplete and navigation
+2. **Testing**: Allows proper test discovery and module mocking
+3. **Namespace Management**: Prevents naming conflicts between modules
+4. **Code Organization**: Makes the project structure explicit and navigable
+5. **Import Flexibility**: Enables both specific imports and wildcard imports
+
+#### **Common Patterns in This Project**
+
+```python
+# app/routers/v1/__init__.py
+from .api import v1_router
+
+# app/schemas/__init__.py
+from .base import BaseDTO, CamelModel
+
+# app/enums/__init__.py
+from .roles import UserRole
+from .permissions import PermissionVerb, PermissionEntity
+```
+
+**Without `__init__.py` files:**
+
+- Import statements would be longer and more complex
+- IDE autocomplete wouldn't work properly
+- Testing frameworks couldn't discover modules
+- The package structure would be implicit rather than explicit
+
+**With `__init__.py` files:**
+
+- Clean, readable import statements
+- Full IDE support for navigation and refactoring
+- Proper test discovery and mocking
+- Explicit package boundaries and organization
+
+### Key Takeaways for Navigation
+
+1. **Follow the layered architecture**: Routers → Schemas → Repositories → Models
+2. **`__init__.py` files make the structure explicit** - they define what's importable
+3. **Security comes first**: Authentication middleware wraps everything
+4. **Data flows down**: HTTP requests → Routers → Schemas → Repositories → Models → Database
+5. **Business logic lives in services**: Complex operations are separated from data access
+
+This structure provides a robust foundation for the financial platform while maintaining clean separation of concerns and comprehensive validation.
 
 ## Authentication Middleware
 
@@ -174,6 +426,7 @@ class UserRepository(BasePGRepository[schemas.User]):
         """Custom method for email lookup"""
         return await self.get_one([self.Meta.orm_model.email == email])
 ```
+
 The repository handles complex SQLAlchemy operations, transaction management, and provides a clean abstraction layer between business logic and database operations.
 
 ## gRPC Server Architecture
@@ -284,10 +537,12 @@ class EntityUpdate(CamelModel):
 Every API request/response goes through schema validation, ensuring data integrity and proper serialization.
 
 #### CamelModel vs BaseDTO
+
 In essence, `CamelModel` and `BaseDTO` have the same functionality. The only difference is in the default fields that are set automatically on all entities that inherit the `BaseDTO`. These are:
+
 1. id
 2. created_at
-These two fields are **not** present in the `CamelModel`
+   These two fields are **not** present in the `CamelModel`
 
 ## Exception Handling
 
@@ -372,6 +627,7 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(JWTAuthMiddleware)  # JWT for HTTP
 app.include_router(app_router)        # HTTP routes
 ```
+
 ### Shared Components
 
 Both protocols share:
