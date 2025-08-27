@@ -675,3 +675,9 @@ app/keys
 
 # Proto files
 app/gen
+
+# Include scripts folders (but exclude venv Scripts folders)
+!scripts/
+!*/scripts/
+!monolith/scripts/
+!document_service/scripts/

@@ -672,3 +672,9 @@ app/keys
 *.pem
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudio,visualstudiocode,python,venv,dotenv,windows,linux
+
+# Include scripts folders (but exclude venv Scripts folders)
+!scripts/
+!*/scripts/
+!monolith/scripts/
+!document_service/scripts/
