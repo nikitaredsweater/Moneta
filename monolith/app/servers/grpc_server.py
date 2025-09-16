@@ -94,9 +94,9 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
       - Map exceptions to gRPC errors or FAILED response statuses
     """
     def __init__(self) -> None:
-    """
-    Initialize the servicer. Currently a no-op.
-    """
+        """
+        Initialize the servicer. Currently a no-op.
+        """
         pass
 
     async def CreateDocument(self, request: pb.CreateDocumentRequest, context):

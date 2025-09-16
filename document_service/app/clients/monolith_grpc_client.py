@@ -94,7 +94,7 @@ class MonolithGrpcClient:
         self._stub: Optional[pbg.DocumentIngestStub] = None
         self._tls_root_cert = tls_root_cert
 
-    async def start(self) -> None
+    async def start(self) -> None:
         """
         Create and open the underlying channel and stub.
 
@@ -113,12 +113,12 @@ class MonolithGrpcClient:
         self._stub = pbg.DocumentIngestStub(self._channel)
 
     async def close(self) -> None:
-    """
-    Close the underlying channel (if open) and clear the stub.
+        """
+        Close the underlying channel (if open) and clear the stub.
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
         if self._channel:
             await self._channel.close()
             self._channel = None
@@ -175,7 +175,7 @@ class MonolithGrpcClient:
         """
         if not self._stub:
             raise RuntimeError(
-                'Client not started. Call await client.start() or use 'async with'.'
+                'Client not started. Call await client.start() or use "async with".'
             )
 
         # Default created_at to 'now' in UTC if not provided
@@ -244,7 +244,7 @@ class MonolithGrpcClient:
         """
         if not self._stub:
             raise RuntimeError(
-                'Client not started. Call await client.start() or use 'async with'.'
+                'Client not started. Call await client.start() or use "async with".'
             )
 
         if created_at is None:
@@ -299,7 +299,7 @@ class MonolithGrpcClient:
         """
         if not self._stub:
             raise RuntimeError(
-                'Client not started. Call await client.start() or use 'async with'.'
+                'Client not started. Call await client.start() or use "async with".'
             )
 
         req = pb.GetDocumentRequest(internal_filename=internal_filename)
