@@ -231,6 +231,4 @@ async def update_status(
                                                 schemas.InstrumentMaturityStatusUpdate(maturity_status=MaturityStatus.PENDING)
                                                 )
             
-            # Set clock to change the status of the instrument to MATURED
-
     return updated
