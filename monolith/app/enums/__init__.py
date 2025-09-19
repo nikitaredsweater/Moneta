@@ -5,7 +5,7 @@ from app.enums.order_types import OrderType
 from app.enums.permissions import PermissionEntity, PermissionVerb
 from app.enums.roles import UserRole
 from app.enums.maturity_status import MaturityStatus
-from app.enums.instrument_status import InstrumentStatus
+from app.enums.instrument_status import InstrumentStatus, InstrumentAction
 
 __all__ = [
     'OrderType',
@@ -14,5 +14,6 @@ __all__ = [
     'UserRole',
     'AddressType',
     'InstrumentStatus',
-    'MaturityStatus'
+    'MaturityStatus',
+    'InstrumentAction'
 ]

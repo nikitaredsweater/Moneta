@@ -175,6 +175,18 @@ async def update_drafted_instrument(
 # 4. MATURED = the date of the maturity of the instrument has passed
 #  and it changed its status FROM ACTIVE.
 # TODO: Add the following statuses:
-# 5. DISAPROVED = For some reason an admin decided that an instrument
+# 5. REJECTED = For some reason an admin decided that an instrument
 #  with status PENDING_APPROVAL cannot be publicly traded.
 
+@instrument_router.post("/{instrument_id}/transition", response_model=schemas.Instrument)
+async def update_status(
+    instrument_id: schemas.MonetaID,
+    body: schemas.InstrumentTransitionRequest,
+    instrument_repo: repo.Instrument,
+    current_user=Depends(get_current_user),
+    _=Depends(has_permission([Permission(Verb.UPDATE, Entity.INSTRUMENT)])),
+) -> schemas.Instrument:
+    """
+    A method that handles all logic for the instruments' statuses.
+    """
+    pass

@@ -7,7 +7,7 @@ from datetime import date
 from typing import Optional, List
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
 from pydantic import Field, root_validator
-from app.enums import InstrumentStatus, MaturityStatus
+from app.enums import InstrumentStatus, MaturityStatus, InstrumentAction
 from app.exceptions import EmptyEntityException
 
 
@@ -66,11 +66,11 @@ class InstrumentDRAFTUpdate(CamelModel):
     """
     For DRAFT Updates
     """
-    name: str = Field(..., max_length=255)
-    face_value: float
-    currency: str = Field(..., min_length=3, max_length=3)
-    maturity_date: date
-    maturity_payment: float
+    name: Optional[str] = Field(None, max_length=255)
+    face_value: Optional[float] = None
+    currency: Optional[str] = Field(None, min_length=3, max_length=3)
+    maturity_date: Optional[date] = None
+    maturity_payment: Optional[float] = None
 
     @root_validator(pre=True)
     def at_least_one_field(cls, values):
@@ -83,6 +83,12 @@ class InstrumentDRAFTUpdate(CamelModel):
         if isinstance(cur, str):
             values["currency"] = cur.upper()
         return values
+    
+class InstrumentTransitionRequest(CamelModel):
+    """
+    schema used for when user wants to update the status of an instrument.
+    """
+    action: InstrumentAction
 
 class InstrumentCreateInternal(InstrumentCreate):
     """

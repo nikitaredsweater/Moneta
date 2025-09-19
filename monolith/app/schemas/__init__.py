@@ -19,7 +19,8 @@ from app.schemas.instrument import (
     InstrumentCreate,
     InstrumentCreateInternal,
     InstrumentFilters,
-    InstrumentDRAFTUpdate
+    InstrumentDRAFTUpdate,
+    InstrumentTransitionRequest
 )
 from app.schemas.user import (
     User,
@@ -47,6 +48,7 @@ __all__ = [
     'InstrumentCreateInternal',
     'InstrumentFilters',
     'InstrumentDRAFTUpdate',
+    'InstrumentTransitionRequest',
     'Document',
     'DocumentCreate',
     'DocumentVersion',

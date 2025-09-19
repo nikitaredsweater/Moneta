@@ -5,7 +5,14 @@ maturity status
 from enum import Enum
 
 class InstrumentStatus(str, Enum):
-    DRAFT = "DRAFT"
-    PENDING_APPROVAL = "PENDING_APPROVAL"
-    ACTIVE = "ACTIVE"
-    MATURED = "MATURED"
+    DRAFT = 'DRAFT'
+    PENDING_APPROVAL = 'PENDING_APPROVAL'
+    ACTIVE = 'ACTIVE'
+    MATURED = 'MATURED'
+    REJECTED = 'REJECTED'
+
+
+class InstrumentAction(str, Enum):
+    SUBMIT='SUBMIT'
+    APPROVE='APPROVE'
+    REJECT='REJECT'
