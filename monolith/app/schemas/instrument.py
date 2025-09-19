@@ -5,10 +5,10 @@ Instrument DTOs
 from datetime import date
 
 from typing import Optional, List
-
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
-from pydantic import Field
+from pydantic import Field, root_validator
 from app.enums import InstrumentStatus, MaturityStatus
+from app.exceptions import EmptyEntityException
 
 
 class Instrument(BaseDTO):
@@ -61,6 +61,28 @@ class InstrumentCreate(CamelModel):
     currency: str = Field(..., min_length=3, max_length=3)
     maturity_date: date
     maturity_payment: float
+
+class InstrumentDRAFTUpdate(CamelModel):
+    """
+    For DRAFT Updates
+    """
+    name: str = Field(..., max_length=255)
+    face_value: float
+    currency: str = Field(..., min_length=3, max_length=3)
+    maturity_date: date
+    maturity_payment: float
+
+    @root_validator(pre=True)
+    def at_least_one_field(cls, values):
+        if not any(v is not None for k, v in values.items() if k in {
+            "name", "face_value", "currency", "maturity_date", "maturity_payment"
+        }):
+            raise EmptyEntityException
+        # optional: normalize currency to upper
+        cur = values.get("currency")
+        if isinstance(cur, str):
+            values["currency"] = cur.upper()
+        return values
 
 class InstrumentCreateInternal(InstrumentCreate):
     """

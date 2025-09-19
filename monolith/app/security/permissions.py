@@ -49,6 +49,8 @@ class Permission:
 # Platform for a specific user is to allow the whole role more permissions
 # This may be the inteded behavior, but I am not sure.
 
+# TODO: Before production, decide which permissions go to which users.
+
 ROLE_PERMISSIONS = {
     UserRole.ADMIN: {
         # Global data access
@@ -98,6 +100,7 @@ ROLE_PERMISSIONS = {
         (Verb.DELETE, Entity.COMPANY_ADDRESS),
         # instruments
         (Verb.VIEW, Entity.INSTRUMENT),
+        (Verb.UPDATE, Entity.INSTRUMENT),
     },
 }
 
