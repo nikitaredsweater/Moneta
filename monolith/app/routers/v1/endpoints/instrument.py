@@ -9,6 +9,7 @@ from app import schemas
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
+from app.exceptions import WasNotFoundException
 from app.security import Permission, has_permission
 from fastapi import APIRouter, Depends, Request
 
@@ -16,12 +17,12 @@ instrument_router = APIRouter()
 
 
 @instrument_router.get('/', response_model=List[schemas.Instrument])
-async def get_all_instruments(
+async def get_instruments(
     instrument_repo: repo.Instrument,
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.INSTRUMENT)])),
 ) -> Optional[List[schemas.Instrument]]:
     """
-    Get all instruments
+    Get instruments based on a list of parameters
 
     Args:
         instrument_repo (repo.Company): dependency
@@ -32,6 +33,32 @@ async def get_all_instruments(
     """
     instruments = await instrument_repo.get_all()
     return instruments
+
+
+@instrument_router.get('/{instrument_id}', response_model=schemas.Instrument)
+async def get_instrument(
+    instrument_id: schemas.MonetaID,
+    instrument_repo: repo.Instrument,
+    _=Depends(has_permission([Permission(Verb.VIEW, Entity.INSTRUMENT)])),
+) -> Optional[List[schemas.Instrument]]:
+    """
+    Get instrument by its id.
+
+    Args:
+        instrument_id (schemas.MonetaID) : uuid4
+        instrument_repo (repo.Company): dependency
+            injection of the Instrument Repository
+
+    Returns:
+        schemas.Instrument: An Instrument object.
+    """
+    instrument = await instrument_repo.get_by_id(instrument_id)
+    if instrument:
+        return instrument
+    else:
+        raise WasNotFoundException(
+            detail=f'Instrument with ID {instrument_id} does not exist'
+        )
 
 
 # TODO: Make it a part of the workflow for
