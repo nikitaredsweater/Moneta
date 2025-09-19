@@ -96,6 +96,12 @@ class InstrumentStatusUpdate(CamelModel):
     """
     instrument_status: InstrumentStatus
 
+class InstrumentMaturityStatusUpdate(CamelModel):
+    """
+    to update the maturity status
+    """
+    maturity_status: MaturityStatus
+
 
 class InstrumentCreateInternal(InstrumentCreate):
     """

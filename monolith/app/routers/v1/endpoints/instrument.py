@@ -11,7 +11,7 @@ from app import schemas
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
-from app.enums import InstrumentStatus, UserRole
+from app.enums import InstrumentStatus, UserRole, MaturityStatus
 from app.exceptions import WasNotFoundException, InsufficientPermissionsException
 from app.security import Permission, has_permission
 from app.utils import validations
@@ -179,6 +179,7 @@ async def update_drafted_instrument(
 # Allowed graph: (status, user_type) -> next_status
 TRANSITIONS: Dict[tuple[InstrumentStatus, UserRole], list[InstrumentStatus]] = {
     (InstrumentStatus.DRAFT, UserRole.ISSUER): [InstrumentStatus.PENDING_APPROVAL],
+    (InstrumentStatus.DRAFT, UserRole.ADMIN): [InstrumentStatus.PENDING_APPROVAL], # TODO: Remove after tests
     (InstrumentStatus.PENDING_APPROVAL, UserRole.ADMIN): [InstrumentStatus.REJECTED, InstrumentStatus.ACTIVE],
     # Transition from ACTIVE to MATURED should happen by a clock.
 }
@@ -207,8 +208,29 @@ async def update_status(
             detail=f'You cannot perform this transition'
         )
     
+    # FIXME: Doing to separate calls to DB is very not advised...
     updated = await instrument_repo.update_by_id(
                                                  instrument_id, 
                                                  schemas.InstrumentStatusUpdate(instrument_status=body.new_status)
                                                  )
+    
+    if updated:
+        # Performing additional actions depending on the type of the new status
+        # Received by the instrument
+        if body.new_status is InstrumentStatus.ACTIVE and \
+            updated.instrument_status is InstrumentStatus.ACTIVE:
+            # Double check in case the status did not change
+
+            # Here we do actions that we need before the item goes public
+
+            # Setting the maturity status to 'pending' - indicates that 
+            # the item is currently changing hands and the maturity settlement is
+            # pending to happen.
+            updated = await instrument_repo.update_by_id(
+                                                instrument_id, 
+                                                schemas.InstrumentMaturityStatusUpdate(maturity_status=MaturityStatus.PENDING)
+                                                )
+            
+            # Set clock to change the status of the instrument to MATURED
+
     return updated

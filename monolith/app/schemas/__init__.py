@@ -21,7 +21,8 @@ from app.schemas.instrument import (
     InstrumentFilters,
     InstrumentDRAFTUpdate,
     InstrumentTransitionRequest,
-    InstrumentStatusUpdate
+    InstrumentStatusUpdate,
+    InstrumentMaturityStatusUpdate
 )
 from app.schemas.user import (
     User,
@@ -51,6 +52,7 @@ __all__ = [
     'InstrumentDRAFTUpdate',
     'InstrumentTransitionRequest',
     'InstrumentStatusUpdate',
+    'InstrumentMaturityStatusUpdate',
     'Document',
     'DocumentCreate',
     'DocumentVersion',
