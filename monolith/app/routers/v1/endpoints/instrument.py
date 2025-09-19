@@ -6,19 +6,25 @@ from typing import List, Optional
 
 from app import repositories as repo
 from app import schemas
+from app import models
+import logging
+from sqlalchemy import and_, or_, asc, desc
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.exceptions import WasNotFoundException
 from app.security import Permission, has_permission
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
+from app.utils.filters import build_sort_instrument, build_where_instrument
+
+logger = logging.getLogger()
 
 instrument_router = APIRouter()
 
-
-@instrument_router.get('/', response_model=List[schemas.Instrument])
-async def get_instruments(
+@instrument_router.post('/search', response_model=List[schemas.Instrument])
+async def search_instruments(
     instrument_repo: repo.Instrument,
+    filters: schemas.InstrumentFilters,
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.INSTRUMENT)])),
 ) -> Optional[List[schemas.Instrument]]:
     """
@@ -31,7 +37,15 @@ async def get_instruments(
     Returns:
         schemas.Instrument: An Instrument object.
     """
-    instruments = await instrument_repo.get_all()
+    where = build_where_instrument(filters)
+    order_list = build_sort_instrument(filters.sort)
+
+    instruments = await instrument_repo.get_all(
+        where_list=where or None,
+        order_list=order_list or None,
+        limit=filters.limit,
+        offset=filters.offset,
+    )
     return instruments
 
 
