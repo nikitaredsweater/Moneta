@@ -7,20 +7,25 @@ from typing import List, Optional
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user
-from fastapi import APIRouter, Depends
+from app.enums import PermissionEntity as Entity
+from app.enums import PermissionVerb as Verb
+from app.security import Permission, has_permission
+from fastapi import APIRouter, Depends, Request
 
 instrument_router = APIRouter()
 
 
 @instrument_router.get('/', response_model=List[schemas.Instrument])
-async def get_companies(
+async def get_all_instruments(
     instrument_repo: repo.Instrument,
+    _=Depends(has_permission([Permission(Verb.VIEW, Entity.INSTRUMENT)])),
 ) -> Optional[List[schemas.Instrument]]:
     """
     Get all instruments
 
     Args:
-        instrument_repo (repo.Company): dependency injection of the User Repository
+        instrument_repo (repo.Company): dependency
+            injection of the Instrument Repository
 
     Returns:
         schemas.Instrument: An Instrument object.
@@ -29,14 +34,18 @@ async def get_companies(
     return instruments
 
 
+# TODO: Make it a part of the workflow for
+# creating on- and off-chaim representations.
+# With this being the first step
 @instrument_router.post('/', response_model=schemas.InstrumentCreate)
-async def create_company(
+async def create_instrument(
     instrument_data: schemas.InstrumentCreate,
     instrument_repo: repo.Instrument,
     current_user=Depends(get_current_user),
+    _=Depends(has_permission([Permission(Verb.CREATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
     """
-    Create a new user
+    Create a new instrument for off-chain
 
     Args:
         instrument_data: Company creation data
@@ -46,7 +55,6 @@ async def create_company(
     Returns:
         Instrument: The created instrument
     """
-
     internal_data = schemas.InstrumentCreateInternal(
         **instrument_data.dict(),
         issuer_id=current_user.company_id,

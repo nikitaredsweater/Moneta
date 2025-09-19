@@ -18,7 +18,6 @@ from app.exceptions import (
 from fastapi import Request
 
 
-
 @dataclass(frozen=True)
 class Permission:
     """
@@ -72,14 +71,23 @@ ROLE_PERMISSIONS = {
         (Verb.CREATE, Entity.COMPANY_ADDRESS),
         (Verb.UPDATE, Entity.COMPANY_ADDRESS),
         (Verb.DELETE, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
+        (Verb.CREATE, Entity.INSTRUMENT),
+        (Verb.DELETE, Entity.INSTRUMENT),
+        (Verb.UPDATE, Entity.INSTRUMENT),
     },
     UserRole.BUYER: {
         (Verb.VIEW, Entity.COMPANY),
         (Verb.VIEW, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
     },
     UserRole.SELLER: {
         (Verb.VIEW, Entity.COMPANY),
         (Verb.VIEW, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
     },
     UserRole.ISSUER: {
         (Verb.VIEW, Entity.COMPANY),
@@ -88,6 +96,8 @@ ROLE_PERMISSIONS = {
         (Verb.CREATE, Entity.COMPANY_ADDRESS),
         (Verb.UPDATE, Entity.COMPANY_ADDRESS),
         (Verb.DELETE, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
     },
 }
 

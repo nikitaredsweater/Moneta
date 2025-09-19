@@ -23,3 +23,4 @@ class PermissionEntity(str, Enum):
     ALL_DATA = 'ALL_DATA'
     ALL_USERS = 'ALL_USERS'
     ALL_ROLES = 'ALL_ROLES'
+    INSTRUMENT = 'INSTRUMENT'
