@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/moneta")
-SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "60"))
+SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "3600")) # Do the check every hour
 LOCK_KEY = int(os.getenv("LOCK_KEY", "90201"))
 STATUS_ACTIVE = "ACTIVE"
 STATUS_MATURED = "MATURED"
