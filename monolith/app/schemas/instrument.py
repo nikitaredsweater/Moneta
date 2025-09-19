@@ -7,7 +7,7 @@ from datetime import date
 from typing import Optional, List
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
 from pydantic import Field, root_validator
-from app.enums import InstrumentStatus, MaturityStatus, InstrumentAction
+from app.enums import InstrumentStatus, MaturityStatus
 from app.exceptions import EmptyEntityException
 
 
@@ -88,7 +88,14 @@ class InstrumentTransitionRequest(CamelModel):
     """
     schema used for when user wants to update the status of an instrument.
     """
-    action: InstrumentAction
+    new_status: InstrumentStatus
+
+class InstrumentStatusUpdate(CamelModel):
+    """
+    to update the status
+    """
+    instrument_status: InstrumentStatus
+
 
 class InstrumentCreateInternal(InstrumentCreate):
     """

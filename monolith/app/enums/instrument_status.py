@@ -10,9 +10,3 @@ class InstrumentStatus(str, Enum):
     ACTIVE = 'ACTIVE'
     MATURED = 'MATURED'
     REJECTED = 'REJECTED'
-
-
-class InstrumentAction(str, Enum):
-    SUBMIT='SUBMIT'
-    APPROVE='APPROVE'
-    REJECT='REJECT'

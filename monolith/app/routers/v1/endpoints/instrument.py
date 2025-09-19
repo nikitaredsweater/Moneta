@@ -1,27 +1,25 @@
 """
 Instrument endpoints
 """
+import logging
 
-from typing import List, Optional
+from fastapi import APIRouter, Depends
+from typing import List, Optional, Dict
 
 from app import repositories as repo
 from app import schemas
-from app import models
-import logging
-from sqlalchemy import and_, or_, asc, desc
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
-from app.enums import InstrumentStatus
+from app.enums import InstrumentStatus, UserRole
 from app.exceptions import WasNotFoundException, InsufficientPermissionsException
 from app.security import Permission, has_permission
 from app.utils import validations
-from fastapi import APIRouter, Depends
 from app.utils.filters import build_sort_instrument, build_where_instrument
 
 logger = logging.getLogger()
-
 instrument_router = APIRouter()
+
 
 @instrument_router.post('/search', response_model=List[schemas.Instrument])
 async def search_instruments(
@@ -50,7 +48,6 @@ async def search_instruments(
     )
     return instruments
 
-
 @instrument_router.get('/{instrument_id}', response_model=schemas.Instrument)
 async def get_instrument(
     instrument_id: schemas.MonetaID,
@@ -76,11 +73,10 @@ async def get_instrument(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
 
-
 # TODO: Make it a part of the workflow for
 # creating on- and off-chaim representations.
 # With this being the first step
-@instrument_router.post('/', response_model=schemas.InstrumentCreate)
+@instrument_router.post('/', response_model=schemas.Instrument)
 async def create_instrument(
     instrument_data: schemas.InstrumentCreate,
     instrument_repo: repo.Instrument,
@@ -156,7 +152,6 @@ async def update_drafted_instrument(
     updated = await instrument_repo.update_by_id(instrument_id, instrument_data)
     return updated
 
-
 ################################################################################
 #                             Updating Instrument Status
 ################################################################################
@@ -167,16 +162,26 @@ async def update_drafted_instrument(
 # 1. DRAFT = User began creation of an instrument but not has finished.
 #  At this stage they can make any corrections to the instrument as well delete
 #  it altogether.
+# 
 # 2. PENDING_APPROVAL = User submitted the instrument for approval.
 #  No more changes can be made to the instrument. Before becomes publicly
 #  availble for purchase ADMIN must approve this note
+# 
 # 3. ACTIVE = instrument was approved and is currently being publicly
 #  traded on-chain
+# 
 # 4. MATURED = the date of the maturity of the instrument has passed
 #  and it changed its status FROM ACTIVE.
-# TODO: Add the following statuses:
+# 
 # 5. REJECTED = For some reason an admin decided that an instrument
 #  with status PENDING_APPROVAL cannot be publicly traded.
+
+# Allowed graph: (status, user_type) -> next_status
+TRANSITIONS: Dict[tuple[InstrumentStatus, UserRole], list[InstrumentStatus]] = {
+    (InstrumentStatus.DRAFT, UserRole.ISSUER): [InstrumentStatus.PENDING_APPROVAL],
+    (InstrumentStatus.PENDING_APPROVAL, UserRole.ADMIN): [InstrumentStatus.REJECTED, InstrumentStatus.ACTIVE],
+    # Transition from ACTIVE to MATURED should happen by a clock.
+}
 
 @instrument_router.post("/{instrument_id}/transition", response_model=schemas.Instrument)
 async def update_status(
@@ -189,4 +194,21 @@ async def update_status(
     """
     A method that handles all logic for the instruments' statuses.
     """
-    pass
+    instrument = await instrument_repo.get_by_id(instrument_id)
+    if not instrument:
+        raise WasNotFoundException(
+            detail=f'Instrument with ID {instrument_id} does not exist'
+        )
+    
+    key = (instrument.instrument_status, current_user.role)
+    allowed_next_statuses = TRANSITIONS.get(key, [])
+    if body.new_status not in allowed_next_statuses:
+        raise InsufficientPermissionsException(
+            detail=f'You cannot perform this transition'
+        )
+    
+    updated = await instrument_repo.update_by_id(
+                                                 instrument_id, 
+                                                 schemas.InstrumentStatusUpdate(instrument_status=body.new_status)
+                                                 )
+    return updated
