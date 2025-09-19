@@ -4,6 +4,8 @@ Instrument DTOs
 
 from datetime import date
 
+from typing import Optional, List
+
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
 from pydantic import Field
 from app.enums import InstrumentStatus, MaturityStatus
@@ -22,6 +24,33 @@ class Instrument(BaseDTO):
     maturity_status: MaturityStatus
     issuer_id:MonetaID
     created_by:MonetaID
+
+class InstrumentFilters(CamelModel):
+    """schema to set the search parameters for instruments."""
+    min_face_value: Optional[float] = None
+    max_face_value: Optional[float] = None
+    currency: Optional[str] = Field(None, min_length=3, max_length=3)
+
+    maturity_date_after: Optional[date] = None
+    maturity_date_before: Optional[date] = None
+
+    created_at_after: Optional[date] = None
+    created_at_before: Optional[date] = None
+
+    min_maturity_payment: Optional[float] = None
+    max_maturity_payment: Optional[float] = None
+
+    instrument_status: Optional[InstrumentStatus] = None
+    maturity_status: Optional[MaturityStatus] = None
+
+    # Now arrays:
+    issuer_id: Optional[List[MonetaID]] = None
+    created_by: Optional[List[MonetaID]] = None
+
+    sort: Optional[str] = "-created_at"
+    limit: int = Field(50, ge=1, le=200)
+    offset: int = Field(0, ge=0)  # optional but useful for pagination
+
 
 class InstrumentCreate(CamelModel):
     """
