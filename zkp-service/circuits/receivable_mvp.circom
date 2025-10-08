@@ -1,48 +1,54 @@
 pragma circom 2.1.6;
 
-// Import Poseidon hash (ZK-friendly)
-include "circomlib/circomlib.circom";
 include "circomlib/poseidon.circom";
 
 /*
-ReceivableProof circuit
---------------------------------------
+ReceivableProofNamed
+------------------------------------------
 Proves that:
-1.  There exists a private set of fields and a salt
-    such that Poseidon(fields || salt) == public commitment
-2.  The public disclosed values equal the corresponding
-    fields inside the committed dataset
+1.  There exists a private list of (name, value) pairs and a salt
+    such that Poseidon( hash(name_i, value_i) for all i , salt ) == public commitment
+2.  The public disclosed values equal the corresponding named fields
 */
 
-template ReceivableProof(n_fields, n_public) {
+template ReceivableProofNamed(n_fields, n_public) {
     // ---------- PRIVATE INPUTS ----------
-    signal input fields[n_fields];   // all hidden fields of the doc
-    signal input salt;               // random salt used in commitment
+    signal input field_names[n_fields];   // numerical IDs or hashed names
+    signal input field_values[n_fields];  // hidden values
+    signal input salt;                    // random salt
 
     // ---------- PUBLIC INPUTS ----------
-    signal input commitment;         // stored/anchored commitment
-    signal input disclosed[n_public];// subset of fields to reveal (exact)
+    signal input commitment;              // Poseidon root (public)
+    signal input disclosed_names[n_public];
+    signal input disclosed_values[n_public];
 
-    // ---------- HASH COMMITMENT ----------
-    component poseidon = Poseidon(n_fields + 1);
+    // ---------- HASH EACH FIELD (name,value) ----------
+    component field_hash[n_fields];
     for (var i = 0; i < n_fields; i++) {
-        poseidon.inputs[i] <== fields[i];
-    }
-    poseidon.inputs[n_fields] <== salt;
-
-    // Enforce equality: computed hash == public commitment
-    poseidon.out === commitment;
-
-    // ---------- FIELD CONSISTENCY ----------
-    // For MVP, assume first n_public fields are disclosed
-    for (var j = 0; j < n_public; j++) {
-        fields[j] === disclosed[j];
+        field_hash[i] = Poseidon(2);
+        field_hash[i].inputs[0] <== field_names[i];
+        field_hash[i].inputs[1] <== field_values[i];
     }
 
-    // ---------- (OPTIONAL RULES) ----------
-    // Example: total_amount_due = taxable_amount + tax_amount
-    // Uncomment and adapt indices as needed:
-    // fields[2] === fields[3] + fields[4];
+    // ---------- HASH ALL FIELD HASHES + SALT ----------
+    component total_hash = Poseidon(n_fields + 1);
+    for (var j = 0; j < n_fields; j++) {
+        total_hash.inputs[j] <== field_hash[j].out;
+    }
+    total_hash.inputs[n_fields] <== salt;
+
+    // Enforce that computed hash equals the public commitment
+    total_hash.out === commitment;
+
+    // ---------- CONSISTENCY FOR DISCLOSED FIELDS ----------
+    for (var k = 0; k < n_public; k++) {
+        // Each disclosed pair (name, value) must exist in private list
+        var matched = 0;
+        for (var m = 0; m < n_fields; m++) {
+            // Enforce equality when names match
+            field_names[m] === disclosed_names[k] ==> field_values[m] === disclosed_values[k];
+        }
+    }
 }
 
-component main = ReceivableProof(5, 3);
+component main = ReceivableProofNamed(5, 3);
