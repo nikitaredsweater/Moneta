@@ -1,5 +1,6 @@
 import express from "express"
 import type { Request, Response } from "express";
+import receivableRouter from "./routes/receivable";
 
 const app = express();
 
@@ -10,6 +11,9 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req: Request, res: Response) =>
   res.status(200).send("ok")
 );
+
+// Custom routes
+app.use("/receivable", receivableRouter);
 
 // Minimal endpoint: log incoming JSON
 app.post("/ingest", (req: Request, res: Response) => {
