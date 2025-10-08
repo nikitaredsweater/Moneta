@@ -5,6 +5,7 @@ export enum FieldType {
   TIMESTAMP = "timestamp", // unix seconds
   BYTES32 = "bytes32", // 32-byte identifier, passed as bigint/hex→bigint
   ENUM = "enum", // small integer code (e.g., ISO 4217 numeric)
+  UUID = "uuidv4", // <— add this
 }
 
 export interface FieldSpec {

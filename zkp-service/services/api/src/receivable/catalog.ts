@@ -41,12 +41,14 @@ export const FIELD_CATALOG: Record<string, FieldSpec> = {
   broker_id: {
     key: "broker_id",
     nameId: 6n,
-    type: FieldType.BYTES32, // pass as 0x… → bigint
+    type: FieldType.UUID, // <— was BYTES32
+    description: "UUIDv4 identifying the broker",
   },
   invoice_id: {
     key: "invoice_id",
     nameId: 7n,
-    type: FieldType.BYTES32,
+    type: FieldType.UUID, // <— was BYTES32
+    description: "UUIDv4 identifying the invoice",
   },
   ships_supplied_count: {
     key: "ships_supplied_count",
