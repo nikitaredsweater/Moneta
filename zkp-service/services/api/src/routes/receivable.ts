@@ -10,6 +10,9 @@ import {
 
 const router = Router();
 
+const b2s = (v: unknown) => (typeof v === "bigint" ? v.toString() : v);
+
+
 // Fail fast on bad config at startup
 const configErrors = validateSchemes();
 if (configErrors.length) {
@@ -31,7 +34,7 @@ function expandScheme(s: Scheme) {
       // Spec details (expected type/scale/description/nameId)
       type: spec?.type ?? null,
       scale: spec?.scale ?? null,
-      nameId: spec?.nameId ?? null,
+      nameId: spec ? b2s(spec.nameId) : null,
       description: spec?.description ?? null,
     };
   });
@@ -51,7 +54,7 @@ function expandScheme(s: Scheme) {
 router.get("/fields", (_req: Request, res: Response) => {
   const fields = Object.values(FIELD_CATALOG).map((f) => ({
     key: f.key,
-    nameId: f.nameId.toString(), // send as string to avoid JSON bigint issues
+    nameId: b2s(f.nameId), // send as string to avoid JSON bigint issues
     type: f.type,
     scale: f.scale ?? null,
     description: f.description ?? null,
