@@ -231,7 +231,6 @@ pyrightconfig.json
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -675,6 +674,7 @@ app/keys
 
 # Include scripts folders (but exclude venv Scripts folders)
 !scripts/
+!zkp-service/scripts
 !*/scripts/
 !monolith/scripts/
 !document_service/scripts/
