@@ -234,4 +234,5 @@ $RECYCLE.BIN/
 
 # Circom generated files
 /circuits/src/*
+/circuits/ptau
 !/circuits/src/*.circom
