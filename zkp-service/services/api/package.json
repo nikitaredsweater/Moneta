@@ -1,6 +1,7 @@
 {
   "author": "",
   "dependencies": {
+    "circomlibjs": "^0.1.7",
     "express": "^5.1.0"
   },
   "description": "",

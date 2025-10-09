@@ -10,6 +10,7 @@ import {
   encodeValue,
   runAdditionalChecks,
 } from "../receivable";
+import { generateSalt, computePoseidonCommitment } from "../utils/commitment";
 
 const router = Router();
 
@@ -109,7 +110,6 @@ router.get("/schemes/:name", (req: Request, res: Response) => {
   res.status(200).json({ scheme: expandScheme(scheme) });
 });
 
-
 //////////////////// creation / validation endpoint ////////////////////////////
 
 /**
@@ -135,7 +135,7 @@ router.get("/schemes/:name", (req: Request, res: Response) => {
  * - provided values must conform to FieldSpec types (via encodeValue)
  * - runAdditionalChecks() hook for future business rules
  */
-router.post("/create", (req: Request, res: Response) => {
+router.post("/create", async (req: Request, res: Response) => {
   const body = req.body as {
     scheme?: string;
     fields?: Record<string, { value: unknown; visibility: unknown }>;
@@ -161,14 +161,18 @@ router.post("/create", (req: Request, res: Response) => {
   // 1) Unknown field keys (not in catalog)
   const unknownKeys = inputKeys.filter((k) => !FIELD_CATALOG[k]);
   if (unknownKeys.length) {
-    return res.status(400).json({ error: "unknown_fields", details: unknownKeys });
+    return res
+      .status(400)
+      .json({ error: "unknown_fields", details: unknownKeys });
   }
 
   // 2) Extras not in scheme (disallow for now)
   const schemeKeys = new Set(scheme.fields.map((f) => f.key));
   const extras = inputKeys.filter((k) => !schemeKeys.has(k));
   if (extras.length) {
-    return res.status(400).json({ error: "fields_not_in_scheme", details: extras });
+    return res
+      .status(400)
+      .json({ error: "fields_not_in_scheme", details: extras });
   }
 
   // 3) Required fields present
@@ -177,7 +181,9 @@ router.post("/create", (req: Request, res: Response) => {
     .map((f) => f.key)
     .filter((k) => !(k in body.fields!));
   if (missingRequired.length) {
-    return res.status(400).json({ error: "missing_required_fields", details: missingRequired });
+    return res
+      .status(400)
+      .json({ error: "missing_required_fields", details: missingRequired });
   }
 
   // 4) Visibility must match scheme
@@ -187,15 +193,23 @@ router.post("/create", (req: Request, res: Response) => {
     if (!provided) continue; // optional & absent is fine
     const v = provided.visibility;
     if (!isVisibilityLiteral(v)) {
-      visErrors.push(`${f.key}: invalid visibility (expected 'public'|'private')`);
+      visErrors.push(
+        `${f.key}: invalid visibility (expected 'public'|'private')`
+      );
       continue;
     }
     if (toEnumVisibility(v) !== f.visibility) {
-      visErrors.push(`${f.key}: visibility mismatch (expected '${f.visibility.toLowerCase()}')`);
+      visErrors.push(
+        `${
+          f.key
+        }: visibility mismatch (expected '${f.visibility.toLowerCase()}')`
+      );
     }
   }
   if (visErrors.length) {
-    return res.status(400).json({ error: "visibility_mismatch", details: visErrors });
+    return res
+      .status(400)
+      .json({ error: "visibility_mismatch", details: visErrors });
   }
 
   // 5) Type/format check via encodeValue + custom validators
@@ -207,17 +221,22 @@ router.post("/create", (req: Request, res: Response) => {
       // Try to encode (throws on bad format/type)
       void encodeValue(spec, value);
     } catch (e) {
-      formatErrors.push(`${key}: ${e instanceof Error ? e.message : "invalid_value"}`);
+      formatErrors.push(
+        `${key}: ${e instanceof Error ? e.message : "invalid_value"}`
+      );
       continue;
     }
     // Additional project-specific checks (currently stubbed)
     const issues = runAdditionalChecks(key, value);
     if (issues.length) {
-      for (const iss of issues) formatErrors.push(`${key}: ${iss.code} - ${iss.message}`);
+      for (const iss of issues)
+        formatErrors.push(`${key}: ${iss.code} - ${iss.message}`);
     }
   }
   if (formatErrors.length) {
-    return res.status(400).json({ error: "invalid_field_values", details: formatErrors });
+    return res
+      .status(400)
+      .json({ error: "invalid_field_values", details: formatErrors });
   }
 
   // 6) Ensure "required public fields" are indeed public in input
@@ -233,11 +252,34 @@ router.post("/create", (req: Request, res: Response) => {
     }
   }
   if (notPublic.length) {
-    return res.status(400).json({ error: "required_fields_not_public", details: notPublic });
+    return res
+      .status(400)
+      .json({ error: "required_fields_not_public", details: notPublic });
   }
 
   // If we reach here, the payload is valid for this scheme
-  return res.status(200).json({ message: "ok" });
+
+  // Encoding values
+  const encoded: bigint[] = []; // we need to maintain the order of the fields!
+  for (const [key, _] of Object.entries(body.fields)) {
+    const spec = FIELD_CATALOG[key];
+    const { value } = body.fields[key]!;
+    if (!spec) {
+      return res.status(400).json({ error: "unknown_field", details: key });
+    }
+    encoded.push(encodeValue(spec, value));
+  }
+
+  // Salt + Poseidon hash
+  const salt = generateSalt();
+  const commitment = await computePoseidonCommitment(encoded, salt);
+
+  return res.status(200).json({
+    salt: salt.toString(),
+    commitment: commitment.toString(),
+    fields: Object.keys(body.fields),
+    message: "commitment_generated",
+  });
 });
 
 export default router;
