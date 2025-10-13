@@ -199,8 +199,6 @@ export async function prepareCircuitInput(
 export async function generateWitness(
   config: WitnessGenerationConfig
 ): Promise<WitnessGenerationResult> {
-  const startTime = Date.now();
-
   // FIXME: FOR MVP these vlaues are more-less hardcoded, this needs
   // to be fixed.
   const {

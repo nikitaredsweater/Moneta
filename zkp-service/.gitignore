@@ -236,6 +236,7 @@ $RECYCLE.BIN/
 /circuits/src/*
 /circuits/ptau
 !/circuits/src/*.circom
+keys
 
 # Generated files while the code execution
 data

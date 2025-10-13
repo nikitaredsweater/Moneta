@@ -11,10 +11,8 @@ import {
   runAdditionalChecks,
 } from "../receivable";
 import { generateSalt, computePoseidonCommitment } from "../utils/commitment";
-import {
-  generateWitnessSimple,
-  prepareCircuitInput,
-} from "../utils/witness";
+import { generateWitnessSimple, prepareCircuitInput } from "../utils/witness";
+import { generateGroth16Proof } from "../utils/proof";
 
 const router = Router();
 
@@ -283,12 +281,19 @@ router.post("/create", async (req: Request, res: Response) => {
     circuitName: "receivable_mvp",
   });
 
+  const proofResult = await generateGroth16Proof({
+    circuitName: "receivable_mvp",
+    witnessPath: "data/output/witness.wtns",
+    proofOutputPath: "data/output/proof.json",
+    publicOutputPath: "data/output/output.json",
+  });
+
+  console.log(proofResult)
 
   // TODO: Do not forget to include the commitment to the response!
-  if (witnessResult.success){
+  if (witnessResult.success) {
     return res.status(200).json(result);
-  }
-  else{
+  } else {
     return res.status(500).json(result);
   }
 });

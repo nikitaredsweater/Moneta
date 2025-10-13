@@ -71,6 +71,16 @@ fi
 
 echo "[zkey] Using circuits directory: $SRC_DIR"
 
+# ---------- Setup keys directory ----------
+KEYS_DIR="$(cd "$SRC_DIR/../.." && pwd)/keys"
+
+if [[ ! -d "$KEYS_DIR" ]]; then
+  echo "[keys] Creating keys directory: $KEYS_DIR"
+  mkdir -p "$KEYS_DIR"
+else
+  echo "[keys] Using keys directory: $KEYS_DIR"
+fi
+
 # ---------- Check for Node.js ----------
 if ! command -v node &> /dev/null; then
   echo "ERROR: Node.js is not installed!" >&2
@@ -191,7 +201,7 @@ while IFS= read -r -d '' r1cs_file; do
   base="${filename%.r1cs}"
 
   zkey_0000="$SRC_DIR/${base}_0000.zkey"
-  zkey_final="$SRC_DIR/${base}_final.zkey"
+  zkey_final="$KEYS_DIR/${base}_final.zkey"
 
   # Check if final zkey already exists
   if [[ -f "$zkey_final" ]]; then
@@ -217,7 +227,6 @@ while IFS= read -r -d '' r1cs_file; do
   if "$SNARKJS_BIN" zkey contribute "$zkey_0000" "$zkey_final" --name="$CONTRIBUTION_NAME" -v -e="$(head -c 64 /dev/urandom | xxd -p -c 256)"; then
     echo "  ✓ Created ${base}_final.zkey"
 
-    # FIXME: I am not sure if we even need this file removed...
     # Clean up intermediate file
     rm -f "$zkey_0000"
 
@@ -226,7 +235,7 @@ while IFS= read -r -d '' r1cs_file; do
     continue
   fi
 
-    vkey_file="$SRC_DIR/${base}_verification_key.json"
+    vkey_file="$KEYS_DIR/${base}_verification_key.json"
     echo "  [3/3] Generating verification key..."
     if "$SNARKJS_BIN" zkey export verificationkey "$zkey_final" "$vkey_file"; then
         echo "  ✓ Created ${base}_verification_key.json"
@@ -247,12 +256,11 @@ fi
 
 echo ""
 echo "[zkey] Done. Processed: $processed, Skipped: $skipped"
+echo "[zkey] Final keys saved to: $KEYS_DIR"
 
 if [[ $processed -gt 0 ]]; then
   echo ""
   echo "Next steps:"
-  echo "  1. Generate verification keys:"
-  echo "     snarkjs zkey export verificationkey <circuit>_final.zkey verification_key.json"
-  echo "  2. Generate proofs:"
-  echo "     snarkjs groth16 prove <circuit>_final.zkey witness.wtns proof.json public.json"
+  echo "  1. Generate proofs:"
+  echo "     snarkjs groth16 prove $KEYS_DIR/<circuit>_final.zkey witness.wtns proof.json public.json"
 fi
