@@ -75,45 +75,28 @@ export async function generateGroth16Proof(
   const resolvedProofPath = resolveFromRoot(proofOutputPath);
   const resolvedPublicPath = resolveFromRoot(publicOutputPath);
 
-  console.log("Proof Generation Configuration:");
-  console.log(`  Circuit: ${circuitName}`);
-  console.log(`  Witness: ${resolvedWitnessPath}`);
-  console.log(`  Proving Key: ${resolvedZkeyPath}`);
-  console.log(`  Proof Output: ${resolvedProofPath}`);
-  console.log(`  Public Signals Output: ${resolvedPublicPath}`);
-
   try {
     // Verify required files exist
-    console.log("\n📋 Verifying files...");
-
     try {
       await access(resolvedWitnessPath, constants.R_OK);
-      console.log("✓ Witness file found");
     } catch {
       throw new Error(`Witness file not found: ${resolvedWitnessPath}`);
     }
 
     try {
       await access(resolvedZkeyPath, constants.R_OK);
-      console.log("✓ Proving key (.zkey) found");
     } catch {
       throw new Error(`Proving key not found: ${resolvedZkeyPath}`);
     }
 
     // Generate the proof using snarkjs
-    console.log("\n⚙️  Generating Groth16 proof...");
-
     const { proof, publicSignals } = await snarkjs.groth16.prove(
       resolvedZkeyPath,
       resolvedWitnessPath
     );
 
-    console.log("✓ Proof generated successfully");
-
     // Write proof to file
-    console.log("\n💾 Writing proof files...");
     await writeFile(resolvedProofPath, JSON.stringify(proof, null, 2), "utf-8");
-    console.log(`✓ Proof written to: ${resolvedProofPath}`);
 
     // Write public signals to file
     await writeFile(
@@ -121,11 +104,8 @@ export async function generateGroth16Proof(
       JSON.stringify(publicSignals, null, 2),
       "utf-8"
     );
-    console.log(`✓ Public signals written to: ${resolvedPublicPath}`);
 
     const executionTime = Date.now() - startTime;
-
-    console.log(`\n✅ Proof generation completed in ${executionTime}ms`);
 
     return {
       success: true,
@@ -138,8 +118,6 @@ export async function generateGroth16Proof(
     };
   } catch (error) {
     const executionTime = Date.now() - startTime;
-
-    console.error("\n❌ Proof generation failed:", error);
 
     if (error instanceof Error) {
       return {
