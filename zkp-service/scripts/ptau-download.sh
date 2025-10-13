@@ -32,3 +32,28 @@
 # Guides:
 #   - https://habr.com/ru/companies/metalamp/articles/869414/
 #   - https://github.com/iden3/snarkjs?tab=readme-ov-file#7-prepare-phase-2
+
+
+TARGET_DIR="../circuits/ptau"
+FILE_NAME="hez13ll.ptau"
+URL="https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_13.ptau"
+
+mkdir -p "$TARGET_DIR"
+
+echo "Downloading $FILE_NAME..."
+
+if command -v wget >/dev/null 2>&1; then
+  wget -q "$URL" -O "$TARGET_DIR/$FILE_NAME"
+elif command -v curl >/dev/null 2>&1; then
+  curl -sSL "$URL" -o "$TARGET_DIR/$FILE_NAME"
+else
+  echo "Neither wget nor curl found. Please install one of them."
+  exit 1
+fi
+
+if [ -f "$TARGET_DIR/$FILE_NAME" ]; then
+  echo "Download complete"
+else
+  echo "Download failed."
+  exit 1
+fi
