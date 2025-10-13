@@ -1,20 +1,17 @@
-import fs from "fs/promises";
 import { encodeValue, FIELD_CATALOG } from "../receivable";
 import { computePoseidonCommitmentSeparate, generateSalt } from "./commitment";
 import { exec } from "child_process";
 import { promisify } from "util";
-import path from "path";
+import { access, mkdir, writeFile } from "fs/promises";
+import { constants } from "fs";
+import { join, dirname, resolve } from "path";
 
 const execAsync = promisify(exec);
 
 export interface WitnessGenerationConfig {
-  /** Name of the circuit (e.g., "ReceivableProofNamed") */
   circuitName: string;
-  /** Path to the compiled circuit directory (default: "./circuits") */
   circuitsDir?: string;
-  /** Path to input.json (default: "./input.json") */
   inputJsonPath?: string;
-  /** Output path for witness file (default: "./witness.wtns") */
   outputWitnessPath?: string;
 }
 
@@ -22,10 +19,36 @@ export interface WitnessGenerationResult {
   success: boolean;
   witnessPath: string;
   circuitName: string;
-  executionTime: number;
-  error?: string;
-  stdout?: string;
-  stderr?: string;
+}
+
+/**
+ * Get the zkp-service root directory from the current file location
+ * Current file: zkp-service/services/api/src/utils/witness.ts
+ * Root: zkp-service/
+ */
+function getZkpServiceRoot(): string {
+  // Go up 4 levels: utils -> src -> api -> services -> zkp-service
+  return join(__dirname, "..", "..", "..", "..");
+}
+
+/**
+ * Get the default circuits directory path
+ * Returns: zkp-service/circuits
+ */
+function getDefaultCircuitsDir(): string {
+  return join(getZkpServiceRoot(), "circuits", "src");
+}
+
+/**
+ * Resolve a path relative to zkp-service root if it's not absolute
+ */
+function resolveFromRoot(pathStr: string): string {
+  if (resolve(pathStr) === pathStr) {
+    // Already absolute
+    return pathStr;
+  }
+  // Relative path - resolve from zkp-service root
+  return join(getZkpServiceRoot(), pathStr);
 }
 
 /**
@@ -33,8 +56,9 @@ export interface WitnessGenerationResult {
  *
  * @param requestBody - The body from POST /receivable/create
  * @param schemeName - Name of the scheme (e.g., "standard_receivable_v1")
- * @param outputPath - Path where to write input.json (optional)
- * @returns The circuit input object
+ * @param outputPath - Path where to write input.json (relative to zkp-service root or absolute)
+ *                     Default: "inputs/input.json" (relative to zkp-service root)
+ * @returns The circuit input object with commitment and metadata
  */
 export async function prepareCircuitInput(
   requestBody: {
@@ -46,6 +70,7 @@ export async function prepareCircuitInput(
   },
   outputPath?: string
 ) {
+  // Validate input
   if (!requestBody.fields || typeof requestBody.fields !== "object") {
     throw new Error("Invalid request body: fields required");
   }
@@ -99,14 +124,58 @@ export async function prepareCircuitInput(
     disclosed_values: publicFields.map((f) => f.value.toString()),
   };
 
-  // Optionally write to file
+  // Write to file if path is provided
   if (outputPath) {
-    await fs.writeFile(
-      outputPath,
-      JSON.stringify(circuitInput, null, 2),
-      "utf-8"
-    );
-    console.log(`Circuit input written to ${outputPath}`);
+    // Resolve path relative to zkp-service root
+    const resolvedOutputPath = resolveFromRoot(outputPath);
+
+    console.log(`Preparing to write circuit input to: ${resolvedOutputPath}`);
+
+    try {
+      // Ensure the directory exists
+      const dir = dirname(resolvedOutputPath);
+      await mkdir(dir, { recursive: true });
+      console.log(`✓ Directory ensured: ${dir}`);
+
+      // Write the file
+      await writeFile(
+        resolvedOutputPath,
+        JSON.stringify(circuitInput, null, 2),
+        "utf-8"
+      );
+      console.log(
+        `✅ Circuit input written successfully to: ${resolvedOutputPath}`
+      );
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(
+        `Failed to write circuit input to ${resolvedOutputPath}: ${errorMsg}`
+      );
+    }
+  } else {
+    // Default path if none provided
+    const defaultPath = resolveFromRoot("inputs/input.json");
+
+    console.log(`No output path specified, using default: ${defaultPath}`);
+
+    try {
+      const dir = dirname(defaultPath);
+      await mkdir(dir, { recursive: true });
+
+      await writeFile(
+        defaultPath,
+        JSON.stringify(circuitInput, null, 2),
+        "utf-8"
+      );
+      console.log(
+        `✅ Circuit input written to default location: ${defaultPath}`
+      );
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(
+        `Failed to write circuit input to ${defaultPath}: ${errorMsg}`
+      );
+    }
   }
 
   return {
@@ -132,37 +201,47 @@ export async function generateWitness(
 ): Promise<WitnessGenerationResult> {
   const startTime = Date.now();
 
+  // FIXME: FOR MVP these vlaues are more-less hardcoded, this needs
+  // to be fixed.
   const {
     circuitName,
-    circuitsDir = config.circuitsDir ? config.circuitsDir : "./circuits",
-    inputJsonPath = config.inputJsonPath
-      ? config.inputJsonPath
-      : "./input.json",
-    outputWitnessPath = config.outputWitnessPath
-      ? config.outputWitnessPath
-      : "./witness.wtns",
+    circuitsDir = getDefaultCircuitsDir(),
+    inputJsonPath = resolveFromRoot("data/input/input.json"),
+    outputWitnessPath = resolveFromRoot("data/output/witness.wtns"),
   } = config;
 
-  console.log(config)
+  // Resolve circuitsDir from root if relative
+  const resolvedCircuitsDir = resolveFromRoot(circuitsDir);
 
-  // Construct paths
-  const jsDir = path.join(circuitsDir, `${circuitName}_js`);
-  const wasmPath = path.join(jsDir, `${circuitName}.wasm`);
-  const generateWitnessScript = path.join(jsDir, "generate_witness.js");
-
-  console.log(jsDir, "\n", wasmPath, "\n", generateWitnessScript);
+  // Construct paths to compiled circuit files
+  const jsDir = join(resolvedCircuitsDir, `${circuitName}_js`);
+  const wasmPath = join(jsDir, `${circuitName}.wasm`);
+  const generateWitnessScript = join(jsDir, "generate_witness.js");
 
   try {
     // Verify files exist
-    await fs.access(generateWitnessScript);
-    await fs.access(wasmPath);
-    await fs.access(inputJsonPath);
+    try {
+      await access(generateWitnessScript, constants.R_OK);
+    } catch {
+      throw new Error(
+        `generate_witness.js not found at: ${generateWitnessScript}`
+      );
+    }
+
+    try {
+      await access(wasmPath, constants.R_OK);
+    } catch {
+      throw new Error(`WASM file not found at: ${wasmPath}`);
+    }
+
+    try {
+      await access(inputJsonPath, constants.R_OK);
+    } catch {
+      throw new Error(`input.json not found at: ${inputJsonPath}`);
+    }
 
     // Build the command
     const command = `node "${generateWitnessScript}" "${wasmPath}" "${inputJsonPath}" "${outputWitnessPath}"`;
-
-    console.log(`Generating witness for circuit: ${circuitName}`);
-    console.log(`Command: ${command}`);
 
     // Execute the command
     const { stdout, stderr } = await execAsync(command, {
@@ -170,34 +249,27 @@ export async function generateWitness(
     });
 
     // Verify witness file was created
-    await fs.access(outputWitnessPath);
-
-    const executionTime = Date.now() - startTime;
+    await access(outputWitnessPath, constants.R_OK);
 
     return {
       success: true,
       witnessPath: outputWitnessPath,
       circuitName,
-      executionTime,
-      stdout: stdout.trim(),
-      stderr: stderr.trim(),
     };
   } catch (error) {
-    const executionTime = Date.now() - startTime;
 
     if (error instanceof Error) {
+      console.error(error.message);
+
       // Check for specific error types
-      if (error.message.includes("ENOENT")) {
+      if (
+        error.message.includes("ENOENT") ||
+        error.message.includes("not found")
+      ) {
         return {
           success: false,
           witnessPath: outputWitnessPath,
           circuitName,
-          executionTime,
-          error:
-            `Required files not found. Ensure circuit is compiled and paths are correct:\n` +
-            `  - ${generateWitnessScript}\n` +
-            `  - ${wasmPath}\n` +
-            `  - ${inputJsonPath}`,
         };
       }
 
@@ -205,10 +277,6 @@ export async function generateWitness(
         success: false,
         witnessPath: outputWitnessPath,
         circuitName,
-        executionTime,
-        error: error.message,
-        stderr: (error as any).stderr,
-        stdout: (error as any).stdout,
       };
     }
 
@@ -216,8 +284,6 @@ export async function generateWitness(
       success: false,
       witnessPath: outputWitnessPath,
       circuitName,
-      executionTime,
-      error: "Unknown error during witness generation",
     };
   }
 }
@@ -251,11 +317,6 @@ export async function generateWitnessBatch(
   for (const config of configs) {
     const result = await generateWitness(config);
     results.push(result);
-
-    if (!result.success) {
-      console.error(`Failed to generate witness for ${config.circuitName}`);
-      console.error(result.error);
-    }
   }
 
   return results;

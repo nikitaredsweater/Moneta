@@ -11,7 +11,10 @@ import {
   runAdditionalChecks,
 } from "../receivable";
 import { generateSalt, computePoseidonCommitment } from "../utils/commitment";
-import { generateWitnessSimple, prepareCircuitInput } from "../utils/witness";
+import {
+  generateWitnessSimple,
+  prepareCircuitInput,
+} from "../utils/witness";
 
 const router = Router();
 
@@ -275,28 +278,19 @@ router.post("/create", async (req: Request, res: Response) => {
   const salt = generateSalt();
   const commitment = await computePoseidonCommitment(encoded, salt);
 
-  // Making input.json file
-
-  // export interface WitnessGenerationConfig {
-  //   /** Name of the circuit (e.g., "ReceivableProofNamed") */
-  //   circuitName: string;
-  //   /** Path to the compiled circuit directory (default: "./circuits") */
-  //   circuitsDir?: string;
-  //   /** Path to input.json (default: "./input.json") */
-  //   inputJsonPath?: string;
-  //   /** Output path for witness file (default: "./witness.wtns") */
-  //   outputWitnessPath?: string;
-  // }
-  const result = await prepareCircuitInput(req.body, "./input.json");
+  const result = await prepareCircuitInput(req.body, "data/input/input.json");
   const witnessResult = await generateWitnessSimple({
     circuitName: "receivable_mvp",
-    inputJsonPath: "../../input.json",
-    circuitsDir: "../../../../circuits/src",
-    outputWitnessPath: "./witness.wtns",
-  }); // default circuit option for MVP
-  console.log(witnessResult); // testing
+  });
 
-  return res.status(200).json(result);
+
+  // TODO: Do not forget to include the commitment to the response!
+  if (witnessResult.success){
+    return res.status(200).json(result);
+  }
+  else{
+    return res.status(500).json(result);
+  }
 });
 
 export default router;
