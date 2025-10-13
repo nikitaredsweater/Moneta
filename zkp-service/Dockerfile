@@ -1,47 +1,38 @@
 # =========================================
-# Stage 0 — Build circom + fetch circomlib
-# (Debian so rust/cargo builds smoothly)
+# Stage 0 — Build circom + fetch circomlib (Alpine)
 # =========================================
-FROM debian:bookworm-slim AS zkp-build
+FROM alpine:3.18 AS zkp-build
 ARG CARGO_HOME=/root/.cargo
 ARG RUSTUP_HOME=/root/.rustup
 WORKDIR /tmp
 
-# Base deps for building circom
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates git build-essential pkg-config \
- && rm -rf /var/lib/apt/lists/*
+# Build deps for circom
+RUN apk add --no-cache curl git build-base musl-dev
 
 # Install Rust (non-interactive)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="$CARGO_HOME/bin:${PATH}"
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
-# Build circom from source
+# Clone sources we also want available at runtime
 RUN git clone https://github.com/iden3/circom.git
+RUN git clone https://github.com/iden3/circomlib.git
+
+# Build circom (binary ends up in target/release/circom)
 WORKDIR /tmp/circom
 RUN cargo build --release
 
-# Collect artifacts for later stages
-#  - circom binary
-#  - circomlib tree (for -l ./circomlib/circuits)
-WORKDIR /tmp
-RUN git clone https://github.com/iden3/circomlib.git
-
 # =========================================
-# Stage 1 — Node deps (with dev) on Alpine
+# Stage 1 — Node deps (dev) on Alpine
 # =========================================
 FROM node:20-alpine AS deps
 WORKDIR /app/services/api
-
-# Tooling needed for native node modules during npm ci (dev stage only)
 RUN apk add --no-cache python3 make g++ git
 
-# Copy package manifests from inside the service
 COPY services/api/package*.json ./
 RUN npm ci --include=dev
 
 # =========================================
-# Stage 2 — Build TS -> dist
+# Stage 2 — Build TypeScript
 # =========================================
 FROM deps AS build
 WORKDIR /app/services/api
@@ -56,33 +47,71 @@ FROM node:20-alpine AS runtime
 WORKDIR /app/services/api
 ENV NODE_ENV=production
 
-# 1) Install only prod deps
+# ---- System tools & runtime libs ----
+# bash      -> run your scripts
+# coreutils -> tee
+# libstdc++ -> required by circom binary
+# gmp       -> required by circom/snarkjs
+# wget      -> healthcheck
+RUN apk add --no-cache bash coreutils libstdc++ gmp wget \
+ && ln -sf /bin/bash /usr/bin/bash
+
+# ---- App deps (prod only) ----
 COPY services/api/package*.json ./
 RUN npm ci --omit=dev
 
-# 2) Bring in compiled JS
+# ---- App code ----
 COPY --from=build /app/services/api/dist ./dist
 
-# 3) Bring in circom binary built on Debian
-#    (works fine; it's a static-ish Rust binary. Place it in PATH.)
+# ---- circom binary ----
 COPY --from=zkp-build /tmp/circom/target/release/circom /usr/local/bin/circom
+RUN chmod +x /usr/local/bin/circom
 
-# 4) Bring circomlib into the service so "-l ./circomlib/circuits" works
-COPY --from=zkp-build /tmp/circomlib ./circomlib
+# ---- Bring circom & circomlib repos (folders) at the same level ----
+# You asked that "circom is a folder and should be on the same level as circomlib".
+# We place them under /zkp/{circom, circomlib}
+RUN mkdir -p /zkp
+COPY --from=zkp-build /tmp/circom     /zkp/circom
+COPY --from=zkp-build /tmp/circomlib  /zkp/circomlib
 
-# 5) Install snarkjs CLI globally
-#    (install as root, then we can drop privileges)
-RUN npm install -g snarkjs
+# ---- Circuits (project sources) ----
+# If your repo has circuits/src at project root:
+RUN mkdir -p /circuits/src /circuits/ptau
+COPY circuits/src /circuits/src
 
-# Optional: copy env/config files if needed
-# COPY services/api/.env ./
+# ---- Global npm (snarkjs) ----
+ENV PATH="/usr/local/bin:/usr/bin:/bin:${PATH}"
+RUN npm config set prefix /usr/local && npm install -g snarkjs@0.7.5
 
-# Non-root runtime
+# ---- Scripts ----
+COPY scripts /scripts
+RUN chmod +x /scripts/*.sh && sed -i 's/\r$//' /scripts/*.sh
+
+# ---- Env for your scripts (avoid path guessing) ----
+ENV CIRCUITS_SRC_DIR=/circuits/src
+ENV CIRCOMLIB_PATH=/zkp/circomlib/circuits
+ENV CIRCOM_BIN=/usr/local/bin/circom
+# (Optional, in case your scripts want to know where the repo is)
+ENV CIRCOM_ROOT=/zkp/circom
+
+# ---- Sanity checks (optional, safe to keep) ----
+RUN test -x "$CIRCOM_BIN" \
+ && test -d "$CIRCUITS_SRC_DIR" \
+ && test -f "$CIRCOMLIB_PATH/poseidon.circom"
+
+# ---- Run setup scripts with live logs ----
+WORKDIR /scripts
+RUN bash -x ./initial-project-setup.sh 2>&1 | tee /initial_setup.log
+RUN bash -x ./scheme-compilation.sh     2>&1 | tee /scheme_compilation.log
+RUN bash -x ./ptau-download.sh          2>&1 | tee /ptau_download.log
+RUN bash -x ./generate-zkeys.sh /circuits/ptau/hez13.ptau "MVP Contribution" 2>&1 | tee /generate_zkeys.log
+
+# ---- Runtime app ----
+WORKDIR /app/services/api
 USER node
 
 EXPOSE 3000
 
-# Optional healthcheck (busybox wget is present on Alpine)
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 

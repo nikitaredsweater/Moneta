@@ -35,7 +35,7 @@
 
 
 TARGET_DIR="../circuits/ptau"
-FILE_NAME="hez13ll.ptau"
+FILE_NAME="hez13.ptau"
 URL="https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_13.ptau"
 
 mkdir -p "$TARGET_DIR"
