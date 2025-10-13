@@ -129,13 +129,10 @@ export async function prepareCircuitInput(
     // Resolve path relative to zkp-service root
     const resolvedOutputPath = resolveFromRoot(outputPath);
 
-    console.log(`Preparing to write circuit input to: ${resolvedOutputPath}`);
-
     try {
       // Ensure the directory exists
       const dir = dirname(resolvedOutputPath);
       await mkdir(dir, { recursive: true });
-      console.log(`✓ Directory ensured: ${dir}`);
 
       // Write the file
       await writeFile(
@@ -143,9 +140,7 @@ export async function prepareCircuitInput(
         JSON.stringify(circuitInput, null, 2),
         "utf-8"
       );
-      console.log(
-        `✅ Circuit input written successfully to: ${resolvedOutputPath}`
-      );
+
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       throw new Error(

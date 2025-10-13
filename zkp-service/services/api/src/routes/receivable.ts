@@ -13,6 +13,10 @@ import {
 import { generateSalt, computePoseidonCommitment } from "../utils/commitment";
 import { generateWitnessSimple, prepareCircuitInput } from "../utils/witness";
 import { generateGroth16Proof } from "../utils/proof";
+import {
+  buildSuccessUserPayload,
+  buildFailureUserPayload,
+} from "../response/userResult";
 
 const router = Router();
 
@@ -288,12 +292,14 @@ router.post("/create", async (req: Request, res: Response) => {
     publicOutputPath: "data/output/output.json",
   });
 
-
-  // TODO: Do not forget to include the commitment to the response!
-  if (witnessResult.success) {
-    return res.status(200).json(result);
+  if (witnessResult.success && proofResult.success) {
+    return res
+      .status(200)
+      .json(
+        buildSuccessUserPayload(scheme, body.fields, commitment.toString())
+      );
   } else {
-    return res.status(500).json(result);
+    return res.status(500).json(buildFailureUserPayload());
   }
 });
 
