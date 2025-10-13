@@ -81,4 +81,4 @@ template ReceivableProofNamed(n_fields, n_public) {
     }
 }
 
-component main {public [commitment, disclosed_names, disclosed_values]} = ReceivableProofNamed(5, 3);
+component main {public [commitment, disclosed_names, disclosed_values]} = ReceivableProofNamed(6, 5);
