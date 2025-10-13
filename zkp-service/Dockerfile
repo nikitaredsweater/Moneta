@@ -106,8 +106,19 @@ RUN bash -x ./scheme-compilation.sh     2>&1 | tee /scheme_compilation.log
 RUN bash -x ./ptau-download.sh          2>&1 | tee /ptau_download.log
 RUN bash -x ./generate-zkeys.sh /circuits/ptau/hez13.ptau "MVP Contribution" 2>&1 | tee /generate_zkeys.log
 
+# ---- Ensure circuits are accessible from /app and keys land in /app/keys ----
+RUN ln -s /circuits /app/circuits || true
+ENV CIRCUITS_SRC_DIR=/app/circuits/src
+
 # ---- Runtime app ----
 WORKDIR /app/services/api
+# Create default data dirs the app expects and grant permissions to node
+RUN mkdir -p /app/data/input /app/data/output \
+ && chown -R node:node /app
+
+# (optional) your circuits live at /circuits/src but your code defaults to /app/circuits/src.
+# Provide a friendly symlink so existing code keeps working.
+RUN ln -s /circuits /app/circuits || true
 USER node
 
 EXPOSE 3000

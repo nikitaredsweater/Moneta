@@ -17,6 +17,7 @@ import {
   buildSuccessUserPayload,
   buildFailureUserPayload,
 } from "../response/userResult";
+import logger from "../utils/logger";
 
 const router = Router();
 
@@ -291,6 +292,9 @@ router.post("/create", async (req: Request, res: Response) => {
     proofOutputPath: "data/output/proof.json",
     publicOutputPath: "data/output/output.json",
   });
+
+  logger.info(`witnessResult :>> ${JSON.stringify(witnessResult)}`);
+  logger.info(`proofResult :>>  ${JSON.stringify(proofResult)}`);
 
   if (witnessResult.success && proofResult.success) {
     return res
