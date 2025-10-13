@@ -119,6 +119,8 @@ RUN mkdir -p /app/data/input /app/data/output \
 # (optional) your circuits live at /circuits/src but your code defaults to /app/circuits/src.
 # Provide a friendly symlink so existing code keeps working.
 RUN ln -s /circuits /app/circuits || true
+# Keys expected at /app/keys but were created under /keys -> symlink them
+RUN ln -s /keys /app/keys || true
 USER node
 
 EXPOSE 3000
