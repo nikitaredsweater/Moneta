@@ -288,7 +288,6 @@ router.post("/create", async (req: Request, res: Response) => {
     publicOutputPath: "data/output/output.json",
   });
 
-  console.log(proofResult)
 
   // TODO: Do not forget to include the commitment to the response!
   if (witnessResult.success) {
