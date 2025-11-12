@@ -1,0 +1,38 @@
+{
+  "author": "",
+  "dependencies": {
+    "circomlibjs": "^0.1.7",
+    "express": "^5.1.0",
+    "morgan": "^1.10.1",
+    "snarkjs": "^0.7.5",
+    "winston": "^3.18.3"
+  },
+  "description": "",
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@types/circomlibjs": "^0.1.6",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "name": "api",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "start": "node dist/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.0"
+}
