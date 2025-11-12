@@ -11,6 +11,7 @@ from app.routers import app_router
 from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 GRPC_ADDR = os.getenv('GRPC_ADDR', '[::]:50061')  # gRPC port
 
@@ -40,4 +41,14 @@ app = FastAPI(
 )
 
 app.add_middleware(JWTAuthMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=False,  # set True only if you use cookies
+    allow_methods=["*"],  # or list methods you use
+    allow_headers=["*", "Authorization", "Content-Type"],
+)
 app.include_router(app_router)
