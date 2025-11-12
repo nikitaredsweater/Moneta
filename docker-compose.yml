@@ -43,7 +43,7 @@ services:
       context: ./zkp-service
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "8082:3000"
 
   # Other Images Used by Moneta Team
   minio:
