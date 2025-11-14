@@ -18,7 +18,6 @@ from app.exceptions import (
 from fastapi import Request
 
 
-
 @dataclass(frozen=True)
 class Permission:
     """
@@ -56,6 +55,7 @@ ROLE_PERMISSIONS = {
         (Verb.VIEW, Entity.ALL_DATA),
         # User management
         (Verb.VIEW, Entity.ALL_USERS),
+        (Verb.VIEW, Entity.USER),
         (Verb.CREATE, Entity.USER),
         (Verb.UPDATE, Entity.USER),
         (Verb.DELETE, Entity.ALL_USERS),
