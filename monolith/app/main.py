@@ -2,6 +2,7 @@
 Main FastAPI application module.
 """
 
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -14,6 +15,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 GRPC_ADDR = os.getenv('GRPC_ADDR', '[::]:50061')  # gRPC port
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+
+logger = logging.getLogger(__name__)
+logger.info('Starting application')
 
 
 @asynccontextmanager
@@ -44,11 +53,11 @@ app.add_middleware(JWTAuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
     ],
     allow_credentials=False,  # set True only if you use cookies
-    allow_methods=["*"],  # or list methods you use
-    allow_headers=["*", "Authorization", "Content-Type"],
+    allow_methods=['*'],  # or list methods you use
+    allow_headers=['*', 'Authorization', 'Content-Type'],
 )
 app.include_router(app_router)
