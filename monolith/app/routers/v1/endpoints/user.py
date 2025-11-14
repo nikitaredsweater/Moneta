@@ -49,7 +49,7 @@ async def get_users(
 async def get_users(
     user_id: schemas.MonetaID,
     user_repo: repo.User,
-    _=Depends(has_permission([Permission(Verb.VIEW, Entity.ALL_USERS)])),
+    _=Depends(has_permission([Permission(Verb.VIEW, Entity.USER)])),
 ) -> Optional[schemas.User]:
     """
     Get a user by id
