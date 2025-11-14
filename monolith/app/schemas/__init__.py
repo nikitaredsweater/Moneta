@@ -26,6 +26,7 @@ from app.schemas.user import (
     UserInternal,
     UserLogin,
     UserUpdate,
+    UserFilters
 )
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     'UserUpdate',
     'UserDelete',
     'UserLogin',
+    'UserFilters',
     'Company',
     'CompanyCreate',
     'CompanyAddress',
