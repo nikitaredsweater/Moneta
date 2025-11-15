@@ -39,7 +39,7 @@ class Instrument(Base, BaseEntity):
     maturity_status: Mapped[MaturityStatus] = mapped_column(
         PgEnum(MaturityStatus, name="maturity_status"),
         nullable=False,
-        default=MaturityStatus.NOT_TRADING,
+        default=MaturityStatus.NOT_DUE,
     )
 
     issuer_id: Mapped[str] = mapped_column(
