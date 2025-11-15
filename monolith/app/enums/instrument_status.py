@@ -37,3 +37,24 @@ class MaturityStatus(str, Enum):
     LATE = 'LATE'  # beyond grace, not default yet (policy-defined)
     DEFAULTED = 'DEFAULTED'  # event of default triggered
     DISPUTED = 'DISPUTED'  # payment/discrepancy under dispute
+
+
+class TradingStatus(str, Enum):
+    """
+    Status of a receivable in its trade lifecycle.
+    """
+
+    OFF_MARKET = "OFF_MARKET"  # held, not listed
+    DRAFT = "DRAFT"  # preparing a listing
+    LISTED = "LISTED"  # publicly available for offers
+    PAUSED = "PAUSED"  # temporarily hidden by owner
+    UNDER_OFFER = "UNDER_OFFER"  # an offer accepted; negotiating/confirming
+    RESERVED = "RESERVED"  # exclusivity window for a buyer
+    ESCROW = "ESCROW"  # docs/funds in escrow
+    SETTLEMENT_PENDING = (
+        "SETTLEMENT_PENDING"  # registrar/ops executing transfer
+    )
+    CANCELLED = "CANCELLED"  # owner withdrew the listing
+    EXPIRED = "EXPIRED"  # listing timed out
+    SUSPENDED = "SUSPENDED"  # platform/compliance hold
+    FAILED_SETTLEMENT = "FAILED_SETTLEMENT"  # unwind
