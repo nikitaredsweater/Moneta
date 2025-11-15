@@ -5,7 +5,7 @@ Main FastAPI application module.
 import logging
 import os
 from contextlib import asynccontextmanager
-
+import logging
 import grpc
 from app.gen import document_ingest_pb2_grpc as pbg
 from app.routers import app_router
@@ -13,6 +13,14 @@ from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+
+logger = logging.getLogger(__name__)
+logger.info('Starting application')
 
 GRPC_ADDR = os.getenv('GRPC_ADDR', '[::]:50061')  # gRPC port
 

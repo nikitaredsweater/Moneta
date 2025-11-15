@@ -49,6 +49,8 @@ class Permission:
 # Platform for a specific user is to allow the whole role more permissions
 # This may be the inteded behavior, but I am not sure.
 
+# TODO: Before production, decide which permissions go to which users.
+
 ROLE_PERMISSIONS = {
     UserRole.ADMIN: {
         # Global data access
@@ -72,14 +74,23 @@ ROLE_PERMISSIONS = {
         (Verb.CREATE, Entity.COMPANY_ADDRESS),
         (Verb.UPDATE, Entity.COMPANY_ADDRESS),
         (Verb.DELETE, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
+        (Verb.CREATE, Entity.INSTRUMENT),
+        (Verb.DELETE, Entity.INSTRUMENT),
+        (Verb.UPDATE, Entity.INSTRUMENT),
     },
     UserRole.BUYER: {
         (Verb.VIEW, Entity.COMPANY),
         (Verb.VIEW, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
     },
     UserRole.SELLER: {
         (Verb.VIEW, Entity.COMPANY),
         (Verb.VIEW, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
     },
     UserRole.ISSUER: {
         (Verb.VIEW, Entity.COMPANY),
@@ -88,6 +99,9 @@ ROLE_PERMISSIONS = {
         (Verb.CREATE, Entity.COMPANY_ADDRESS),
         (Verb.UPDATE, Entity.COMPANY_ADDRESS),
         (Verb.DELETE, Entity.COMPANY_ADDRESS),
+        # instruments
+        (Verb.VIEW, Entity.INSTRUMENT),
+        (Verb.UPDATE, Entity.INSTRUMENT),
     },
 }
 

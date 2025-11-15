@@ -14,5 +14,5 @@ __all__ = [
     'UserRole',
     'AddressType',
     'InstrumentStatus',
-    'MaturityStatus'
+    'MaturityStatus',
 ]

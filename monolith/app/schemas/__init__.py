@@ -18,6 +18,11 @@ from app.schemas.instrument import (
     Instrument,
     InstrumentCreate,
     InstrumentCreateInternal,
+    InstrumentFilters,
+    InstrumentDRAFTUpdate,
+    InstrumentTransitionRequest,
+    InstrumentStatusUpdate,
+    InstrumentMaturityStatusUpdate
 )
 from app.schemas.user import (
     User,
@@ -30,6 +35,7 @@ from app.schemas.user import (
 )
 
 __all__ = [
+    'MonetaID',
     'User',
     'UserCreate',
     'UserUpdate',
@@ -45,6 +51,11 @@ __all__ = [
     'Instrument',
     'InstrumentCreate',
     'InstrumentCreateInternal',
+    'InstrumentFilters',
+    'InstrumentDRAFTUpdate',
+    'InstrumentTransitionRequest',
+    'InstrumentStatusUpdate',
+    'InstrumentMaturityStatusUpdate',
     'Document',
     'DocumentCreate',
     'DocumentVersion',

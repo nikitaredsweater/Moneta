@@ -66,6 +66,7 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     return {'access_token': token, 'token_type': 'bearer'}
 
 
+# FIXME: Do not return the password.
 @v1_router.get('/me')
 async def get_me(current_user=Depends(get_current_user)):
     return current_user
