@@ -10,6 +10,10 @@ from app import schemas
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.security import Permission, has_permission
+from app.utils.filters.company_filters import (
+    build_sort_company,
+    build_where_company,
+)
 from fastapi import APIRouter, Depends
 
 logger = logging.getLogger()
@@ -61,6 +65,23 @@ async def get_company_by_uuid(
         )
     finally:
         return company
+
+
+@company_router.post("/search", response_model=List[schemas.Company])
+async def search_companies(
+    company_repo: repo.Company,
+    filters: schemas.CompanyFilters,
+    _=Depends(has_permission([Permission(Verb.VIEW, Entity.COMPANY)])),
+) -> Optional[List[schemas.Company]]:
+    where = build_where_company(filters)
+    order = build_sort_company(filters.sort)
+    result = await company_repo.get_all(
+        where_list=where or None,
+        order_list=order or None,
+        limit=filters.limit,
+        offset=filters.offset,
+    )
+    return result
 
 
 @company_router.post('/', response_model=schemas.Company)
