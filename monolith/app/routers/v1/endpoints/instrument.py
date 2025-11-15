@@ -18,7 +18,7 @@ from app.exceptions import (
 )
 from app.security import Permission, has_permission
 from app.utils import validations
-from app.utils.filters import build_sort_instrument, build_where_instrument
+from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
 from fastapi import APIRouter, Depends
 
 logger = logging.getLogger()

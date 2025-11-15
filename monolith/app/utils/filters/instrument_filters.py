@@ -68,6 +68,8 @@ def build_where_instrument(filters: schemas.InstrumentFilters) -> list:
         where.append(M.instrument_status == filters.instrument_status)
     if filters.maturity_status is not None:
         where.append(M.maturity_status == filters.maturity_status)
+    if filters.trading_status is not None:
+        where.append(M.trading_status == filters.trading_status)
 
     # Date ranges
     if filters.maturity_date_after:
