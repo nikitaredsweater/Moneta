@@ -1,4 +1,6 @@
 services:
+
+  # Services Created and Maintained by Moneta Team
   app:
     build:
       context: ./monolith
@@ -50,6 +52,14 @@ services:
         condition: service_healthy
     restart: always
 
+  zkp_service:
+    build:
+      context: ./zkp-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:3000"
+
+  # Other Images Used by Moneta Team
   minio:
     image: minio/minio
     ports:

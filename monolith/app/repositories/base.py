@@ -180,6 +180,11 @@ class BasePGRepository(Generic[T]):
                 if where_list:
                     for where_clause in where_list:
                         query = query.where(where_clause)
+                
+                if offset is not None:
+                    query = query.offset(offset)
+                if limit is not None:
+                    query = query.limit(limit)
 
                 if order_list:
                     for order in order_list:
