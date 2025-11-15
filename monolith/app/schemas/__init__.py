@@ -7,7 +7,7 @@ with models module.
 """
 
 from app.schemas.base import MonetaID
-from app.schemas.company import Company, CompanyCreate
+from app.schemas.company import Company, CompanyCreate, CompanyFilters
 from app.schemas.company_address import CompanyAddress, CompanyAddressCreate
 from app.schemas.documents.document import Document, DocumentCreate
 from app.schemas.documents.document_version import (
@@ -23,10 +23,10 @@ from app.schemas.user import (
     User,
     UserCreate,
     UserDelete,
+    UserFilters,
     UserInternal,
     UserLogin,
     UserUpdate,
-    UserFilters
 )
 
 __all__ = [
@@ -38,6 +38,7 @@ __all__ = [
     'UserFilters',
     'Company',
     'CompanyCreate',
+    'CompanyFilters',
     'CompanyAddress',
     'CompanyAddressCreate',
     'UserInternal',
