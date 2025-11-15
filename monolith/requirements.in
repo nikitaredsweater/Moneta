@@ -48,3 +48,7 @@ python-jose[cryptography]
 # -- gRPC --
 grpcio
 grpcio-tools
+
+# -- Fake DB --
+faker
+typer
