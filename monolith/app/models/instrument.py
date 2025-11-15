@@ -7,7 +7,7 @@ though the main trade takes place on the chain.
 
 from datetime import date, datetime
 
-from app.enums import InstrumentStatus, MaturityStatus
+from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
 from app.models.base import Base, BaseEntity
 from sqlalchemy import Date, Double
 from sqlalchemy import Enum as PgEnum
@@ -39,7 +39,13 @@ class Instrument(Base, BaseEntity):
     maturity_status: Mapped[MaturityStatus] = mapped_column(
         PgEnum(MaturityStatus, name="maturity_status"),
         nullable=False,
-        default=MaturityStatus.NOT_TRADING,
+        default=MaturityStatus.NOT_DUE,
+    )
+
+    trading_status: Mapped[TradingStatus] = mapped_column(
+        PgEnum(TradingStatus, name="trading_status"),
+        nullable=False,
+        default=TradingStatus.OFF_MARKET,
     )
 
     issuer_id: Mapped[str] = mapped_column(

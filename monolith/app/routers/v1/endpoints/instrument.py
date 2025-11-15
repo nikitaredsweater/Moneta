@@ -1,21 +1,25 @@
 """
 Instrument endpoints
 """
-import logging
 
-from fastapi import APIRouter, Depends
-from typing import List, Optional, Dict
+import logging
+from typing import Dict, List, Optional
 
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user
+from app.enums import InstrumentStatus, MaturityStatus
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
-from app.enums import InstrumentStatus, UserRole, MaturityStatus
-from app.exceptions import WasNotFoundException, InsufficientPermissionsException
+from app.enums import UserRole
+from app.exceptions import (
+    InsufficientPermissionsException,
+    WasNotFoundException,
+)
 from app.security import Permission, has_permission
 from app.utils import validations
-from app.utils.filters import build_sort_instrument, build_where_instrument
+from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
+from fastapi import APIRouter, Depends
 
 logger = logging.getLogger()
 instrument_router = APIRouter()
@@ -48,6 +52,7 @@ async def search_instruments(
     )
     return instruments
 
+
 @instrument_router.get('/{instrument_id}', response_model=schemas.Instrument)
 async def get_instrument(
     instrument_id: schemas.MonetaID,
@@ -72,6 +77,7 @@ async def get_instrument(
         raise WasNotFoundException(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
+
 
 # TODO: Make it a part of the workflow for
 # creating on- and off-chaim representations.
@@ -102,6 +108,7 @@ async def create_instrument(
     instrument = await instrument_repo.create(internal_data)
     return instrument
 
+
 ################################################################################
 #                        Updating an instrument entity
 ################################################################################
@@ -130,7 +137,7 @@ async def update_drafted_instrument(
             detail=f'This instrument cannot be updated'
         )
 
-    # Check that the user belongs to the same company 
+    # Check that the user belongs to the same company
     # as that which issues the DRAFT
     if instrument.issuer_id != current_user.company_id:
         raise InsufficientPermissionsException(
@@ -140,51 +147,66 @@ async def update_drafted_instrument(
     # Update entity checks
     # Check that the time is in the future
     if instrument_data.maturity_date:
-        validations.ensure_future(instrument_data.maturity_date, 'maturity_date')
+        validations.ensure_future(
+            instrument_data.maturity_date, 'maturity_date'
+        )
     # Check that the faceValue is more than 0
     if instrument_data.face_value:
         validations.ensure_positive(instrument_data.face_value, 'face_value')
     # Check that the maturityPayment is more than 0
     if instrument_data.maturity_payment:
-        validations.ensure_positive(instrument_data.maturity_payment, 'maturity_payment')
+        validations.ensure_positive(
+            instrument_data.maturity_payment, 'maturity_payment'
+        )
 
     # Update the entity in the database
     updated = await instrument_repo.update_by_id(instrument_id, instrument_data)
     return updated
+
 
 ################################################################################
 #                             Updating Instrument Status
 ################################################################################
 # These actions relate to status of a note rather than to the
 # maturity of the instrument.
-# 
-# 
+#
+#
 # 1. DRAFT = User began creation of an instrument but not has finished.
 #  At this stage they can make any corrections to the instrument as well delete
 #  it altogether.
-# 
+#
 # 2. PENDING_APPROVAL = User submitted the instrument for approval.
 #  No more changes can be made to the instrument. Before becomes publicly
 #  availble for purchase ADMIN must approve this note
-# 
+#
 # 3. ACTIVE = instrument was approved and is currently being publicly
 #  traded on-chain
-# 
+#
 # 4. MATURED = the date of the maturity of the instrument has passed
 #  and it changed its status FROM ACTIVE.
-# 
+#
 # 5. REJECTED = For some reason an admin decided that an instrument
 #  with status PENDING_APPROVAL cannot be publicly traded.
 
 # Allowed graph: (status, user_type) -> next_status
 TRANSITIONS: Dict[tuple[InstrumentStatus, UserRole], list[InstrumentStatus]] = {
-    (InstrumentStatus.DRAFT, UserRole.ISSUER): [InstrumentStatus.PENDING_APPROVAL],
-    (InstrumentStatus.DRAFT, UserRole.ADMIN): [InstrumentStatus.PENDING_APPROVAL], # TODO: Remove after tests
-    (InstrumentStatus.PENDING_APPROVAL, UserRole.ADMIN): [InstrumentStatus.REJECTED, InstrumentStatus.ACTIVE],
+    (InstrumentStatus.DRAFT, UserRole.ISSUER): [
+        InstrumentStatus.PENDING_APPROVAL
+    ],
+    (InstrumentStatus.DRAFT, UserRole.ADMIN): [
+        InstrumentStatus.PENDING_APPROVAL
+    ],  # TODO: Remove after tests
+    (InstrumentStatus.PENDING_APPROVAL, UserRole.ADMIN): [
+        InstrumentStatus.REJECTED,
+        InstrumentStatus.ACTIVE,
+    ],
     # Transition from ACTIVE to MATURED should happen by a clock.
 }
 
-@instrument_router.post("/{instrument_id}/transition", response_model=schemas.Instrument)
+
+@instrument_router.post(
+    "/{instrument_id}/transition", response_model=schemas.Instrument
+)
 async def update_status(
     instrument_id: schemas.MonetaID,
     body: schemas.InstrumentTransitionRequest,
@@ -200,35 +222,39 @@ async def update_status(
         raise WasNotFoundException(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
-    
+
     key = (instrument.instrument_status, current_user.role)
     allowed_next_statuses = TRANSITIONS.get(key, [])
     if body.new_status not in allowed_next_statuses:
         raise InsufficientPermissionsException(
             detail=f'You cannot perform this transition'
         )
-    
+
     # FIXME: Doing to separate calls to DB is very not advised...
     updated = await instrument_repo.update_by_id(
-                                                 instrument_id, 
-                                                 schemas.InstrumentStatusUpdate(instrument_status=body.new_status)
-                                                 )
-    
+        instrument_id,
+        schemas.InstrumentStatusUpdate(instrument_status=body.new_status),
+    )
+
     if updated:
         # Performing additional actions depending on the type of the new status
         # Received by the instrument
-        if body.new_status is InstrumentStatus.ACTIVE and \
-            updated.instrument_status is InstrumentStatus.ACTIVE:
+        if (
+            body.new_status is InstrumentStatus.ACTIVE
+            and updated.instrument_status is InstrumentStatus.ACTIVE
+        ):
             # Double check in case the status did not change
 
             # Here we do actions that we need before the item goes public
 
-            # Setting the maturity status to 'pending' - indicates that 
+            # Setting the maturity status to 'pending' - indicates that
             # the item is currently changing hands and the maturity settlement is
             # pending to happen.
             updated = await instrument_repo.update_by_id(
-                                                instrument_id, 
-                                                schemas.InstrumentMaturityStatusUpdate(maturity_status=MaturityStatus.PENDING)
-                                                )
-            
+                instrument_id,
+                schemas.InstrumentMaturityStatusUpdate(
+                    maturity_status=MaturityStatus.DUE
+                ),
+            )
+
     return updated
