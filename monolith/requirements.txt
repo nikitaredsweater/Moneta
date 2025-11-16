@@ -73,6 +73,8 @@ flake8-isort==6.1.2
     # via -r requirements.in
 flake8-quotes==3.4.0
     # via -r requirements.in
+greenlet==3.2.4
+    # via -r requirements.in
 grpcio==1.74.0
     # via
     #   -r requirements.in

@@ -52,3 +52,4 @@ grpcio-tools
 # -- Fake DB --
 faker
 typer
+greenlet

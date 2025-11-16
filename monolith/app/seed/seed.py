@@ -1,19 +1,21 @@
 import asyncio
 import os
 import random
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Sequence
 
 import typer
-from app.enums import AddressType  # <-- adjust if needed; <-- adjust
-from app.enums import InstrumentStatus, MaturityStatus, TradingStatus, UserRole
-from app.models import CompanyAddress  # <-- adjust if needed
-from app.models import Company, Instrument, User
-
-# ==== import your project bits (adjust paths if needed) ====
+from app.enums import (
+    AddressType,
+    InstrumentStatus,
+    MaturityStatus,
+    TradingStatus,
+    UserRole,
+)
+from app.models import Company, CompanyAddress, Instrument, User
 from app.security import encrypt_password
 from faker import Faker
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 cli = typer.Typer(help="Seed the database with deterministic demo/test data.")
@@ -31,7 +33,9 @@ def get_db_url() -> str:
     Reads DATABASE_URL and ensures async driver.
     Works for both dev and test stacks (Option 2).
     """
-    url = os.getenv("DATABASE_URL")
+    url = os.getenv(
+        "DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/moneta"
+    )
     if not url:
         raise SystemExit(
             "Set DATABASE_URL (e.g. postgresql+asyncpg://user:pass@host/db)"
@@ -60,6 +64,54 @@ async def truncate_all(engine) -> None:
             except Exception:
                 # Table may not exist in early dev; ignore to keep seed robust
                 pass
+
+
+# ----- instrument value helpers -----
+def _rand_currency() -> str:
+    return random.choice(["USD", "EUR", "GBP", "CHF", "RSD"])
+
+
+def _gen_instrument_name(i: int) -> str:
+    return f"INV-{datetime.now().strftime('%Y%m%d')}-{i:04d}-{random.randint(100,999)}"
+
+
+def _pick_instrument_status() -> InstrumentStatus:
+    # Heavily bias toward ACTIVE
+    bag = [InstrumentStatus.ACTIVE] * 6 + [InstrumentStatus.DRAFT] * 3
+    if hasattr(InstrumentStatus, "REJECTED"):
+        bag += [InstrumentStatus.REJECTED]
+    return random.choice(bag)
+
+
+def _pick_maturity_status(maturity_dt: date) -> MaturityStatus:
+    today = date.today()
+    if maturity_dt > today + timedelta(days=7):
+        return MaturityStatus.NOT_DUE
+    if today <= maturity_dt <= today + timedelta(days=7):
+        return (
+            MaturityStatus.IN_GRACE
+            if hasattr(MaturityStatus, "IN_GRACE")
+            else MaturityStatus.NOT_DUE
+        )
+    # Past due
+    # Prefer LATE/OVERDUE if present; fall back to DUE
+    if hasattr(MaturityStatus, "LATE"):
+        return MaturityStatus.LATE
+    return MaturityStatus.DUE
+
+
+def _pick_trading_status(readiness: InstrumentStatus) -> TradingStatus:
+    if readiness == InstrumentStatus.ACTIVE:
+        base = [
+            TradingStatus.LISTED,
+            TradingStatus.OFF_MARKET,
+            TradingStatus.PAUSED,
+        ]
+        if hasattr(TradingStatus, "UNDER_OFFER"):
+            base += [TradingStatus.UNDER_OFFER]
+        return random.choice(base)
+    # Not active -> shouldn't be openly listed
+    return random.choice([TradingStatus.OFF_MARKET, TradingStatus.DRAFT])
 
 
 # ---------- main command ----------
@@ -107,6 +159,7 @@ def run(
                 )
                 session.add(c)
                 companies_created.append(c)
+            # we need IDs for FKs
             await session.flush()
 
             # --- Addresses (1–3 per company) ---
@@ -154,48 +207,51 @@ def run(
                     ),
                 )
                 session.add(u)
+
+            # Flush to ensure user/company IDs are available for FK assignment
             await session.flush()
+
+            # Collect FK pools (robust even if models add constraints later)
+            company_ids = [
+                row[0]
+                for row in (await session.execute(select(Company.id))).all()
+            ]
+            user_ids = [
+                row[0] for row in (await session.execute(select(User.id))).all()
+            ]
+            if not company_ids or not user_ids:
+                raise RuntimeError(
+                    "Seeder prerequisite not met: companies and users must exist before instruments."
+                )
 
             # --- Instruments (Receivables) ---
             today = date.today()
-            for _ in range(instruments):
-                maturity = today + timedelta(days=random.randint(30, 360))
-                readiness = random.choices(
-                    [
-                        InstrumentStatus.ACTIVE,
-                        InstrumentStatus.DRAFT,
-                        InstrumentStatus.REJECTED,
-                    ],
-                    weights=[0.7, 0.25, 0.05],
-                    k=1,
-                )[0]
-                payout = random.choice(
-                    [
-                        MaturityStatus.NOT_DUE,
-                        MaturityStatus.DUE,
-                        MaturityStatus.IN_GRACE,
-                        MaturityStatus.PARTIALLY_PAID,
-                        MaturityStatus.PAID,
-                        MaturityStatus.LATE,
-                    ]
+            for i in range(instruments):
+                # Business values
+                face_value = float(random.randrange(10_000, 250_000, 500))
+                currency = _rand_currency()
+                maturity_dt = today + timedelta(days=random.randint(-30, 360))
+                # A simple premium component (ensure >= face value)
+                maturity_payment = round(
+                    face_value * (1.00 + random.uniform(0.02, 0.15)), 2
                 )
-                trade_pool = (
-                    [
-                        TradingStatus.LISTED,
-                        TradingStatus.OFF_MARKET,
-                        TradingStatus.PAUSED,
-                    ]
-                    if readiness == InstrumentStatus.ACTIVE
-                    else [TradingStatus.OFF_MARKET, TradingStatus.DRAFT]
-                )
-                trading = random.choice(trade_pool)
+
+                readiness = _pick_instrument_status()
+                payout = _pick_maturity_status(maturity_dt)
+                trading = _pick_trading_status(readiness)
 
                 inst = Instrument(
-                    # fill required business fields on your model in addition to statuses:
-                    # e.g., face_value=..., currency="USD", issuer_id=..., maturity_date=maturity, ...
-                    readiness_status=readiness,
-                    payout_status=payout,
+                    name=_gen_instrument_name(i),
+                    face_value=face_value,
+                    currency=currency,
+                    maturity_date=maturity_dt,
+                    maturity_payment=maturity_payment,
+                    instrument_status=readiness,
+                    maturity_status=payout,
                     trading_status=trading,
+                    issuer_id=random.choice(company_ids),
+                    created_by=random.choice(user_ids),
+                    created_at=datetime.now(timezone.utc),
                 )
                 session.add(inst)
 
