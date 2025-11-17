@@ -63,6 +63,15 @@ class IncorrectInputFormatException(BaseHTTPException):
     detail = 'Entity passed in has an invalid field'
 
 
+class ForbiddenException(BaseHTTPException):
+    """
+    Excpetion raised when the user has no permission to do an action.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = 'Forbidden Action'
+
+
 ################################################################################
 #                              AUTH EXCPETIONS
 ################################################################################

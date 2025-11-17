@@ -6,7 +6,11 @@ Provides routes for user login and token generation using JWT.
 
 from app import repositories as repo
 from app import schemas
-from app.exceptions import AccountStatusException, InvalidCredentialsException
+from app.exceptions import (
+    AccountStatusException,
+    ForbiddenException,
+    InvalidCredentialsException,
+)
 from app.security import (
     ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS,
     ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA,
@@ -66,6 +70,9 @@ async def get_jwt_token(
 
     if user is None:
         raise InvalidCredentialsException
+
+    if user.deleted_at is not None:
+        raise ForbiddenException  # Account is deleted
 
     if not can_get_jwt_token(user=user):
         raise AccountStatusException

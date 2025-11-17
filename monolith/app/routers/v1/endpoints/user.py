@@ -15,6 +15,7 @@ from app.enums import PermissionVerb as Verb
 from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
+    ForbiddenException,
     InsufficientPermissionsException,
     WasNotFoundException,
 )
@@ -129,7 +130,7 @@ async def delete_user(
     if user_to_delete.company_id:
         # Only same company user can delete a user
         if current_user.company_id != user_to_delete.company_id:
-            raise InsufficientPermissionsException  # 403
+            raise ForbiddenException  # 403
     else:
         raise WasNotFoundException  # 404
 
