@@ -1,11 +1,12 @@
 """
 User DTOs
 """
-from datetime import date
 
-from app.enums import UserRole
-from app.schemas.base import BaseDTO, CamelModel, MonetaID
+from datetime import date
 from typing import Optional
+
+from app.enums import ActivationStatus, UserRole
+from app.schemas.base import BaseDTO, CamelModel, MonetaID
 
 
 class User(BaseDTO):
@@ -18,6 +19,7 @@ class User(BaseDTO):
     last_name: str
     company_id: MonetaID
     role: UserRole
+    account_status: ActivationStatus
 
 
 class UserInternal(BaseDTO):
@@ -31,6 +33,7 @@ class UserInternal(BaseDTO):
     last_name: str
     company_id: MonetaID
     role: UserRole
+    account_status: ActivationStatus
 
 
 class UserCreate(CamelModel):
@@ -71,19 +74,21 @@ class UserLogin(CamelModel):
     password: str
     email: str
 
+
 class UserFilters(CamelModel):
     """
     Search parameters for Users (pagination + sorting included).
     All fields are optional; unspecified filters are ignored.
     """
+
     # exact or partial fields
-    email: Optional[str] = None                 # partial match (ilike)
-    first_name: Optional[str] = None            # partial match (ilike)
-    last_name: Optional[str] = None             # partial match (ilike)
+    email: Optional[str] = None  # partial match (ilike)
+    first_name: Optional[str] = None  # partial match (ilike)
+    last_name: Optional[str] = None  # partial match (ilike)
 
     # exact filters
     role: Optional[UserRole] = None
-    company_id: Optional[MonetaID] = None       # exact company
+    company_id: Optional[MonetaID] = None  # exact company
 
     # created_at range (inclusive)
     created_at_after: Optional[date] = None
@@ -92,5 +97,5 @@ class UserFilters(CamelModel):
     # sorting & pagination
     # "-created_at,first_name" → desc(created_at), asc(first_name)
     sort: Optional[str] = '-created_at'
-    limit: int = 50          # 1..200 in repo
-    offset: int = 0          # 0..∞ (enforced in repo/DB)
+    limit: int = 50  # 1..200 in repo
+    offset: int = 0  # 0..∞ (enforced in repo/DB)
