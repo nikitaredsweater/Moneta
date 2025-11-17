@@ -2,7 +2,7 @@
 User ORM model
 """
 
-from app.enums import UserRole
+from app.enums import UserRole, ActivationStatus
 from app.models.base import Base, BaseEntity
 from sqlalchemy import Enum, ForeignKey, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -28,6 +28,11 @@ class User(Base, BaseEntity):
         nullable=False,
         default=UserRole.BUYER,
         server_default=text("'BUYER'"),
+    )
+    account_status: Mapped[ActivationStatus] = mapped_column(
+        Enum(ActivationStatus, name="account_status"),
+        nullable=False,
+        default=ActivationStatus.AWAITING_APPROVAL,
     )
     instruments: Mapped[list['Instrument']] = relationship(
     back_populates='creator', cascade='all, delete-orphan'

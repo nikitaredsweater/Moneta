@@ -1,5 +1,6 @@
 """Enums entrypoint"""
 
+from app.enums.account_activation_statuses import ActivationStatus
 from app.enums.address_types import AddressType
 from app.enums.instrument_status import (
     InstrumentStatus,
@@ -19,4 +20,5 @@ __all__ = [
     'InstrumentStatus',
     'MaturityStatus',
     'TradingStatus',
+    'ActivationStatus',
 ]

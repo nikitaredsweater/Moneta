@@ -3,17 +3,21 @@ User endpoints
 """
 
 import logging
+from app.utils import validations
 from typing import List, Optional
 
 logger = logging.getLogger()
 
 from app import repositories as repo
 from app import schemas
+from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
+    ForbiddenException,
+    InsufficientPermissionsException,
     WasNotFoundException,
 )
 from app.security import (
@@ -22,8 +26,8 @@ from app.security import (
     has_permission,
     verify_password,
 )
+from app.utils.filters.user_filters import build_sort_user, build_where_user
 from fastapi import APIRouter, Depends
-from app.utils.filters.user_filters import (build_where_user, build_sort_user)
 
 user_router = APIRouter()
 
@@ -44,6 +48,7 @@ async def get_all_users(
     """
     users = await user_repo.get_all()
     return users
+
 
 @user_router.post("/search", response_model=List[schemas.User])
 async def search_users(
@@ -92,6 +97,96 @@ async def get_user_by_id(
     finally:
         return user_found
 
+
+@user_router.delete('/{user_id}', response_model=schemas.User)
+async def delete_user(
+    user_id: schemas.MonetaID,
+    user_repo: repo.User,
+    current_user=Depends(get_current_user),
+    _=Depends(has_permission([Permission(Verb.DELETE, Entity.USER)])),
+) -> schemas.User:
+    """
+    Current implementation simply deletes a user from the database, given that
+    the user requesting this action shares the same company id as that account
+    who they are trying to delete.
+
+    Args:
+        user_id (schemas.MonetaID): Valid uuid4 ID
+        user_repo (repo.User): dependency injection of the User Repository
+        current_user: Current User
+
+    Returns:
+        UserSchema: The deleted user object
+    """
+    # Validations
+    user_to_delete = None
+    try:
+        user_to_delete = await user_repo.get_by_id(user_id)
+    except Exception as e:
+        raise WasNotFoundException  # 404
+
+    if user_to_delete is None:
+        raise WasNotFoundException  # 404
+
+    if user_to_delete.company_id:
+        # Only same company user can delete a user
+        if current_user.company_id != user_to_delete.company_id:
+            raise ForbiddenException  # 403
+    else:
+        raise WasNotFoundException  # 404
+
+    # Deleting
+    user_to_delete = await user_repo.delete_by_id(user_id)
+    return user_to_delete  # Entity that was deleted
+
+@user_router.patch("/{user_id}", response_model=schemas.User)
+async def patch_user(
+    user_id: schemas.MonetaID,
+    user_repo: repo.User,
+    user_patch_data: schemas.UserPatch,
+    current_user=Depends(get_current_user),
+    _=Depends(has_permission([Permission(Verb.UPDATE, Entity.USER)])),
+):
+    """
+    Update some user parameters. Pass the parameters that you would like to
+    update inside of the body of the request.
+
+    Only users from the same company can perform this action.
+    """
+    user_to_patch = None
+    try:
+        user_to_patch = await user_repo.get_by_id(user_id)
+    except Exception as e:
+        raise WasNotFoundException  # 404
+
+    if user_to_patch is None:
+        raise WasNotFoundException  # 404
+    
+    if user_to_patch.company_id:
+        # Only same company user can delete a user
+        if current_user.company_id != user_to_patch.company_id:
+            raise ForbiddenException  # 403
+    else:
+        raise WasNotFoundException  # 404
+    
+    # Checking the data passed
+    if user_patch_data.email:
+        # Check email is valid format
+        validations.ensure_valid_email(user_patch_data.email, 'email') # 422
+        # Check that email is not taken
+        existing_user = await user_repo.get_by_email_exact(user_patch_data.email)
+        if existing_user:
+            raise EntityAlreadyExistsException # 409
+    
+    if user_patch_data.first_name:
+        validations.ensure_not_empty(user_patch_data.first_name, 'first_name') # 422
+    
+    if user_patch_data.last_name:
+        validations.ensure_not_empty(user_patch_data.last_name, 'last_name') # 422
+
+    # Main logic
+    updated = await user_repo.update_by_id(user_id, user_patch_data)
+    return updated
 
 @user_router.post('/', response_model=schemas.User)
 async def create_user(

@@ -2,6 +2,7 @@
 Security module
 """
 
+from app.security.account_status import can_get_jwt_token
 from app.security.jwt import (
     ACCESS_TOKEN_EXPIRE_DEFAULT_MINUTES,
     ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS,
@@ -25,4 +26,5 @@ __all__ = [
     'ACCESS_TOKEN_EXPIRE_DEFAULT_MINUTES',
     'ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA',
     'ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS',
+    'can_get_jwt_token',
 ]

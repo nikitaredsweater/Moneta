@@ -43,6 +43,7 @@ class EntityAlreadyExistsException(BaseHTTPException):
     status_code = status.HTTP_409_CONFLICT
     detail = 'Entity with such unique fields already exists'
 
+
 class EmptyEntityException(BaseHTTPException):
     """
     Exception raised when an input entity does not have a single input field.
@@ -51,13 +52,24 @@ class EmptyEntityException(BaseHTTPException):
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     detail = 'Entity passed in is empty'
 
+
 class IncorrectInputFormatException(BaseHTTPException):
     """
     Exception raised when an input entity has
     at least one field in an unsupported format.
     """
+
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     detail = 'Entity passed in has an invalid field'
+
+
+class ForbiddenException(BaseHTTPException):
+    """
+    Excpetion raised when the user has no permission to do an action.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = 'Forbidden Action'
 
 
 ################################################################################
@@ -81,6 +93,16 @@ class InsufficientPermissionsException(BaseHTTPException):
 
     status_code = status.HTTP_403_FORBIDDEN
     detail = 'Insufficient permissions'
+
+
+class AccountStatusException(BaseHTTPException):
+    """
+    Excpetion raised when the user account has no
+    permission to perform cetain action.
+    """
+
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = 'Wrong account status'
 
 
 ################################################################################
