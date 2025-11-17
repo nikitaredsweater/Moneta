@@ -71,9 +71,6 @@ async def get_jwt_token(
     if user is None:
         raise InvalidCredentialsException
 
-    if user.deleted_at is not None:
-        raise ForbiddenException  # Account is deleted
-
     if not can_get_jwt_token(user=user):
         raise AccountStatusException
 

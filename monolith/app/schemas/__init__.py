@@ -31,14 +31,14 @@ from app.schemas.user import (
     UserFilters,
     UserInternal,
     UserLogin,
-    UserUpdate,
+    UserPatch,
 )
 
 __all__ = [
     'MonetaID',
     'User',
     'UserCreate',
-    'UserUpdate',
+    'UserPatch',
     'UserDelete',
     'UserLogin',
     'UserFilters',

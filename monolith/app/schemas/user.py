@@ -49,15 +49,15 @@ class UserCreate(CamelModel):
     role: UserRole
 
 
-class UserUpdate(CamelModel):
+class UserPatch(CamelModel):
     """
-    User update
+    User patch
     """
 
-    email: str
-    first_name: str
-    last_name: str
-    password: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    account_status: Optional[ActivationStatus] = None
 
 
 class UserDelete(CamelModel):
