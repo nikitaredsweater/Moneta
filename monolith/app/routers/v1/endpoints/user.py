@@ -9,11 +9,13 @@ logger = logging.getLogger()
 
 from app import repositories as repo
 from app import schemas
+from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
+    InsufficientPermissionsException,
     WasNotFoundException,
 )
 from app.security import (
@@ -22,8 +24,8 @@ from app.security import (
     has_permission,
     verify_password,
 )
+from app.utils.filters.user_filters import build_sort_user, build_where_user
 from fastapi import APIRouter, Depends
-from app.utils.filters.user_filters import (build_where_user, build_sort_user)
 
 user_router = APIRouter()
 
@@ -44,6 +46,7 @@ async def get_all_users(
     """
     users = await user_repo.get_all()
     return users
+
 
 @user_router.post("/search", response_model=List[schemas.User])
 async def search_users(
@@ -91,6 +94,48 @@ async def get_user_by_id(
         logger.info(e)
     finally:
         return user_found
+
+
+@user_router.delete('/{user_id}', response_model=schemas.User)
+async def delete_user(
+    user_id: schemas.MonetaID,
+    user_repo: repo.User,
+    current_user=Depends(get_current_user),
+    _=Depends(has_permission([Permission(Verb.DELETE, Entity.USER)])),
+) -> schemas.User:
+    """
+    Current implementation simply deletes a user from the database, given that
+    the user requesting this action shares the same company id as that account
+    who they are trying to delete.
+
+    Args:
+        user_id (schemas.MonetaID): Valid uuid4 ID
+        user_repo (repo.User): dependency injection of the User Repository
+        current_user: Current User
+
+    Returns:
+        UserSchema: The deleted user object
+    """
+    # Validations
+    user_to_delete = None
+    try:
+        user_to_delete = await user_repo.get_by_id(user_id)
+    except Exception as e:
+        raise WasNotFoundException  # 404
+
+    if user_to_delete is None:
+        raise WasNotFoundException  # 404
+
+    if user_to_delete.company_id:
+        # Only same company user can delete a user
+        if current_user.company_id != user_to_delete.company_id:
+            raise InsufficientPermissionsException  # 403
+    else:
+        raise WasNotFoundException  # 404
+
+    # Deleting
+    user_to_delete = await user_repo.delete_by_id(user_id)
+    return user_to_delete  # Entity that was deleted
 
 
 @user_router.post('/', response_model=schemas.User)

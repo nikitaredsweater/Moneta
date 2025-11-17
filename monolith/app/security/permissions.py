@@ -60,6 +60,7 @@ ROLE_PERMISSIONS = {
         (Verb.VIEW, Entity.USER),
         (Verb.CREATE, Entity.USER),
         (Verb.UPDATE, Entity.USER),
+        (Verb.DELETE, Entity.USER),
         (Verb.DELETE, Entity.ALL_USERS),
         # Role management
         (Verb.VIEW, Entity.ALL_ROLES),
