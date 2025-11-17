@@ -58,6 +58,7 @@ class UserPatch(CamelModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     account_status: Optional[ActivationStatus] = None
+    role: Optional[UserRole] = None
 
 
 class UserDelete(CamelModel):
