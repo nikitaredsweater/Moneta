@@ -18,6 +18,7 @@ from app.exceptions import (
 )
 from app.security import Permission, has_permission
 from app.utils import validations
+from app.exceptions import FailedToCreateEntityException
 from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
 from fastapi import APIRouter, Depends
 
@@ -101,31 +102,40 @@ async def create_instrument(
     Returns:
         Instrument: The created instrument
     """
-    # TODO: Add error-handling
 
-    logger.info(f"instrument_data: {instrument_data}")
+    # TODO: Add verifications of the payload object
+
     internal_data = schemas.InstrumentCreateInternal(
         **instrument_data.model_dump(exclude={"public_payload"}),
         issuer_id=current_user.company_id,
         created_by=current_user.id,
     )
 
-    logger.info(f"internal_data: {internal_data}")
-
     instrument = await instrument_repo.create(internal_data)
-    logger.info(f"instrument: {instrument}")
 
+    if instrument is None:
+        raise FailedToCreateEntityException
+    
+    payload = {}
     if instrument_data.public_payload is not None:
-        await public_payload_repo.create(
-            schemas.InstrumentPublicPayloadFull(
-                instrument_id=instrument.id,
-                payload=instrument_data.public_payload,
-            )
+        payload = instrument_data.public_payload
+
+    public_payload = await public_payload_repo.create(
+        schemas.InstrumentPublicPayloadFull(
+            instrument_id=instrument.id,
+            payload=payload,
         )
+    )
+
+    if public_payload is None:
+        raise FailedToCreateEntityException
 
     instrument_with_payload = await instrument_repo.get_by_id(
         instrument.id
     )
+
+    if instrument_with_payload is None:
+        raise FailedToCreateEntityException # Should not be happenning
 
     return instrument_with_payload
 
