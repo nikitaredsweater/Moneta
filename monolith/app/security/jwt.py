@@ -10,12 +10,18 @@ from app.security.jwt_keys import jwt_keys
 from jose import JWTError, jwt
 
 ALGORITHM = 'RS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_DEFAULT_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS = (
+    ACCESS_TOKEN_EXPIRE_DEFAULT_MINUTES * 60_000
+)  # Default is 15 minutes
+ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA = timedelta(
+    minutes=ACCESS_TOKEN_EXPIRE_DEFAULT_MINUTES
+)
 
 
 def create_access_token(
     user_id: MonetaID,
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta = ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA,
 ) -> str:
     """
     Creates a JWT token for a user.
@@ -34,9 +40,7 @@ def create_access_token(
     """
     # Use timezone-aware datetime
     now = datetime.now(timezone.utc)
-    expire = now + (
-        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    expire = now + expires_delta
 
     # Use integer timestamps for JWT standard compliance
     to_encode = {

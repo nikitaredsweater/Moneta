@@ -152,6 +152,8 @@ class BasePGRepository(Generic[T]):
         order_list: Optional[list] = None,
         custom_model: Optional[Type[T]] = None,
         deleted: bool = False,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> list[T]:
         """
         Gets all rows according to where statements
@@ -173,29 +175,30 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_model)
 
                 if not deleted:
-                    # pylint: disable=singleton-comparison
-                    query = query.where(
-                        orm_model.deleted_at == None
-                    )  # noqa: E711
+                    query = query.where(orm_model.deleted_at == None)  # noqa: E711
 
                 if where_list:
                     for where_clause in where_list:
                         query = query.where(where_clause)
+                
+                if offset is not None:
+                    query = query.offset(offset)
+                if limit is not None:
+                    query = query.limit(limit)
 
                 if order_list:
                     for order in order_list:
                         query = query.order_by(order)
 
+                if offset is not None:
+                    query = query.offset(offset)
+                if limit is not None:
+                    query = query.limit(limit)
+
                 result = await session.execute(query)
                 if custom_model:
-                    return [
-                        custom_model.from_orm(entity)
-                        for entity in result.scalars().unique()
-                    ]
-
-                return [
-                    self.from_orm(entity) for entity in result.scalars().all()
-                ]
+                    return [custom_model.from_orm(entity) for entity in result.scalars().unique()]
+                return [self.from_orm(entity) for entity in result.scalars().all()]  
 
     async def count_all(self) -> int:
         session: AsyncSession

@@ -1,11 +1,15 @@
 """Enums entrypoint"""
 
+from app.enums.account_activation_statuses import ActivationStatus
 from app.enums.address_types import AddressType
+from app.enums.instrument_status import (
+    InstrumentStatus,
+    MaturityStatus,
+    TradingStatus,
+)
 from app.enums.order_types import OrderType
 from app.enums.permissions import PermissionEntity, PermissionVerb
 from app.enums.roles import UserRole
-from app.enums.maturity_status import MaturityStatus
-from app.enums.instrument_status import InstrumentStatus
 
 __all__ = [
     'OrderType',
@@ -14,5 +18,7 @@ __all__ = [
     'UserRole',
     'AddressType',
     'InstrumentStatus',
-    'MaturityStatus'
+    'MaturityStatus',
+    'TradingStatus',
+    'ActivationStatus',
 ]

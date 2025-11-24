@@ -66,6 +66,6 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     return {'access_token': token, 'token_type': 'bearer'}
 
 
-@v1_router.get('/me')
+@v1_router.get('/me', response_model=schemas.User)
 async def get_me(current_user=Depends(get_current_user)):
     return current_user

@@ -1,4 +1,6 @@
 services:
+
+  # Services Created and Maintained by Moneta Team
   app:
     build:
       context: ./monolith
@@ -36,6 +38,28 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MONGO_URL=mongodb://mongodb:27017
 
+  scheduler-service:
+    build:
+      context: ./scheduler_service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/moneta
+      SLEEP_SECONDS: 3600
+      LOCK_KEY: 90201
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  zkp_service:
+    build:
+      context: ./zkp-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:3000"
+
+  # Other Images Used by Moneta Team
   minio:
     image: minio/minio
     ports:

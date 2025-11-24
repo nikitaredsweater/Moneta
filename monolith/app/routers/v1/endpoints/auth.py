@@ -6,8 +6,18 @@ Provides routes for user login and token generation using JWT.
 
 from app import repositories as repo
 from app import schemas
-from app.exceptions import InvalidCredentialsException
-from app.security import create_access_token, verify_password
+from app.exceptions import (
+    AccountStatusException,
+    ForbiddenException,
+    InvalidCredentialsException,
+)
+from app.security import (
+    ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS,
+    ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA,
+    can_get_jwt_token,
+    create_access_token,
+    verify_password,
+)
 from fastapi import APIRouter
 
 auth_router = APIRouter()
@@ -31,7 +41,9 @@ async def get_jwt_token(
 
     Returns:
         dict: A dictionary with the JWT token and token type
-                (e.g. {"access_token": ..., "token_type": "bearer"}).
+                (e.g. {"access_token": ...,
+                "token_type": "bearer",
+                "expires": 900000}).
 
     Raises:
         InvalidCredentialsException:
@@ -50,6 +62,7 @@ async def get_jwt_token(
         {
             "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
             "token_type": "bearer"
+            "expires": 90000
         }
         ```
     """
@@ -58,10 +71,20 @@ async def get_jwt_token(
     if user is None:
         raise InvalidCredentialsException
 
+    if not can_get_jwt_token(user=user):
+        raise AccountStatusException
+
     if not verify_password(
         password=user_login.password, hashed_password=user.password
     ):
         raise InvalidCredentialsException
 
-    token = create_access_token(user_id=user.id)
-    return {'access_token': token, 'token_type': 'bearer'}
+    token = create_access_token(
+        user_id=user.id, expires_delta=ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA
+    )
+
+    return {
+        'access_token': token,
+        'token_type': 'bearer',
+        'expires': ACCESS_TOKEN_EXPIRE_DEFAULT_SECONDS,
+    }
