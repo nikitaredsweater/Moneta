@@ -1,5 +1,9 @@
 fastapi
 uvicorn
+web3
+eth-account
+httpx
+pydantic-settings
 
 # --- Formatters & Linters ---
 isort
