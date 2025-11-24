@@ -4,7 +4,7 @@ public representation. Used for NFT-related activities.
 """
 
 from typing import Dict, Any
-from app.schemas.base import BaseDTO, MonetaID
+from app.schemas.base import BaseDTO, MonetaID, CamelModel
 
 from pydantic import ConfigDict
 
@@ -16,3 +16,9 @@ class InstrumentPublicPayloadFull(BaseDTO):
     payload: Dict[str, Any]
 
     model_config = ConfigDict(from_attributes=True)
+
+class InstrumentPublicPayloadCreate(CamelModel):
+    """
+    Model to pass as a body when creating a new instrument
+    """
+    payload: Dict[str, Any]

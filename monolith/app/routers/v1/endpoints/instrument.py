@@ -80,12 +80,13 @@ async def get_instrument(
 
 
 # TODO: Make it a part of the workflow for
-# creating on- and off-chaim representations.
+# creating on- and off-chain representations.
 # With this being the first step
 @instrument_router.post('/', response_model=schemas.Instrument)
 async def create_instrument(
     instrument_data: schemas.InstrumentCreate,
     instrument_repo: repo.Instrument,
+    public_payload_repo: repo.InstrumentPublicPayload,
     current_user=Depends(get_current_user),
     _=Depends(has_permission([Permission(Verb.CREATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
@@ -100,17 +101,37 @@ async def create_instrument(
     Returns:
         Instrument: The created instrument
     """
+    # TODO: Add error-handling
+
+    logger.info(f"instrument_data: {instrument_data}")
     internal_data = schemas.InstrumentCreateInternal(
-        **instrument_data.dict(),
+        **instrument_data.model_dump(exclude={"public_payload"}),
         issuer_id=current_user.company_id,
         created_by=current_user.id,
     )
+
+    logger.info(f"internal_data: {internal_data}")
+
     instrument = await instrument_repo.create(internal_data)
-    return instrument
+    logger.info(f"instrument: {instrument}")
+
+    if instrument_data.public_payload is not None:
+        await public_payload_repo.create(
+            schemas.InstrumentPublicPayloadFull(
+                instrument_id=instrument.id,
+                payload=instrument_data.public_payload,
+            )
+        )
+
+    instrument_with_payload = await instrument_repo.get_by_id(
+        instrument.id
+    )
+
+    return instrument_with_payload
 
 
 ################################################################################
-#                        Updating an instrument entity
+#                        Updating  Instrument Entity
 ################################################################################
 @instrument_router.patch('/{instrument_id}', response_model=schemas.Instrument)
 async def update_drafted_instrument(

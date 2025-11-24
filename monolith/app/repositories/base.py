@@ -110,14 +110,40 @@ class BasePGRepository(Generic[T]):
         return cls.Meta.response_model.from_orm(orm_model)
 
     async def create(self, model: T) -> T:
+        """
+        Create a single entity.
+
+        1) Insert the ORM object.
+        2) Reload it with any configured eager_relations.
+        3) Convert to the response_model via from_orm.
+        """
+        # 1) Insert ORM object and get its id
         orm_model = self.to_orm(model)
         session: AsyncSession
+
         async with self.session() as session:
             async with session.begin():
                 session.add(orm_model)
                 await session.flush()
                 await session.refresh(orm_model)
-                return self.from_orm(orm_model)
+                obj_id = orm_model.id
+
+        # 2) Reload with eager relations (if any)
+        async with self.session() as session:
+            async with session.begin():
+                orm_cls = self.Meta.orm_model
+                query = select(orm_cls).where(orm_cls.id == obj_id)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
+
+                result = await session.execute(query)
+                loaded = result.scalars().unique().one()
+
+        # 3) Convert to DTO
+        return self.from_orm(loaded)
 
     @staticmethod
     def normalize_column(column: Any) -> Any:
@@ -229,6 +255,11 @@ class BasePGRepository(Generic[T]):
                 # pylint: disable=singleton-comparison
                 query = query.where(orm_model.deleted_at == None)  # noqa: E711
 
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
+
                 if where_list:
                     for where_clause in where_list:
                         query = query.where(where_clause)
@@ -256,6 +287,11 @@ class BasePGRepository(Generic[T]):
             async with session.begin():
                 orm_model = self.Meta.orm_model
                 query = select(orm_model).where(orm_model.id == pk)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
 
                 if not deleted:
                     # pylint: disable=singleton-comparison

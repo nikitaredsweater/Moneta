@@ -3,12 +3,12 @@ Instrument DTOs
 """
 
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
 from app.exceptions import EmptyEntityException
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
-from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull
+from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull, InstrumentPublicPayloadCreate
 from pydantic import Field, root_validator, ConfigDict
 
 
@@ -74,7 +74,7 @@ class InstrumentCreate(CamelModel):
     currency: str = Field(..., min_length=3, max_length=3)
     maturity_date: date
     maturity_payment: float
-
+    public_payload: Optional[Dict[str, Any]] = None
 
 class InstrumentDRAFTUpdate(CamelModel):
     """
@@ -133,10 +133,22 @@ class InstrumentMaturityStatusUpdate(CamelModel):
     maturity_status: MaturityStatus
 
 
-class InstrumentCreateInternal(InstrumentCreate):
+class InstrumentCreateInternal(CamelModel):
     """
-    Instrument Profile
+    Internal instrument profile
     """
 
     issuer_id: MonetaID
     created_by: MonetaID
+
+    name: str = Field(..., max_length=255)
+    face_value: float
+    currency: str = Field(..., min_length=3, max_length=3)
+    maturity_date: date
+    maturity_payment: float
+
+    instrument_status: InstrumentStatus = InstrumentStatus.DRAFT
+    maturity_status: MaturityStatus = MaturityStatus.NOT_DUE
+    trading_status: TradingStatus = TradingStatus.DRAFT
+
+    # public_payload: Optional[InstrumentPublicPayloadFull] = None
