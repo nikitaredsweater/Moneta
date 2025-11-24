@@ -55,5 +55,12 @@ class Instrument(Base, BaseEntity):
         ForeignKey('users.id'), nullable=False
     )
 
+    public_payload: Mapped['InstrumentPublicPayload'] = relationship(
+        "InstrumentPublicPayload",
+        back_populates="instrument",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
     issuer: Mapped['Company'] = relationship(back_populates='instruments')
     creator: Mapped['User'] = relationship(back_populates='instruments')

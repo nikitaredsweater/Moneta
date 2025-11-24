@@ -14,10 +14,11 @@ from app.models.documents.document import Document
 from app.models.documents.document_version import DocumentVersion
 from app.models.instrument import Instrument
 from app.models.user import User
+from app.models.instrument_public_payload import InstrumentPublicPayload
 from sqlalchemy import MetaData
 from sqlalchemy import exc as sa_exc
 
-__all__ = ['User', 'Company', 'CompanyAddress']
+__all__ = ['User', 'Company', 'CompanyAddress', 'InstrumentPublicPayload']
 
 
 def combine_metadata(*args: MetaData) -> MetaData:
@@ -37,4 +38,5 @@ with warnings.catch_warnings():
         Instrument.metadata,
         Document.metadata,
         DocumentVersion.metadata,
+        InstrumentPublicPayload.metadata
     )
