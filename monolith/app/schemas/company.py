@@ -3,9 +3,11 @@ Company DTOs
 """
 
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from app.schemas.base import BaseDTO, CamelModel
+from app.schemas.company_address import CompanyAddress
+from app.schemas.user import User
 
 
 class Company(BaseDTO):
@@ -17,6 +19,16 @@ class Company(BaseDTO):
     trade_name: str
     registration_number: str
     incorporation_date: date
+
+
+class CompanyIncludes(Company):
+    """
+    Return model for optional including of some predefined entities that
+    relate to the mother company entity through the id field
+    """
+
+    addresses: Optional[List[CompanyAddress]] = None
+    users: Optional[List[User]] = None
 
 
 class CompanyCreate(CamelModel):

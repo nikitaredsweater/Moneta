@@ -2,13 +2,14 @@
 Dependencies module
 """
 
-from typing import Generator
+from typing import Generator, Optional, Set
 from uuid import UUID
 
+from app.enums import CompanyInclude
 from app.repositories.user import User
 from app.security.jwt import verify_access_token
 from app.utils.minio_client import minio_client
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Query, Request, status
 from jose import JWTError
 from minio import Minio
 
@@ -105,3 +106,36 @@ def get_minio_client() -> Generator[Minio, None, None]:
         Minio: A MinIO client session.
     """
     yield minio_client
+
+
+def parse_company_includes(
+    include: Optional[str] = Query(
+        None,
+        description="Comma-separated list of related entities to include. "
+        "Allowed: addresses,users,instruments",
+    ),
+) -> Set[CompanyInclude]:
+    """
+    Set of additional entities that a user requested to be retrieved with
+    every company they are searching
+    """
+    if not include:
+        return set()
+
+    raw_parts = [
+        part.strip().lower() for part in include.split(",") if part.strip()
+    ]
+    includes: Set[CompanyInclude] = set()
+
+    mapping = {
+        "addresses": CompanyInclude.ADDRESSES,
+        "users": CompanyInclude.USERS,
+        "instruments": CompanyInclude.INSTRUMENTS,
+    }
+
+    for part in raw_parts:
+        if part in mapping:
+            includes.add(mapping[part])
+        # silently ignore unknown values, or raise HTTPException if you prefer
+
+    return includes

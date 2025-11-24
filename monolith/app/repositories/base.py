@@ -11,10 +11,12 @@ from typing import (
     Callable,
     ClassVar,
     Generic,
+    Iterable,
     List,
     Optional,
     Type,
     TypeVar,
+    cast,
 )
 
 from app.models.base import BaseEntity
@@ -22,7 +24,7 @@ from app.schemas.base import BaseDTO, MonetaID
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import selectinload, sessionmaker
 
 T = TypeVar("T", bound=BaseDTO)
 
@@ -154,6 +156,7 @@ class BasePGRepository(Generic[T]):
         deleted: bool = False,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        includes: Optional[Iterable[str]] = None,
     ) -> list[T]:
         """
         Gets all rows according to where statements
@@ -175,12 +178,14 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_model)
 
                 if not deleted:
-                    query = query.where(orm_model.deleted_at == None)  # noqa: E711
+                    query = query.where(
+                        orm_model.deleted_at == None
+                    )  # noqa: E711
 
                 if where_list:
                     for where_clause in where_list:
                         query = query.where(where_clause)
-                
+
                 if offset is not None:
                     query = query.offset(offset)
                 if limit is not None:
@@ -195,10 +200,23 @@ class BasePGRepository(Generic[T]):
                 if limit is not None:
                     query = query.limit(limit)
 
+                if includes:
+                    for name in includes:
+                        # only apply if the relationship exists
+                        if hasattr(orm_model, name):
+                            query = query.options(
+                                selectinload(getattr(orm_model, name))
+                            )
+
                 result = await session.execute(query)
                 if custom_model:
-                    return [custom_model.from_orm(entity) for entity in result.scalars().unique()]
-                return [self.from_orm(entity) for entity in result.scalars().all()]  
+                    return [
+                        custom_model.from_orm(entity)
+                        for entity in result.scalars().unique()
+                    ]
+                return [
+                    self.from_orm(entity) for entity in result.scalars().all()
+                ]
 
     async def count_all(self) -> int:
         session: AsyncSession
@@ -242,7 +260,11 @@ class BasePGRepository(Generic[T]):
                 return None
 
     async def get_by_id(
-        self, pk: MonetaID, deleted: bool = False
+        self,
+        pk: MonetaID,
+        deleted: bool = False,
+        custom_model: Optional[Type[T]] = None,
+        includes: Optional[Iterable[str]] = None,
     ) -> Optional[T]:
         """Gets record by id"""
         session: AsyncSession
@@ -252,16 +274,28 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_model).where(orm_model.id == pk)
 
                 if not deleted:
-                    # pylint: disable=singleton-comparison
                     query = query.where(
                         orm_model.deleted_at == None
                     )  # noqa: E711
 
-                result = await session.execute(query)
+                if includes:
+                    for name in includes:
+                        if hasattr(orm_model, name):
+                            query = query.options(
+                                selectinload(getattr(orm_model, name))
+                            )
 
-                if entity := result.scalars().first():
-                    return self.from_orm(entity)
-                return None
+                result = await session.execute(query)
+                entity = result.scalars().first()
+                if not entity:
+                    return None
+
+                if custom_model is not None:
+                    model_cls: Type[T] = custom_model
+                else:
+                    model_cls = cast(Type[T], self.Meta.response_model)
+
+                return model_cls.from_orm(entity)
 
     async def get_by_ids(
         self, pk_list: list[MonetaID], deleted: bool = False
