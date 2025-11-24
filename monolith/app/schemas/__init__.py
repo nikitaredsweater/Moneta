@@ -34,6 +34,8 @@ from app.schemas.user import (
     UserPatch,
 )
 
+from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull
+
 __all__ = [
     'MonetaID',
     'User',
@@ -61,4 +63,5 @@ __all__ = [
     'DocumentVersion',
     'DocumentVersionCreate',
     'MonetaID',
+    'InstrumentPublicPayloadFull'
 ]

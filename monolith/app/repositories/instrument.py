@@ -17,6 +17,7 @@ class InstrumentRepository(BasePGRepository[schemas.Instrument]):
         response_model = schemas.Instrument  # This should be your schema
         orm_model = models.Instrument  # This should be your ORM model
         exclusion_fields = None
+        eager_relations = [models.Instrument.public_payload]
 
 
 Instrument = Annotated[

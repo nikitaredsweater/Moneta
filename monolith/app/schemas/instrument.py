@@ -8,7 +8,8 @@ from typing import List, Optional
 from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
 from app.exceptions import EmptyEntityException
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
-from pydantic import Field, root_validator
+from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull
+from pydantic import Field, root_validator, ConfigDict
 
 
 class Instrument(BaseDTO):
@@ -26,6 +27,10 @@ class Instrument(BaseDTO):
     trading_status: TradingStatus
     issuer_id: MonetaID
     created_by: MonetaID
+
+    public_payload: Optional[InstrumentPublicPayloadFull] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InstrumentFilters(CamelModel):

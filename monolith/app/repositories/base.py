@@ -22,7 +22,7 @@ from app.schemas.base import BaseDTO, MonetaID
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, selectinload
 
 T = TypeVar("T", bound=BaseDTO)
 
@@ -36,6 +36,7 @@ class BasePGRepository(Generic[T]):
         response_model = BaseDTO
         orm_model = BaseEntity
         exclusion_fields: Optional[set]
+        eager_relations: list | None = None
 
     _instances: ClassVar[dict[sessionmaker, BasePGRepository]] = {}
 
@@ -173,6 +174,11 @@ class BasePGRepository(Generic[T]):
             async with session.begin():
                 orm_model = self.Meta.orm_model
                 query = select(orm_model)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
 
                 if not deleted:
                     query = query.where(orm_model.deleted_at == None)  # noqa: E711
