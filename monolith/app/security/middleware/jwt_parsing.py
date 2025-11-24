@@ -33,8 +33,6 @@ def _is_path_excluded(path: str) -> bool:
         bool: True if the path is excluded from JWT authentication.
     """
 
-    return True  # TODO: REMOVE
-
     for pattern in EXCLUDED_PATH_PATTERNS:
         if fnmatch.fnmatch(path, pattern):
             return True
