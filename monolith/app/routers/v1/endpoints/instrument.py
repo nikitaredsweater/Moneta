@@ -148,6 +148,7 @@ async def update_drafted_instrument(
     instrument_id: schemas.MonetaID,
     instrument_data: schemas.InstrumentDRAFTUpdate,
     instrument_repo: repo.Instrument,
+    public_payload_repo: repo.InstrumentPublicPayload,
     current_user=Depends(get_current_user),
     _=Depends(has_permission([Permission(Verb.UPDATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
@@ -191,8 +192,30 @@ async def update_drafted_instrument(
         )
 
     # Update the entity in the database
-    updated = await instrument_repo.update_by_id(instrument_id, instrument_data)
-    return updated
+    instrument_data_trimmed = schemas.InstrumentDRAFTUpdate(
+        **instrument_data.model_dump(exclude={"public_payload"}),
+    )
+    updated_instrument = await instrument_repo.update_by_id(instrument_id, instrument_data_trimmed)
+
+    public_payload_id = None
+    update_payload = instrument_data.public_payload
+    if updated_instrument:
+        if updated_instrument.public_payload:
+            public_payload_id = updated_instrument.public_payload.id
+    
+    if public_payload_id is None:
+        # Object is still not created. Create an object with passed payload
+        await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
+            instrument_id=instrument_id,
+            payload=update_payload
+        ))
+    elif update_payload is not None:
+        # Update the payload
+        await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
+            payload=update_payload
+        ))
+    
+    return await instrument_repo.get_by_id(instrument_id)
 
 
 ################################################################################

@@ -86,6 +86,7 @@ class InstrumentDRAFTUpdate(CamelModel):
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
     maturity_date: Optional[date] = None
     maturity_payment: Optional[float] = None
+    public_payload: Optional[Dict[str, Any]] = None
 
     @root_validator(pre=True)
     def at_least_one_field(cls, values):
@@ -99,6 +100,7 @@ class InstrumentDRAFTUpdate(CamelModel):
                 'currency',
                 'maturity_date',
                 'maturity_payment',
+                'public_payload'
             }
         ):
             raise EmptyEntityException

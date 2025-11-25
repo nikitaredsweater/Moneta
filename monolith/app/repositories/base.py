@@ -23,6 +23,9 @@ from sqlalchemy import desc, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker, selectinload
+import logging
+
+logger = logging.getLogger()
 
 T = TypeVar("T", bound=BaseDTO)
 
@@ -317,22 +320,55 @@ class BasePGRepository(Generic[T]):
         self, pk: MonetaID, update_map: dict
     ) -> Optional[T]:
         """Updates entity based on mapping"""
+        logger.info("[_update_by_id] start | pk=%s, update_map=%s", pk, update_map)
+
         session: AsyncSession
         async with self.session() as session:
             async with session.begin():
                 orm_model = self.Meta.orm_model
+                logger.info(
+                    "[_update_by_id] running UPDATE on ... for id=%s",
+                    pk,
+                )
                 stmt = (
                     update(orm_model)
                     .values(update_map)
                     .where(orm_model.id == pk)
                 )
-                await session.execute(stmt)
+                logger.info(f"stmt: {stmt}")
+                result = await session.execute(stmt)
+                logger.info(
+                    "[_update_by_id] UPDATE executed | rowcount=%s",
+                    getattr(result, "rowcount", None),
+                )
 
-        return await self.get_by_id(pk, deleted=True)
+        logger.info(
+            "[_update_by_id] UPDATE committed, reloading entity via get_by_id(deleted=True) | pk=%s",
+            pk,
+        )
+
+        entity = await self.get_by_id(pk, deleted=True)
+
+        if entity is None:
+            logger.info(
+                "[_update_by_id] get_by_id returned None after update | pk=%s",
+                pk,
+            )
+        else:
+            logger.info(
+                "[_update_by_id] get_by_id returned entity after update | pk=%s, entity=%s",
+                pk,
+                entity,
+            )
+
+        return entity
+
 
     async def update_by_id(self, pk: MonetaID, model: T) -> Optional[T]:
         """Updates record by id"""
         update_map = self.to_orm_dict(model, exclude_unset=True)
+        update_map = {k: v for k, v in update_map.items() if v is not None}
+        logger.info(f"update_map:{update_map}")
         return await self._update_by_id(pk, update_map)
 
     async def update_by_ids(self, pk_list: list[MonetaID], model: T) -> list[T]:

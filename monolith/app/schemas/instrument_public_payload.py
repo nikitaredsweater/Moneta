@@ -22,3 +22,9 @@ class InstrumentPublicPayloadCreate(CamelModel):
     Model to pass as a body when creating a new instrument
     """
     payload: Dict[str, Any]
+
+class InstrumentPublicPayloadUpdate(CamelModel):
+    """
+    Model to pass as a body when updating an instrument
+    """
+    payload: Dict[str, Any]
