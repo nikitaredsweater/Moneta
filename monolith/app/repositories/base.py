@@ -24,7 +24,10 @@ from app.schemas.base import BaseDTO, MonetaID
 from sqlalchemy import desc, func, inspect, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, sessionmaker
+from sqlalchemy.orm import sessionmaker, selectinload
+import logging
+
+logger = logging.getLogger()
 
 T = TypeVar("T", bound=BaseDTO)
 
@@ -38,6 +41,7 @@ class BasePGRepository(Generic[T]):
         response_model = BaseDTO
         orm_model = BaseEntity
         exclusion_fields: Optional[set]
+        eager_relations: list | None = None
 
     _instances: ClassVar[dict[sessionmaker, BasePGRepository]] = {}
 
@@ -154,14 +158,40 @@ class BasePGRepository(Generic[T]):
         return model_cls(**data)
 
     async def create(self, model: T) -> T:
+        """
+        Create a single entity.
+
+        1) Insert the ORM object.
+        2) Reload it with any configured eager_relations.
+        3) Convert to the response_model via from_orm.
+        """
+        # 1) Insert ORM object and get its id
         orm_model = self.to_orm(model)
         session: AsyncSession
+
         async with self.session() as session:
             async with session.begin():
                 session.add(orm_model)
                 await session.flush()
                 await session.refresh(orm_model)
-                return self.from_orm(orm_model)
+                obj_id = orm_model.id
+
+        # 2) Reload with eager relations (if any)
+        async with self.session() as session:
+            async with session.begin():
+                orm_cls = self.Meta.orm_model
+                query = select(orm_cls).where(orm_cls.id == obj_id)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
+
+                result = await session.execute(query)
+                loaded = result.scalars().unique().one()
+
+        # 3) Convert to DTO
+        return self.from_orm(loaded)
 
     @staticmethod
     def normalize_column(column: Any) -> Any:
@@ -219,6 +249,11 @@ class BasePGRepository(Generic[T]):
             async with session.begin():
                 orm_model = self.Meta.orm_model
                 query = select(orm_model)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
 
                 if not deleted:
                     query = query.where(
@@ -293,6 +328,11 @@ class BasePGRepository(Generic[T]):
                 # pylint: disable=singleton-comparison
                 query = query.where(orm_model.deleted_at == None)  # noqa: E711
 
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
+
                 if where_list:
                     for where_clause in where_list:
                         query = query.where(where_clause)
@@ -324,6 +364,11 @@ class BasePGRepository(Generic[T]):
             async with session.begin():
                 orm_model = self.Meta.orm_model
                 query = select(orm_model).where(orm_model.id == pk)
+
+                eager_relations = getattr(self.Meta, "eager_relations", None)
+                if eager_relations:
+                    for rel in eager_relations:
+                        query = query.options(selectinload(rel))
 
                 if not deleted:
                     query = query.where(
@@ -368,22 +413,55 @@ class BasePGRepository(Generic[T]):
         self, pk: MonetaID, update_map: dict
     ) -> Optional[T]:
         """Updates entity based on mapping"""
+        logger.info("[_update_by_id] start | pk=%s, update_map=%s", pk, update_map)
+
         session: AsyncSession
         async with self.session() as session:
             async with session.begin():
                 orm_model = self.Meta.orm_model
+                logger.info(
+                    "[_update_by_id] running UPDATE on ... for id=%s",
+                    pk,
+                )
                 stmt = (
                     update(orm_model)
                     .values(update_map)
                     .where(orm_model.id == pk)
                 )
-                await session.execute(stmt)
+                logger.info(f"stmt: {stmt}")
+                result = await session.execute(stmt)
+                logger.info(
+                    "[_update_by_id] UPDATE executed | rowcount=%s",
+                    getattr(result, "rowcount", None),
+                )
 
-        return await self.get_by_id(pk, deleted=True)
+        logger.info(
+            "[_update_by_id] UPDATE committed, reloading entity via get_by_id(deleted=True) | pk=%s",
+            pk,
+        )
+
+        entity = await self.get_by_id(pk, deleted=True)
+
+        if entity is None:
+            logger.info(
+                "[_update_by_id] get_by_id returned None after update | pk=%s",
+                pk,
+            )
+        else:
+            logger.info(
+                "[_update_by_id] get_by_id returned entity after update | pk=%s, entity=%s",
+                pk,
+                entity,
+            )
+
+        return entity
+
 
     async def update_by_id(self, pk: MonetaID, model: T) -> Optional[T]:
         """Updates record by id"""
         update_map = self.to_orm_dict(model, exclude_unset=True)
+        update_map = {k: v for k, v in update_map.items() if v is not None}
+        logger.info(f"update_map:{update_map}")
         return await self._update_by_id(pk, update_map)
 
     async def update_by_ids(self, pk_list: list[MonetaID], model: T) -> list[T]:
