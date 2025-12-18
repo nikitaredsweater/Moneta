@@ -1,6 +1,8 @@
 """
-Routes for uploading and downloading the actual documents, not metadata
+Routes for uploading and downloading the actual documents, not metadata.
 """
+
+import logging
 
 from app.enums import DocumentType
 from app.schemas import (
@@ -15,6 +17,8 @@ from app.services import (
 )
 from app.utils import generate_secure_key
 from fastapi import APIRouter
+
+logger = logging.getLogger(__name__)
 
 document_router = APIRouter()
 
@@ -33,6 +37,12 @@ async def request_upload_link(document_data: DocumentUploadRequest):
     This is a system-blocking call, meaning it is not dealt with in a queue,
     to allow user to actually get the upload link.
     """
+    logger.debug(
+        '[BUSINESS] Upload link requested | extension=%s | user_id=%s',
+        document_data.extension,
+        HARDCODED_USER_ID,
+    )
+
     # Generate a secure key for the new document
     key = generate_secure_key(
         user_id=HARDCODED_USER_ID,
@@ -44,6 +54,13 @@ async def request_upload_link(document_data: DocumentUploadRequest):
 
     # Creating the upload link in minIO
     upload_url = generate_presigned_upload_url(key)
+
+    logger.info(
+        '[BUSINESS] Upload link generated | key=%s | user_id=%s',
+        key,
+        HARDCODED_USER_ID,
+    )
+
     return {'key': upload_url}
 
 
@@ -54,12 +71,25 @@ async def request_access_link(document_data: DocumentAccessRequest):
 
     This endpoint provides a presigned download URL for documents stored in MinIO.
     """
+    logger.debug(
+        '[BUSINESS] Access link requested | document_name=%s | user_id=%s',
+        document_data.document_name,
+        HARDCODED_USER_ID,
+    )
+
     # Create the full object key using the same structure as uploads
     # For exact name access, we use the provided document name directly
     key = f'{HARDCODED_COMPANY_ID}/{HARDCODED_USER_ID}/{document_data.document_name}'
 
     # Generate presigned download URL
     download_url = generate_presigned_download_url(key)
+
+    logger.info(
+        '[BUSINESS] Access link generated | document_name=%s | user_id=%s',
+        document_data.document_name,
+        HARDCODED_USER_ID,
+    )
+
     return {'access_url': download_url}
 
 
@@ -73,10 +103,23 @@ async def request_version_upload_link(
     This creates a new versioned upload for an existing document by name.
     The new version will be stored with a version-specific key.
     """
+    logger.debug(
+        '[BUSINESS] Version upload link requested | document_name=%s | user_id=%s',
+        document_data.document_name,
+        HARDCODED_USER_ID,
+    )
+
     key = f'{HARDCODED_COMPANY_ID}/{HARDCODED_USER_ID}/{document_data.document_name}'
 
     # Create versioned upload URL
     upload_url = generate_presigned_upload_url(key)
+
+    logger.info(
+        '[BUSINESS] Version upload link generated | document_name=%s | user_id=%s',
+        document_data.document_name,
+        HARDCODED_USER_ID,
+    )
+
     return {
         'upload_url': upload_url,
     }
