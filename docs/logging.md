@@ -4,6 +4,7 @@ This document outlines the logging standards, formats, and best practices for th
 
 ## Table of Contents
 
+- [Configuration](#configuration)
 - [Logging Levels](#logging-levels)
 - [Log Message Format](#log-message-format)
 - [Component Tags](#component-tags)
@@ -12,6 +13,48 @@ This document outlines the logging standards, formats, and best practices for th
 - [Sensitive Data Handling](#sensitive-data-handling)
 - [Performance Thresholds](#performance-thresholds)
 - [Implementation Examples](#implementation-examples)
+
+---
+
+## Configuration
+
+Logging is configured through environment variables in the `.env` file. The configuration is loaded automatically when the application starts.
+
+### Environment Variables
+
+| Variable | Description | Options | Default |
+|----------|-------------|---------|---------|
+| `LOG_LEVEL` | Logging verbosity level | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
+| `LOG_OUTPUT` | Where to send log output | `console`, `file`, `both` | `console` |
+| `LOG_FILE_PATH` | Path to log file | Any valid file path | `logs/moneta.log` |
+
+### Example Configuration
+
+```bash
+# .env file
+
+# Logging Configuration
+LOG_LEVEL="INFO"           # Set to DEBUG for development
+LOG_OUTPUT="console"       # Use "both" for production
+LOG_FILE_PATH="logs/moneta.log"
+```
+
+### Recommended Settings by Environment
+
+| Environment | LOG_LEVEL | LOG_OUTPUT | Notes |
+|-------------|-----------|------------|-------|
+| Development | `DEBUG` | `console` | Full verbosity in terminal |
+| Testing | `WARNING` | `console` | Reduce noise during tests |
+| Staging | `INFO` | `both` | Console + file for debugging |
+| Production | `INFO` | `file` or `both` | Persistent logs for auditing |
+
+### File Logging Features
+
+When `LOG_OUTPUT` is set to `file` or `both`:
+
+- **Automatic Directory Creation**: The log directory is created if it doesn't exist
+- **Log Rotation**: Files rotate at 10MB with 5 backup files retained
+- **Rotated Files**: Named `moneta.log.1`, `moneta.log.2`, etc.
 
 ---
 

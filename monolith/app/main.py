@@ -12,16 +12,13 @@ from app.middleware import RequestLoggingMiddleware
 from app.routers import app_router
 from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
-from app.utils.logging_config import configure_logging, DETAILED_FORMAT
+from app.utils.logging_config import configure_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Configure logging with detailed format
+# Configure logging from environment variables (LOG_LEVEL, LOG_OUTPUT, LOG_FILE_PATH)
 # See app/utils/logging_config.py for logging rules and standards
-configure_logging(
-    level=logging.INFO,
-    log_format=DETAILED_FORMAT,
-)
+configure_logging()
 
 logger = logging.getLogger(__name__)
 logger.info('[SYSTEM] Application starting')
