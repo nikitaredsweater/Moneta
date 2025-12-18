@@ -18,14 +18,12 @@ from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
     ForbiddenException,
-    InsufficientPermissionsException,
     WasNotFoundException,
 )
 from app.security import (
     Permission,
     encrypt_password,
     has_permission,
-    verify_password,
 )
 from app.utils.filters.user_filters import build_sort_user, build_where_user
 from fastapi import APIRouter, Depends
