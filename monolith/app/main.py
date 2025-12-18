@@ -8,16 +8,16 @@ from contextlib import asynccontextmanager
 
 import grpc
 from app.gen import document_ingest_pb2_grpc as pbg
-from app.middleware import RequestLoggingMiddleware
 from app.routers import app_router
 from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
-from app.utils.logging_config import configure_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from moneta_logging import configure_logging
+from moneta_logging.middleware import RequestLoggingMiddleware
 
 # Configure logging from environment variables (LOG_LEVEL, LOG_OUTPUT, LOG_FILE_PATH)
-# See app/utils/logging_config.py for logging rules and standards
+# See moneta_logging package or docs/logging.md for logging rules and standards
 configure_logging()
 
 logger = logging.getLogger(__name__)

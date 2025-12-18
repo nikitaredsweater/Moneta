@@ -48,12 +48,12 @@ distlib==0.3.9
     # via virtualenv
 dlint==0.16.0
     # via -r requirements.in
-dnspython==2.8.0
-    # via pymongo
 ecdsa==0.19.1
     # via python-jose
 fastapi==0.115.14
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   moneta-logging
 filelock==3.18.0
     # via virtualenv
 flake8==7.3.0
@@ -105,7 +105,7 @@ mdurl==0.1.2
     # via markdown-it-py
 minio==7.2.16
     # via -r requirements.in
-motor==3.7.1
+moneta-logging[fastapi] @ git+https://github.com/adtimokhin/moneta-logging.git
     # via -r requirements.in
 mypy==1.16.1
     # via -r requirements.in
@@ -135,10 +135,10 @@ pluggy==1.6.0
 pre-commit==4.2.0
     # via -r requirements.in
 protobuf==6.32.0
-    # via -r requirements.in
-psycopg-binary==3.2.9
     # via grpcio-tools
 psycopg[binary]==3.2.9
+    # via -r requirements.in
+psycopg-binary==3.2.9
     # via psycopg
 pyasn1==0.6.1
     # via
@@ -162,8 +162,6 @@ pygments==2.19.2
     #   rich
 pylint==3.3.7
     # via -r requirements.in
-pymongo==4.15.4
-    # via motor
 pytest==8.4.1
     # via
     #   -r requirements.in
@@ -171,7 +169,9 @@ pytest==8.4.1
 pytest-asyncio==1.0.0
     # via -r requirements.in
 python-dotenv==1.1.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   moneta-logging
 python-jose[cryptography]==3.5.0
     # via -r requirements.in
 pyyaml==6.0.2
@@ -191,7 +191,9 @@ sqlalchemy==2.0.41
     #   -r requirements.in
     #   alembic
 starlette==0.46.2
-    # via fastapi
+    # via
+    #   fastapi
+    #   moneta-logging
 stevedore==5.4.1
     # via bandit
 tomlkit==0.13.3
