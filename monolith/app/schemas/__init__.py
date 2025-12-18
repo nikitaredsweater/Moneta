@@ -7,7 +7,12 @@ with models module.
 """
 
 from app.schemas.base import MonetaID
-from app.schemas.company import Company, CompanyCreate, CompanyFilters
+from app.schemas.company import (
+    Company,
+    CompanyCreate,
+    CompanyFilters,
+    CompanyIncludes,
+)
 from app.schemas.company_address import CompanyAddress, CompanyAddressCreate
 from app.schemas.documents.document import Document, DocumentCreate
 from app.schemas.documents.document_version import (
@@ -18,11 +23,11 @@ from app.schemas.instrument import (
     Instrument,
     InstrumentCreate,
     InstrumentCreateInternal,
-    InstrumentFilters,
     InstrumentDRAFTUpdate,
-    InstrumentTransitionRequest,
+    InstrumentFilters,
+    InstrumentMaturityStatusUpdate,
     InstrumentStatusUpdate,
-    InstrumentMaturityStatusUpdate
+    InstrumentTransitionRequest,
 )
 from app.schemas.user import (
     User,
@@ -67,4 +72,5 @@ __all__ = [
     'InstrumentPublicPayloadFull',
     'InstrumentPublicPayloadCreate',
     'InstrumentPublicPayloadUpdate'
+    'CompanyIncludes',
 ]
