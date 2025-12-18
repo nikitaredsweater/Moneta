@@ -7,6 +7,7 @@ user is attached to the request state for downstream access.
 """
 
 import fnmatch
+import logging
 from uuid import UUID
 
 from app.repositories.user import UserRepository
@@ -18,6 +19,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
+
+logger = logging.getLogger(__name__)
 
 EXCLUDED_PATH_PATTERNS = ['/', '/v1/auth/login', '/openapi.json', '/docs']
 
@@ -69,10 +72,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             Response: The HTTP response after processing or early rejection.
         """
         if _is_path_excluded(request.url.path):
+            logger.debug('[AUTH] Path excluded from JWT auth | path=%s', request.url.path)
             return await call_next(request)
 
         auth = request.headers.get('Authorization')
         if not auth or not auth.startswith('Bearer '):
+            logger.warning(
+                '[AUTH] Missing or malformed Authorization header | path=%s',
+                request.url.path,
+            )
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={'detail': 'Missing or malformed Authorization header'},
@@ -83,6 +91,7 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             payload = verify_access_token(token)
             user_id_str = payload.get('sub')
             if not user_id_str:
+                logger.warning('[AUTH] Token missing subject (sub) | path=%s', request.url.path)
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={'detail': 'Token missing subject (sub)'},
@@ -92,6 +101,7 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             user_repo = UserRepository(async_session)
             user = await user_repo.get_by_id(user_id)
             if not user:
+                logger.warning('[AUTH] User not found | user_id=%s', user_id)
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={'detail': 'User not found'},
@@ -99,16 +109,29 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
             # Attach full user object to request.state
             request.state.user = user
+            logger.debug('[AUTH] User authenticated | user_id=%s | path=%s', user_id, request.url.path)
 
             return await call_next(request)
 
-        except (JWTError, ValueError):
+        except (JWTError, ValueError) as e:
+            logger.warning(
+                '[AUTH] Invalid or expired token | path=%s | error_type=%s',
+                request.url.path,
+                type(e).__name__,
+            )
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={'detail': 'Invalid or expired token'},
             )
-        except Exception:
+        except Exception as e:
             # Add general exception handling for database issues
+            logger.error(
+                '[AUTH] Internal server error during authentication | path=%s | '
+                'error_type=%s | error=%s',
+                request.url.path,
+                type(e).__name__,
+                str(e),
+            )
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={'detail': 'Internal server error'},

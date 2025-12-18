@@ -5,6 +5,7 @@ Provides utilities for defining permissions, mapping roles to allowed actions,
 and a FastAPI dependency for enforcing permission checks on requests.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -16,6 +17,8 @@ from app.exceptions import (
     InvalidCredentialsException,
 )
 from fastapi import Request
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -145,13 +148,40 @@ def has_permission(required: Iterable[Permission]):
                 - 403 Forbidden if the user's role does not grant any of the
                   required permissions.
         """
+        required_str = ', '.join(str(p) for p in required)
+        logger.debug(
+            '[AUTH] Checking permissions | required=%s | path=%s',
+            required_str,
+            request.url.path,
+        )
+
         user = getattr(request.state, 'user', None)
         if not user:
+            logger.warning(
+                '[AUTH] Permission check failed - no user | path=%s | required=%s',
+                request.url.path,
+                required_str,
+            )
             raise InvalidCredentialsException()
 
         role: UserRole = user.role
         allowed = ROLE_PERMISSIONS.get(role, set())
         if not any((p.verb, p.entity) in allowed for p in required):
+            logger.warning(
+                '[AUTH] Permission denied | user_id=%s | role=%s | required=%s | path=%s',
+                user.id,
+                role,
+                required_str,
+                request.url.path,
+            )
             raise InsufficientPermissionsException()
+
+        logger.debug(
+            '[AUTH] Permission granted | user_id=%s | role=%s | required=%s | path=%s',
+            user.id,
+            role,
+            required_str,
+            request.url.path,
+        )
 
     return permission_dependency
