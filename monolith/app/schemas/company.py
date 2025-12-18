@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from app.schemas.base import BaseDTO, CamelModel
 from app.schemas.company_address import CompanyAddress
+from app.schemas.instrument import Instrument
 from app.schemas.user import User
 
 
@@ -29,6 +30,7 @@ class CompanyIncludes(Company):
 
     addresses: Optional[List[CompanyAddress]] = None
     users: Optional[List[User]] = None
+    instruments: Optional[List[Instrument]] = None
 
 
 class CompanyCreate(CamelModel):

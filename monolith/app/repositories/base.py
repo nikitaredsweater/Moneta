@@ -21,7 +21,7 @@ from typing import (
 
 from app.models.base import BaseEntity
 from app.schemas.base import BaseDTO, MonetaID
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import desc, func, inspect, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, sessionmaker
@@ -109,6 +109,49 @@ class BasePGRepository(Generic[T]):
     def from_orm(cls, orm_model: BaseEntity) -> T:
         """SQLAlchemy -> Pydantic mapper"""
         return cls.Meta.response_model.from_orm(orm_model)
+
+    @staticmethod
+    def from_orm_with_includes(
+        orm_model: BaseEntity,
+        model_cls: Type[T],
+        includes: Optional[Iterable[str]] = None,
+    ) -> T:
+        """
+        Safely convert ORM entity to Pydantic model, handling unloaded relationships.
+
+        This method only includes relationships that were explicitly loaded (via includes).
+        Unloaded relationships will use their default values (typically None).
+
+        Args:
+            orm_model: The SQLAlchemy ORM model instance
+            model_cls: The Pydantic model class to convert to
+            includes: List of relationship names that were eagerly loaded
+
+        Returns:
+            Pydantic model instance with only loaded relationships populated
+        """
+        includes_set = set(includes) if includes else set()
+        insp = inspect(orm_model)
+        mapper = insp.mapper
+
+        # Get all column attribute names (non-relationship fields)
+        column_attrs = {c.key for c in mapper.columns}
+
+        # Get all relationship attribute names
+        relationship_attrs = {r.key for r in mapper.relationships}
+
+        # Build dict with column values
+        data = {}
+        for attr in column_attrs:
+            data[attr] = getattr(orm_model, attr)
+
+        # Only include relationships that were explicitly loaded
+        for attr in relationship_attrs:
+            if attr in includes_set:
+                data[attr] = getattr(orm_model, attr)
+            # Unloaded relationships will use Pydantic's default value (None)
+
+        return model_cls(**data)
 
     async def create(self, model: T) -> T:
         orm_model = self.to_orm(model)
@@ -209,6 +252,15 @@ class BasePGRepository(Generic[T]):
                             )
 
                 result = await session.execute(query)
+                # Use safe conversion when includes are specified to avoid
+                # lazy loading issues with unloaded relationships
+                if custom_model and includes:
+                    return [
+                        self.from_orm_with_includes(
+                            entity, custom_model, includes
+                        )
+                        for entity in result.scalars().unique()
+                    ]
                 if custom_model:
                     return [
                         custom_model.from_orm(entity)
@@ -294,6 +346,13 @@ class BasePGRepository(Generic[T]):
                     model_cls: Type[T] = custom_model
                 else:
                     model_cls = cast(Type[T], self.Meta.response_model)
+
+                # Use safe conversion when includes are specified to avoid
+                # lazy loading issues with unloaded relationships
+                if includes:
+                    return self.from_orm_with_includes(
+                        entity, model_cls, includes
+                    )
 
                 return model_cls.from_orm(entity)
 

@@ -48,27 +48,26 @@ def map_includes_to_rel_names(includes: Set[CompanyInclude]) -> List[str]:
     Map include enums to actual relationship attribute names on models.Company.
     """
     rel_map = {
-        CompanyInclude.ADDRESSES: "addresses",
-        CompanyInclude.USERS: "users",
-        CompanyInclude.INSTRUMENTS: "instruments",
+        CompanyInclude.ADDRESSES: 'addresses',
+        CompanyInclude.USERS: 'users',
+        CompanyInclude.INSTRUMENTS: 'instruments',
     }
     return [rel_map[i] for i in includes if i in rel_map]
 
 
-@company_router.get("/{company_id}", response_model=schemas.CompanyIncludes)
+@company_router.get('/{company_id}', response_model=schemas.CompanyIncludes)
 async def get_company_by_uuid(
     company_id: schemas.MonetaID,
     company_repo: repo.Company,
     includes: Set[CompanyInclude] = Depends(parse_company_includes),
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.COMPANY)])),
 ) -> schemas.CompanyIncludes:
-    logger.info("NEW INCLUDES FEATURE")
-    logger.info(includes)
-
     rel_names = map_includes_to_rel_names(includes)
 
     if rel_names:
         # We want relations → eager-load & deserialize into extended DTO
+        # The base repository handles partial includes automatically,
+        # only populating requested relationships
         company = await company_repo.get_by_id(
             pk=company_id,
             includes=rel_names,
@@ -76,13 +75,6 @@ async def get_company_by_uuid(
         )
         if not company:
             raise WasNotFoundException
-
-        if "addresses" not in rel_names:
-            company.addresses = None
-        if "users" not in rel_names:
-            company.users = None
-        # if "instruments" not in rel_names:
-        #     company.instruments = None
 
         return company
 
@@ -95,7 +87,7 @@ async def get_company_by_uuid(
     return schemas.CompanyIncludes(**base.dict())
 
 
-@company_router.post("/search", response_model=List[schemas.Company])
+@company_router.post('/search', response_model=List[schemas.Company])
 async def search_companies(
     company_repo: repo.Company,
     filters: schemas.CompanyFilters,
