@@ -18,6 +18,7 @@ from app.exceptions import (
 )
 from app.security import Permission, has_permission
 from app.utils import validations
+from app.exceptions import FailedToCreateEntityException
 from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
 from fastapi import APIRouter, Depends
 
@@ -80,12 +81,13 @@ async def get_instrument(
 
 
 # TODO: Make it a part of the workflow for
-# creating on- and off-chaim representations.
+# creating on- and off-chain representations.
 # With this being the first step
 @instrument_router.post('/', response_model=schemas.Instrument)
 async def create_instrument(
     instrument_data: schemas.InstrumentCreate,
     instrument_repo: repo.Instrument,
+    public_payload_repo: repo.InstrumentPublicPayload,
     current_user=Depends(get_current_user),
     _=Depends(has_permission([Permission(Verb.CREATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
@@ -100,23 +102,53 @@ async def create_instrument(
     Returns:
         Instrument: The created instrument
     """
+
+    # TODO: Add verifications of the payload object
+
     internal_data = schemas.InstrumentCreateInternal(
-        **instrument_data.dict(),
+        **instrument_data.model_dump(exclude={"public_payload"}),
         issuer_id=current_user.company_id,
         created_by=current_user.id,
     )
+
     instrument = await instrument_repo.create(internal_data)
-    return instrument
+
+    if instrument is None:
+        raise FailedToCreateEntityException
+    
+    payload = {}
+    if instrument_data.public_payload is not None:
+        payload = instrument_data.public_payload
+
+    public_payload = await public_payload_repo.create(
+        schemas.InstrumentPublicPayloadFull(
+            instrument_id=instrument.id,
+            payload=payload,
+        )
+    )
+
+    if public_payload is None:
+        raise FailedToCreateEntityException
+
+    instrument_with_payload = await instrument_repo.get_by_id(
+        instrument.id
+    )
+
+    if instrument_with_payload is None:
+        raise FailedToCreateEntityException # Should not be happenning
+
+    return instrument_with_payload
 
 
 ################################################################################
-#                        Updating an instrument entity
+#                        Updating  Instrument Entity
 ################################################################################
 @instrument_router.patch('/{instrument_id}', response_model=schemas.Instrument)
 async def update_drafted_instrument(
     instrument_id: schemas.MonetaID,
     instrument_data: schemas.InstrumentDRAFTUpdate,
     instrument_repo: repo.Instrument,
+    public_payload_repo: repo.InstrumentPublicPayload,
     current_user=Depends(get_current_user),
     _=Depends(has_permission([Permission(Verb.UPDATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
@@ -160,8 +192,30 @@ async def update_drafted_instrument(
         )
 
     # Update the entity in the database
-    updated = await instrument_repo.update_by_id(instrument_id, instrument_data)
-    return updated
+    instrument_data_trimmed = schemas.InstrumentDRAFTUpdate(
+        **instrument_data.model_dump(exclude={"public_payload"}),
+    )
+    updated_instrument = await instrument_repo.update_by_id(instrument_id, instrument_data_trimmed)
+
+    public_payload_id = None
+    update_payload = instrument_data.public_payload
+    if updated_instrument:
+        if updated_instrument.public_payload:
+            public_payload_id = updated_instrument.public_payload.id
+    
+    if public_payload_id is None:
+        # Object is still not created. Create an object with passed payload
+        await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
+            instrument_id=instrument_id,
+            payload=update_payload
+        ))
+    elif update_payload is not None:
+        # Update the payload
+        await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
+            payload=update_payload
+        ))
+    
+    return await instrument_repo.get_by_id(instrument_id)
 
 
 ################################################################################

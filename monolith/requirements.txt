@@ -48,6 +48,8 @@ distlib==0.3.9
     # via virtualenv
 dlint==0.16.0
     # via -r requirements.in
+dnspython==2.8.0
+    # via pymongo
 ecdsa==0.19.1
     # via python-jose
 fastapi==0.115.14
@@ -102,6 +104,8 @@ mccabe==0.7.0
 mdurl==0.1.2
     # via markdown-it-py
 minio==7.2.16
+    # via -r requirements.in
+motor==3.7.1
     # via -r requirements.in
 mypy==1.16.1
     # via -r requirements.in
@@ -158,6 +162,8 @@ pygments==2.19.2
     #   rich
 pylint==3.3.7
     # via -r requirements.in
+pymongo==4.15.4
+    # via motor
 pytest==8.4.1
     # via
     #   -r requirements.in
