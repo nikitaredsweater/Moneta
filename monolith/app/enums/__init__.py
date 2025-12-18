@@ -2,6 +2,7 @@
 
 from app.enums.account_activation_statuses import ActivationStatus
 from app.enums.address_types import AddressType
+from app.enums.endpoints.entity_include_search import CompanyInclude
 from app.enums.instrument_status import (
     InstrumentStatus,
     MaturityStatus,
@@ -21,4 +22,5 @@ __all__ = [
     'MaturityStatus',
     'TradingStatus',
     'ActivationStatus',
+    'CompanyInclude',
 ]
