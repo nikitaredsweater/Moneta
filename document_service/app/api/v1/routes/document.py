@@ -26,6 +26,13 @@ document_router = APIRouter()
 HARDCODED_USER_ID = '70b30fbc-3856-4f2f-89cd-c1c5688ca7c9'
 HARDCODED_COMPANY_ID = 'company-1234'
 
+@document_router.get('/s')
+async def health_check():
+    logger.debug(
+        '[BUSINESS] test',
+    )
+    return {'status': 'healthy'}
+
 
 # TODO: Add a permissions check and etc
 @document_router.post('/upload/request')

@@ -58,4 +58,4 @@ FROM base AS production
 COPY . .
 
 # Command to run the application in production mode
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "null"]

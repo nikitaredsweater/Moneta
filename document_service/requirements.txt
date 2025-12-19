@@ -196,7 +196,9 @@ pytest-asyncio==1.1.0
 python-dateutil==2.9.0.post0
     # via celery
 python-dotenv==1.2.1
-    # via moneta-logging
+    # via
+    #   -r requirements.in
+    #   moneta-logging
 pyyaml==6.0.2
     # via
     #   bandit
