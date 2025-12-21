@@ -27,11 +27,17 @@ QUEUE_NAME = 'document_tasks'
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event for startup and shutdown."""
-    # Configure logging HERE, after Uvicorn has started
+    # Configure logging AFTER Uvicorn has initialized
+    # This prevents Uvicorn from overriding our configuration
     configure_logging()
+    
     logger = logging.getLogger(__name__)
     logger.info('[SYSTEM] Document service starting')
     logger.info('[SYSTEM] Logging configured successfully')
+    
+    # Check that log file was created
+    log_file_path = os.getenv('LOG_FILE_PATH', 'logs/app.log')
+    logger.info(f'[SYSTEM] Logging to file: {log_file_path}')
     
     # Initialize RabbitMQ consumer
     logger.info('[SYSTEM] Initializing RabbitMQ consumer')
@@ -40,7 +46,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(client.consume())
     logger.info('[SYSTEM] RabbitMQ consumer task started')
     
-    yield  # Application runs
+    yield  # Application runs here
     
     # Cleanup on shutdown
     logger.info('[SYSTEM] Application shutting down')
@@ -49,7 +55,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title='Document Service',
     description='Document management and storage service',
-    lifespan=lifespan
+    lifespan=lifespan  # This ensures logging is configured at the right time
 )
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(app_router)
