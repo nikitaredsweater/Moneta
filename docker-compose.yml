@@ -19,6 +19,9 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MONGO_URL=mongodb://mongodb:27017
       - MONGO_DB_NAME=moneta
+      - LOG_LEVEL=INFO
+      - LOG_OUTPUT=file
+      - LOG_FILE_PATH=logs/monolith.log
 
   document_service:
     build:
@@ -38,16 +41,21 @@ services:
       - RABBIT_QUEUE=document_tasks
       - MINIO_ENDPOINT=minio:9000
       - MONGO_URL=mongodb://mongodb:27017
+      - LOG_LEVEL=INFO
+      - LOG_OUTPUT=file
+      - LOG_FILE_PATH=logs/document_service.log
 
   scheduler-service:
     build:
       context: ./scheduler_service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/moneta
-      SLEEP_SECONDS: 3600
-      LOCK_KEY: 90201
-      LOG_LEVEL: INFO
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/moneta
+      - SLEEP_SECONDS=3600
+      - LOCK_KEY=90201
+      - LOG_LEVEL=INFO
+      - LOG_OUTPUT=file
+      - LOG_FILE_PATH=logs/scheduler_service.log
     depends_on:
       postgres:
         condition: service_healthy

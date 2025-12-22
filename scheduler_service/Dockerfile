@@ -23,5 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY src ./src
 
+# Create logs directory for file-based logging
+RUN mkdir -p /logs
+
 # Command to run the application
 CMD ["python", "-m", "scheduler.main"]
