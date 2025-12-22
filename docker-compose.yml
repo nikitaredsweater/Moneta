@@ -67,6 +67,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8082:3000"
+    environment:
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=file
+      - LOG_FILE_PATH=/app/logs/zkp_service.log
 
   # Other Images Used by Moneta Team
   minio:

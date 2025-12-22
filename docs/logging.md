@@ -48,13 +48,26 @@ LOG_FILE_PATH="logs/moneta.log"
 | Staging | `INFO` | `both` | Console + file for debugging |
 | Production | `INFO` | `file` or `both` | Persistent logs for auditing |
 
+### Log File Naming Convention
+
+Log file names should follow the pattern `<service_folder_name>.log`:
+
+| Service Folder | Log File Path |
+|----------------|---------------|
+| `monolith` | `logs/monolith.log` |
+| `document_service` | `logs/document_service.log` |
+| `scheduler_service` | `logs/scheduler_service.log` |
+| `zkp-service` | `logs/zkp_service.log` |
+
+This convention ensures consistency across services and makes it easy to identify which service generated which log file.
+
 ### File Logging Features
 
 When `LOG_OUTPUT` is set to `file` or `both`:
 
 - **Automatic Directory Creation**: The log directory is created if it doesn't exist
 - **Log Rotation**: Files rotate at 10MB with 5 backup files retained
-- **Rotated Files**: Named `moneta.log.1`, `moneta.log.2`, etc.
+- **Rotated Files**: Named `<service>.log.1`, `<service>.log.2`, etc.
 
 ---
 
