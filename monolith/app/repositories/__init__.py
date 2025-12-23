@@ -14,6 +14,7 @@ from app.repositories.documents.document_version import (
 )
 from app.repositories.instrument import Instrument, InstrumentRepository
 from app.repositories.user import User, UserRepository
+from app.repositories.instrument_public_payload import InstrumentPublicPayloadRepository, InstrumentPublicPayload
 
 __all__ = [
     'UserRepository',
@@ -28,4 +29,6 @@ __all__ = [
     'Document',
     'DocumentVersionRepository',
     'DocumentVersion',
+    'InstrumentPublicPayloadRepository',
+    'InstrumentPublicPayload'
 ]

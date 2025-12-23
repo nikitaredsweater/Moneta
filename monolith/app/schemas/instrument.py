@@ -3,12 +3,13 @@ Instrument DTOs
 """
 
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
 from app.exceptions import EmptyEntityException
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
-from pydantic import Field, root_validator
+from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull, InstrumentPublicPayloadCreate
+from pydantic import Field, root_validator, ConfigDict
 
 
 class Instrument(BaseDTO):
@@ -26,6 +27,10 @@ class Instrument(BaseDTO):
     trading_status: TradingStatus
     issuer_id: MonetaID
     created_by: MonetaID
+
+    public_payload: Optional[InstrumentPublicPayloadFull] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InstrumentFilters(CamelModel):
@@ -69,7 +74,7 @@ class InstrumentCreate(CamelModel):
     currency: str = Field(..., min_length=3, max_length=3)
     maturity_date: date
     maturity_payment: float
-
+    public_payload: Optional[Dict[str, Any]] = None
 
 class InstrumentDRAFTUpdate(CamelModel):
     """
@@ -81,6 +86,7 @@ class InstrumentDRAFTUpdate(CamelModel):
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
     maturity_date: Optional[date] = None
     maturity_payment: Optional[float] = None
+    public_payload: Optional[Dict[str, Any]] = None
 
     @root_validator(pre=True)
     def at_least_one_field(cls, values):
@@ -94,6 +100,7 @@ class InstrumentDRAFTUpdate(CamelModel):
                 'currency',
                 'maturity_date',
                 'maturity_payment',
+                'public_payload'
             }
         ):
             raise EmptyEntityException
@@ -128,10 +135,22 @@ class InstrumentMaturityStatusUpdate(CamelModel):
     maturity_status: MaturityStatus
 
 
-class InstrumentCreateInternal(InstrumentCreate):
+class InstrumentCreateInternal(CamelModel):
     """
-    Instrument Profile
+    Internal instrument profile
     """
 
     issuer_id: MonetaID
     created_by: MonetaID
+
+    name: str = Field(..., max_length=255)
+    face_value: float
+    currency: str = Field(..., min_length=3, max_length=3)
+    maturity_date: date
+    maturity_payment: float
+
+    instrument_status: InstrumentStatus = InstrumentStatus.DRAFT
+    maturity_status: MaturityStatus = MaturityStatus.NOT_DUE
+    trading_status: TradingStatus = TradingStatus.DRAFT
+
+    # public_payload: Optional[InstrumentPublicPayloadFull] = None

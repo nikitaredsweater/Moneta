@@ -2,6 +2,7 @@
 Module that loads the JWT Keys from .env file
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,8 @@ from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class JWTKeyManager:
@@ -30,10 +33,12 @@ class JWTKeyManager:
             FileNotFoundError: If key files don't exist.
             RuntimeError: If key files are empty or unreadable.
         """
+        logger.debug('[AUTH] Loading JWT keys from environment')
         private_key_path = os.getenv('JWT_PRIVATE_KEY_PATH')
         public_key_path = os.getenv('JWT_PUBLIC_KEY_PATH')
 
         if not private_key_path or not public_key_path:
+            logger.error('[AUTH] JWT key paths not set in environment')
             raise ValueError(
                 'JWT_PRIVATE_KEY_PATH or JWT_PUBLIC_KEY_PATH is not set in the .env file'
             )
@@ -43,10 +48,16 @@ class JWTKeyManager:
 
         # Check if files exist
         if not private_path.exists():
+            logger.error(
+                '[AUTH] Private key file not found | path=%s', private_key_path
+            )
             raise FileNotFoundError(
                 f'Private key file not found: {private_key_path}'
             )
         if not public_path.exists():
+            logger.error(
+                '[AUTH] Public key file not found | path=%s', public_key_path
+            )
             raise FileNotFoundError(
                 f'Public key file not found: {public_key_path}'
             )
@@ -60,6 +71,7 @@ class JWTKeyManager:
 
             # Validate that keys were read and are not empty
             if not self._private_key or not self._public_key:
+                logger.error('[AUTH] JWT key files are empty')
                 raise RuntimeError('One or both key files are empty')
 
             # Basic validation that the keys contain expected PEM markers
@@ -70,6 +82,7 @@ class JWTKeyManager:
                 '-----BEGIN' not in private_key_str
                 or '-----END' not in private_key_str
             ):
+                logger.error('[AUTH] Private key not in PEM format')
                 raise RuntimeError(
                     'Private key file does not appear to be in PEM format'
                 )
@@ -77,16 +90,20 @@ class JWTKeyManager:
                 '-----BEGIN' not in public_key_str
                 or '-----END' not in public_key_str
             ):
+                logger.error('[AUTH] Public key not in PEM format')
                 raise RuntimeError(
                     'Public key file does not appear to be in PEM format'
                 )
 
             self._loaded = True
+            logger.info('[AUTH] JWT keys loaded successfully')
 
         except OSError as e:
+            logger.error('[AUTH] Error reading key files | error=%s', str(e))
             raise RuntimeError(f'Error reading key files: {e}')
         except UnicodeDecodeError:
             # Keys should be readable as UTF-8 for PEM format validation
+            logger.error('[AUTH] Key files contain invalid characters')
             raise RuntimeError('Key files contain invalid characters')
 
     @property
@@ -147,7 +164,7 @@ jwt_keys = JWTKeyManager()
 try:
     jwt_keys.load_keys()
 except Exception as e:
-    print(f'Warning: Failed to load JWT keys on import: {e}')
+    logger.warning('[AUTH] Failed to load JWT keys on import | error=%s', str(e))
 
 
 def load_jwt_keys() -> None:

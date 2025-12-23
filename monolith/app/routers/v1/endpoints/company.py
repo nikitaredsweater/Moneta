@@ -19,7 +19,7 @@ from app.utils.filters.company_filters import (
 )
 from fastapi import APIRouter, Depends
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 company_router = APIRouter()
@@ -39,7 +39,9 @@ async def get_companies(
     Returns:
         List[schemas.Company]: A list of company entities.
     """
+    logger.debug('[BUSINESS] Fetching all companies')
     companies = await company_repo.get_all()
+    logger.info('[BUSINESS] Companies retrieved | count=%d', len(companies))
     return companies
 
 
@@ -62,6 +64,11 @@ async def get_company_by_uuid(
     includes: Set[CompanyInclude] = Depends(parse_company_includes),
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.COMPANY)])),
 ) -> schemas.CompanyIncludes:
+    logger.debug(
+        '[BUSINESS] Fetching company | company_id=%s | includes=%s',
+        company_id,
+        list(includes) if includes else [],
+    )
     rel_names = map_includes_to_rel_names(includes)
 
     if rel_names:
@@ -74,15 +81,26 @@ async def get_company_by_uuid(
             custom_model=schemas.CompanyIncludes,
         )
         if not company:
+            logger.warning(
+                '[BUSINESS] Company not found | company_id=%s', company_id
+            )
             raise WasNotFoundException
 
+        logger.info(
+            '[BUSINESS] Company retrieved with includes | company_id=%s | '
+            'includes=%s',
+            company_id,
+            rel_names,
+        )
         return company
 
     # No includes → use base DTO (no relationships touched)
     base = await company_repo.get_by_id(pk=company_id)
     if not base:
+        logger.warning('[BUSINESS] Company not found | company_id=%s', company_id)
         raise WasNotFoundException
 
+    logger.info('[BUSINESS] Company retrieved | company_id=%s', company_id)
     # Convert base → extended shape, relations stay None
     return schemas.CompanyIncludes(**base.dict())
 
@@ -93,6 +111,11 @@ async def search_companies(
     filters: schemas.CompanyFilters,
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.COMPANY)])),
 ) -> Optional[List[schemas.Company]]:
+    logger.debug(
+        '[BUSINESS] Searching companies | limit=%d | offset=%d',
+        filters.limit,
+        filters.offset,
+    )
     where = build_where_company(filters)
     order = build_sort_company(filters.sort)
     result = await company_repo.get_all(
@@ -101,6 +124,7 @@ async def search_companies(
         limit=filters.limit,
         offset=filters.offset,
     )
+    logger.info('[BUSINESS] Company search completed | results=%d', len(result))
     return result
 
 
@@ -120,5 +144,15 @@ async def create_company(
     Returns:
         Company: The created user object
     """
+    logger.debug(
+        '[BUSINESS] Creating company | legal_name=%s | registration_number=%s',
+        company_data.legal_name,
+        company_data.registration_number,
+    )
     company = await company_repo.create(company_data)
+    logger.info(
+        '[BUSINESS] Company created | company_id=%s | legal_name=%s',
+        company.id,
+        company.legal_name,
+    )
     return company

@@ -10,7 +10,11 @@ reversible encryption, which is the security best practice for password storage.
 Passwords cannot and should not be decrypted back to plaintext.
 """
 
+import logging
+
 import bcrypt
+
+logger = logging.getLogger(__name__)
 
 
 def encrypt_password(password: str) -> str:
@@ -40,7 +44,9 @@ def encrypt_password(password: str) -> str:
         - Automatically generates a unique salt for each password
         - Resistant to rainbow table and brute force attacks
     """
+    logger.debug('[AUTH] Encrypting password')
     if not isinstance(password, str):
+        logger.error('[AUTH] Password encryption failed | error=Password must be a string')
         raise TypeError('Password must be a string')
 
     # Convert string to bytes
@@ -50,6 +56,7 @@ def encrypt_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
 
+    logger.debug('[AUTH] Password encrypted successfully')
     # Return as string for database storage
     return hashed.decode('utf-8')
 
@@ -87,10 +94,15 @@ def verify_password(password: str, hashed_password: str) -> bool:
         - Works with any bcrypt hash regardless of work factor
         - Safe against hash format manipulation attacks
     """
+    logger.debug('[AUTH] Verifying password')
     if not isinstance(password, str):
+        logger.error('[AUTH] Password verification failed | error=Password must be a string')
         raise TypeError('Password must be a string')
 
     if not isinstance(hashed_password, str):
+        logger.error(
+            '[AUTH] Password verification failed | error=Hashed password must be a string'
+        )
         raise TypeError('Hashed password must be a string')
 
     try:
@@ -99,10 +111,18 @@ def verify_password(password: str, hashed_password: str) -> bool:
         hashed_bytes = hashed_password.encode('utf-8')
 
         # Verify password using bcrypt
-        return bcrypt.checkpw(password_bytes, hashed_bytes)
+        is_valid = bcrypt.checkpw(password_bytes, hashed_bytes)
+
+        if is_valid:
+            logger.debug('[AUTH] Password verification successful')
+        else:
+            logger.debug('[AUTH] Password verification failed | reason=mismatch')
+
+        return is_valid
 
     except ValueError as e:
         # Re-raise with more specific message
+        logger.warning('[AUTH] Invalid bcrypt hash format | error=%s', str(e))
         raise ValueError(f'Invalid bcrypt hash format: {str(e)}')
 
 

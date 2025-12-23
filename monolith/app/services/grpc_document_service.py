@@ -15,6 +15,7 @@ All functions interact with the database via repository classes and rely on
 async SQLAlchemy sessions.
 """
 
+import logging
 import uuid
 from datetime import datetime
 
@@ -22,6 +23,8 @@ import app.models as models
 import app.schemas as schemas
 from app.repositories import DocumentRepository, DocumentVersionRepository
 from app.utils.session import async_session
+
+logger = logging.getLogger(__name__)
 
 
 async def save_document(
@@ -49,6 +52,12 @@ async def save_document(
     Returns:
         schemas.Document: The newly created document schema object
     """
+    logger.debug(
+        '[BUSINESS] Saving document | filename=%s | mime=%s | bucket=%s',
+        internal_filename,
+        mime,
+        storage_bucket,
+    )
     # TODO: Add verifications.
     #
     # Better, just add exception handling, since SQL
@@ -65,6 +74,12 @@ async def save_document(
 
     document_repo = DocumentRepository(async_session)
     doc = await document_repo.create(new_doc)
+    logger.info(
+        '[BUSINESS] Document saved | document_id=%s | filename=%s | created_by=%s',
+        doc.id,
+        internal_filename,
+        created_by_user_id,
+    )
     return doc
 
 
@@ -91,6 +106,11 @@ async def save_document_version(
         schemas.DocumentVersion: The newly created document
             version schema object
     """
+    logger.debug(
+        '[BUSINESS] Saving document version | document_id=%s | storage_version_id=%s',
+        document_id,
+        storage_version_id,
+    )
     # TODO: Add verifications.
     #
     # Better, just add exception handling, since SQL
@@ -105,6 +125,13 @@ async def save_document_version(
         max_retries=3,
     )
 
+    logger.info(
+        '[BUSINESS] Document version saved | version_id=%s | document_id=%s | '
+        'created_by=%s',
+        version.id,
+        document_id,
+        created_by,
+    )
     return version
 
 
@@ -126,11 +153,21 @@ async def get_document_by_filename(
             - The corresponding document schema object if found
             - None if no document matches the provided filename
     """
+    logger.debug('[BUSINESS] Fetching document by filename | filename=%s', internal_filename)
     document_repo = DocumentRepository(async_session)
 
     # Use the get_one method with a where clause to find by internal_filename
     document = await document_repo.get_one(
         where_list=[models.Document.internal_filename == internal_filename]
     )
+
+    if document:
+        logger.info(
+            '[BUSINESS] Document found | document_id=%s | filename=%s',
+            document.id,
+            internal_filename,
+        )
+    else:
+        logger.warning('[BUSINESS] Document not found | filename=%s', internal_filename)
 
     return document

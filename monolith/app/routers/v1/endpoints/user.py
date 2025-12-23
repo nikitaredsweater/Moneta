@@ -3,10 +3,11 @@ User endpoints
 """
 
 import logging
-from app.utils import validations
 from typing import List, Optional
 
-logger = logging.getLogger()
+from app.utils import validations
+
+logger = logging.getLogger(__name__)
 
 from app import repositories as repo
 from app import schemas
@@ -17,14 +18,12 @@ from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
     ForbiddenException,
-    InsufficientPermissionsException,
     WasNotFoundException,
 )
 from app.security import (
     Permission,
     encrypt_password,
     has_permission,
-    verify_password,
 )
 from app.utils.filters.user_filters import build_sort_user, build_where_user
 from fastapi import APIRouter, Depends
@@ -46,7 +45,9 @@ async def get_all_users(
     Returns:
         schemas.User: A user object.
     """
+    logger.debug('[BUSINESS] Fetching all users')
     users = await user_repo.get_all()
+    logger.info('[BUSINESS] Users retrieved | count=%d', len(users))
     return users
 
 
@@ -60,6 +61,11 @@ async def search_users(
     Search users with pagination and sorting.
     Body: UserFilters (camelCase JSON).
     """
+    logger.debug(
+        '[BUSINESS] Searching users | limit=%d | offset=%d',
+        filters.limit,
+        filters.offset,
+    )
     where = build_where_user(filters)
     order_list = build_sort_user(filters.sort)
 
@@ -69,6 +75,7 @@ async def search_users(
         limit=filters.limit,
         offset=filters.offset,
     )
+    logger.info('[BUSINESS] User search completed | results=%d', len(users))
     return users
 
 
@@ -88,14 +95,23 @@ async def get_user_by_id(
     Returns:
         Optional[schemas.User]: A user object.
     """
+    logger.debug('[BUSINESS] Fetching user | user_id=%s', user_id)
     user_found = None
     try:
         user_found = await user_repo.get_by_id(user_id)
     except Exception as e:
-        logger.info('exception finding the user')
-        logger.info(e)
-    finally:
-        return user_found
+        logger.error(
+            '[BUSINESS] Exception finding user | user_id=%s | error_type=%s | '
+            'error=%s',
+            user_id,
+            type(e).__name__,
+            str(e),
+        )
+    if user_found:
+        logger.info('[BUSINESS] User retrieved | user_id=%s', user_id)
+    else:
+        logger.warning('[BUSINESS] User not found | user_id=%s', user_id)
+    return user_found
 
 
 @user_router.delete('/{user_id}', response_model=schemas.User)
@@ -118,25 +134,47 @@ async def delete_user(
     Returns:
         UserSchema: The deleted user object
     """
+    logger.debug(
+        '[BUSINESS] Deleting user | user_id=%s | requested_by=%s',
+        user_id,
+        current_user.id,
+    )
     # Validations
     user_to_delete = None
     try:
         user_to_delete = await user_repo.get_by_id(user_id)
     except Exception as e:
+        logger.warning('[BUSINESS] User not found for deletion | user_id=%s', user_id)
         raise WasNotFoundException  # 404
 
     if user_to_delete is None:
+        logger.warning('[BUSINESS] User not found for deletion | user_id=%s', user_id)
         raise WasNotFoundException  # 404
 
     if user_to_delete.company_id:
         # Only same company user can delete a user
         if current_user.company_id != user_to_delete.company_id:
+            logger.warning(
+                '[BUSINESS] Forbidden delete attempt | user_id=%s | '
+                'requester_company=%s | target_company=%s',
+                user_id,
+                current_user.company_id,
+                user_to_delete.company_id,
+            )
             raise ForbiddenException  # 403
     else:
+        logger.warning(
+            '[BUSINESS] User has no company, cannot delete | user_id=%s', user_id
+        )
         raise WasNotFoundException  # 404
 
     # Deleting
     user_to_delete = await user_repo.delete_by_id(user_id)
+    logger.info(
+        '[BUSINESS] User deleted | user_id=%s | deleted_by=%s',
+        user_id,
+        current_user.id,
+    )
     return user_to_delete  # Entity that was deleted
 
 @user_router.patch("/{user_id}", response_model=schemas.User)
@@ -153,39 +191,66 @@ async def patch_user(
 
     Only users from the same company can perform this action.
     """
+    logger.debug(
+        '[BUSINESS] Patching user | user_id=%s | requested_by=%s',
+        user_id,
+        current_user.id,
+    )
     user_to_patch = None
     try:
         user_to_patch = await user_repo.get_by_id(user_id)
     except Exception as e:
+        logger.warning('[BUSINESS] User not found for patch | user_id=%s', user_id)
         raise WasNotFoundException  # 404
 
     if user_to_patch is None:
+        logger.warning('[BUSINESS] User not found for patch | user_id=%s', user_id)
         raise WasNotFoundException  # 404
-    
+
     if user_to_patch.company_id:
-        # Only same company user can delete a user
+        # Only same company user can patch a user
         if current_user.company_id != user_to_patch.company_id:
+            logger.warning(
+                '[BUSINESS] Forbidden patch attempt | user_id=%s | '
+                'requester_company=%s | target_company=%s',
+                user_id,
+                current_user.company_id,
+                user_to_patch.company_id,
+            )
             raise ForbiddenException  # 403
     else:
+        logger.warning(
+            '[BUSINESS] User has no company, cannot patch | user_id=%s', user_id
+        )
         raise WasNotFoundException  # 404
-    
+
     # Checking the data passed
     if user_patch_data.email:
         # Check email is valid format
-        validations.ensure_valid_email(user_patch_data.email, 'email') # 422
+        validations.ensure_valid_email(user_patch_data.email, 'email')  # 422
         # Check that email is not taken
         existing_user = await user_repo.get_by_email_exact(user_patch_data.email)
         if existing_user:
-            raise EntityAlreadyExistsException # 409
-    
+            logger.warning(
+                '[BUSINESS] Email already exists | user_id=%s | email=%s',
+                user_id,
+                user_patch_data.email,
+            )
+            raise EntityAlreadyExistsException  # 409
+
     if user_patch_data.first_name:
-        validations.ensure_not_empty(user_patch_data.first_name, 'first_name') # 422
-    
+        validations.ensure_not_empty(user_patch_data.first_name, 'first_name')  # 422
+
     if user_patch_data.last_name:
-        validations.ensure_not_empty(user_patch_data.last_name, 'last_name') # 422
+        validations.ensure_not_empty(user_patch_data.last_name, 'last_name')  # 422
 
     # Main logic
     updated = await user_repo.update_by_id(user_id, user_patch_data)
+    logger.info(
+        '[BUSINESS] User patched | user_id=%s | patched_by=%s',
+        user_id,
+        current_user.id,
+    )
     return updated
 
 @user_router.post('/', response_model=schemas.User)
@@ -205,16 +270,28 @@ async def create_user(
     Returns:
         UserSchema: The created user object
     """
+    logger.debug(
+        '[BUSINESS] Creating user | email=%s | company_id=%s',
+        user_data.email,
+        getattr(user_data, 'company_id', None),
+    )
     # Validations
     if hasattr(user_data, 'company_id') and user_data.company_id:
         company = await company_repo.get_by_id(user_data.company_id)
         if not company:
+            logger.warning(
+                '[BUSINESS] Company not found for user creation | company_id=%s',
+                user_data.company_id,
+            )
             raise WasNotFoundException(
                 detail=f'Company with ID {user_data.company_id} does not exist'
             )
 
     existing_user = await user_repo.get_by_email_exact(user_data.email)
     if existing_user:
+        logger.warning(
+            '[BUSINESS] User already exists with email | email=%s', user_data.email
+        )
         raise EntityAlreadyExistsException
 
     # Main logic
@@ -222,6 +299,17 @@ async def create_user(
 
     try:
         user = await user_repo.create(user_data)
+        logger.info(
+            '[BUSINESS] User created | user_id=%s | email=%s',
+            user.id,
+            user.email,
+        )
         return user
-    except Exception:
+    except Exception as e:
+        logger.error(
+            '[BUSINESS] Failed to create user | email=%s | error_type=%s | error=%s',
+            user_data.email,
+            type(e).__name__,
+            str(e),
+        )
         raise FailedToCreateEntityException

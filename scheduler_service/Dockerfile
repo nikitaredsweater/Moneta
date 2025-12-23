@@ -1,19 +1,33 @@
 FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/srv/scheduler/src
+
 WORKDIR /srv/scheduler
 
 # Create logs directory at container root for file-based logging
 RUN mkdir -p /logs
 
-# files are at scheduler_service/requirements.txt (context root), so just:
+# Install system dependencies (including git)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install wheel
+RUN pip install --upgrade pip wheel setuptools
+
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# src is at scheduler_service/src
+# Copy source code
 COPY src ./src
 
-ENV PYTHONPATH=/srv/scheduler/src
+# Create logs directory for file-based logging
+RUN mkdir -p /logs
 
-# either of these is fine:
-# CMD ["python", "src/scheduler/main.py"]
+# Command to run the application
 CMD ["python", "-m", "scheduler.main"]

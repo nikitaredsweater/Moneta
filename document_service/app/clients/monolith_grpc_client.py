@@ -31,6 +31,7 @@ Typical async usage:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Dict, Iterable, Optional, Tuple
@@ -41,6 +42,8 @@ import app.gen.document_ingest_pb2_grpc as pbg
 import grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 from grpc import aio
+
+logger = logging.getLogger(__name__)
 
 
 class MonolithGrpcClient:
@@ -102,7 +105,10 @@ class MonolithGrpcClient:
             None
         """
         if self._channel:
+            logger.debug('[EXTERNAL] gRPC channel already open | target=%s', self.target)
             return
+
+        logger.debug('[EXTERNAL] Opening gRPC channel | target=%s | tls=%s', self.target, bool(self._tls_root_cert))
         if self._tls_root_cert:
             creds = grpc.ssl_channel_credentials(
                 root_certificates=self._tls_root_cert
@@ -111,6 +117,7 @@ class MonolithGrpcClient:
         else:
             self._channel = aio.insecure_channel(self.target)
         self._stub = pbg.DocumentIngestStub(self._channel)
+        logger.info('[EXTERNAL] gRPC channel opened | target=%s', self.target)
 
     async def close(self) -> None:
         """
@@ -120,9 +127,11 @@ class MonolithGrpcClient:
             None
         """
         if self._channel:
+            logger.debug('[EXTERNAL] Closing gRPC channel | target=%s', self.target)
             await self._channel.close()
             self._channel = None
             self._stub = None
+            logger.info('[EXTERNAL] gRPC channel closed | target=%s', self.target)
 
     async def __aenter__(self) -> 'MonolithGrpcClient':
         """Start the client when entering an async context manager."""
@@ -174,9 +183,17 @@ class MonolithGrpcClient:
             RuntimeError: If the client has not been started.
         """
         if not self._stub:
+            logger.error('[EXTERNAL] gRPC client not started')
             raise RuntimeError(
                 'Client not started. Call await client.start() or use "async with".'
             )
+
+        logger.debug(
+            '[EXTERNAL] gRPC CreateDocument | filename=%s | bucket=%s | created_by=%s',
+            internal_filename,
+            storage_bucket,
+            created_by,
+        )
 
         # Default created_at to 'now' in UTC if not provided
         if created_at is None:
@@ -203,9 +220,25 @@ class MonolithGrpcClient:
 
         deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
 
-        return await self._stub.CreateDocument(
-            req, timeout=deadline, metadata=md
-        )
+        try:
+            response = await self._stub.CreateDocument(
+                req, timeout=deadline, metadata=md
+            )
+            logger.info(
+                '[EXTERNAL] gRPC CreateDocument completed | filename=%s | status=%s | row_id=%s',
+                internal_filename,
+                response.status,
+                response.row_id,
+            )
+            return response
+        except grpc.RpcError as e:
+            logger.error(
+                '[EXTERNAL] gRPC CreateDocument failed | filename=%s | error_code=%s | error=%s',
+                internal_filename,
+                e.code() if hasattr(e, 'code') else 'unknown',
+                str(e),
+            )
+            raise
 
     async def save_document_version(
         self,
@@ -243,9 +276,17 @@ class MonolithGrpcClient:
             RuntimeError: If the client has not been started.
         """
         if not self._stub:
+            logger.error('[EXTERNAL] gRPC client not started')
             raise RuntimeError(
                 'Client not started. Call await client.start() or use "async with".'
             )
+
+        logger.debug(
+            '[EXTERNAL] gRPC CreateDocumentVersion | document_id=%s | version=%d | created_by=%s',
+            document_id,
+            version_number,
+            created_by,
+        )
 
         if created_at is None:
             created_at = datetime.now(timezone.utc)
@@ -268,9 +309,26 @@ class MonolithGrpcClient:
             md.extend(extra_metadata.items())
 
         deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
-        return await self._stub.CreateDocumentVersion(
-            req, timeout=deadline, metadata=md
-        )
+
+        try:
+            response = await self._stub.CreateDocumentVersion(
+                req, timeout=deadline, metadata=md
+            )
+            logger.info(
+                '[EXTERNAL] gRPC CreateDocumentVersion completed | document_id=%s | status=%s | version_id=%s',
+                document_id,
+                response.status,
+                response.version_id,
+            )
+            return response
+        except grpc.RpcError as e:
+            logger.error(
+                '[EXTERNAL] gRPC CreateDocumentVersion failed | document_id=%s | error_code=%s | error=%s',
+                document_id,
+                e.code() if hasattr(e, 'code') else 'unknown',
+                str(e),
+            )
+            raise
 
     async def get_document(
         self,
@@ -298,9 +356,12 @@ class MonolithGrpcClient:
             RuntimeError: If the client has not been started.
         """
         if not self._stub:
+            logger.error('[EXTERNAL] gRPC client not started')
             raise RuntimeError(
                 'Client not started. Call await client.start() or use "async with".'
             )
+
+        logger.debug('[EXTERNAL] gRPC GetDocument | filename=%s', internal_filename)
 
         req = pb.GetDocumentRequest(internal_filename=internal_filename)
 
@@ -310,7 +371,22 @@ class MonolithGrpcClient:
 
         deadline = timeout_sec if timeout_sec is not None else self.timeout_sec
 
-        return await self._stub.GetDocument(req, timeout=deadline, metadata=md)
+        try:
+            response = await self._stub.GetDocument(req, timeout=deadline, metadata=md)
+            logger.info(
+                '[EXTERNAL] gRPC GetDocument completed | filename=%s | status=%s',
+                internal_filename,
+                response.status,
+            )
+            return response
+        except grpc.RpcError as e:
+            logger.error(
+                '[EXTERNAL] gRPC GetDocument failed | filename=%s | error_code=%s | error=%s',
+                internal_filename,
+                e.code() if hasattr(e, 'code') else 'unknown',
+                str(e),
+            )
+            raise
 
 
 # --------------------------

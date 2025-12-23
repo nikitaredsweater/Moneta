@@ -48,3 +48,6 @@ python-jose[cryptography]
 # -- gRPC --
 grpcio
 grpcio-tools
+
+# --- Moneta Packages ---
+moneta-logging[fastapi] @ git+https://github.com/adtimokhin/moneta-logging.git
