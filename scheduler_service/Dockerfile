@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /srv/scheduler
 
+# Create logs directory at container root for file-based logging
+RUN mkdir -p /logs
+
 # files are at scheduler_service/requirements.txt (context root), so just:
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

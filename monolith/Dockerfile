@@ -22,6 +22,9 @@ RUN pip install --upgrade pip wheel setuptools
 # Set work directory
 WORKDIR /app_root
 
+# Create logs directory at container root (outside mounted volumes)
+RUN mkdir -p /logs
+
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
