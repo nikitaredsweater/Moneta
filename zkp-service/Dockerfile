@@ -113,9 +113,9 @@ ENV CIRCUITS_SRC_DIR=/app/circuits/src
 # ---- Runtime app ----
 WORKDIR /app/services/api
 # Create default data dirs the app expects and grant permissions to node
-# Create logs directory at container root for file-based logging
-RUN mkdir -p /app/data/input /app/data/output /logs \
- && chown -R node:node /app /logs
+# Also create logs directory for file-based logging
+RUN mkdir -p /app/data/input /app/data/output /app/logs \
+ && chown -R node:node /app
 
 # (optional) your circuits live at /circuits/src but your code defaults to /app/circuits/src.
 # Provide a friendly symlink so existing code keeps working.
