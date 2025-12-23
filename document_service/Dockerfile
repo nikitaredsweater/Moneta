@@ -2,8 +2,26 @@
 
 FROM python:3.13-slim AS base
 
-# Set working directory to /app
-WORKDIR /app
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/venv/bin:$PATH"
+ENV PYTHONPATH="/app_root/src"
+
+# Create and activate virtual environment
+RUN python -m venv /venv
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install wheel
+RUN pip install --upgrade pip wheel setuptools
+
+# Set work directory
+WORKDIR /app_root
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
