@@ -7,9 +7,6 @@ ENV PYTHONPATH=/srv/scheduler/src
 
 WORKDIR /srv/scheduler
 
-# Create logs directory at container root for file-based logging
-RUN mkdir -p /logs
-
 # Install system dependencies (including git)
 RUN apt-get update && apt-get install -y \
     build-essential \
