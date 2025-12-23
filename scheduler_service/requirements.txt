@@ -12,10 +12,16 @@ mako==1.3.10
     # via alembic
 markupsafe==3.0.2
     # via mako
+moneta-logging @ git+https://github.com/adtimokhin/moneta-logging.git
+    # via -r requirements.in
 psycopg[binary]==3.2.10
     # via -r requirements.in
 psycopg-binary==3.2.10
     # via psycopg
+python-dotenv==1.2.1
+    # via
+    #   -r requirements.in
+    #   moneta-logging
 sqlalchemy==2.0.43
     # via
     #   -r requirements.in

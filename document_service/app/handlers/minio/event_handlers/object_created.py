@@ -23,7 +23,7 @@ from app.clients import MonolithGrpcClient
 from app.handlers.minio.registry import handles
 from app.utils.minio_event_parsing import MinIOEvent
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 @handles('s3:ObjectCreated:Put')
@@ -42,6 +42,11 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
     Returns:
         None
     """
+    logger.debug(
+        '[BUSINESS] Handling ObjectCreated:Put | bucket=%s | object_key=%s',
+        event.bucket_name,
+        event.object_key,
+    )
 
     async with MonolithGrpcClient(
         metadata=[('authorization', 'Bearer <token>')],
@@ -57,8 +62,8 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
             object_key_parts = event.object_key.split('/')
         else:
             logger.error(
-                'event.object_key should not be \
-                set to None but it is.'
+                '[BUSINESS] Object key is None | bucket=%s',
+                event.bucket_name,
             )
             return
 
@@ -68,8 +73,8 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
         internal_filename = event.filename or 'unnamed'
 
         # Step 1: Check if document already exists
-        logger.info(
-            'Checking if document exists with internal_filename: %s',
+        logger.debug(
+            '[BUSINESS] Checking document existence | filename=%s',
             internal_filename,
         )
 
@@ -81,14 +86,19 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
             if get_resp.status == get_resp.GetStatus.FOUND:
                 # Document exists, only create a new version
                 logger.info(
-                    'Document found with ID: %s. Creating new version.',
+                    '[BUSINESS] Document exists, creating new version | document_id=%s | filename=%s',
                     get_resp.document_id,
+                    internal_filename,
                 )
                 document_id = get_resp.document_id
 
             elif get_resp.status == get_resp.GetStatus.NOT_FOUND:
                 # Document doesn't exist, create it first
-                logger.info('Document not found. Creating new document.')
+                logger.info(
+                    '[BUSINESS] Document not found, creating new | filename=%s | user_id=%s',
+                    internal_filename,
+                    user_id,
+                )
 
                 doc_resp = await client.save_document(
                     internal_filename=internal_filename,
@@ -100,10 +110,10 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
                 )
 
                 logger.info(
-                    'Document creation response: %s, %s, %s',
+                    '[BUSINESS] Document created | filename=%s | status=%s | document_id=%s',
+                    internal_filename,
                     doc_resp.status,
                     doc_resp.row_id,
-                    doc_resp.message,
                 )
 
                 if doc_resp.status in [
@@ -113,18 +123,27 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
                     document_id = doc_resp.row_id
                 else:
                     logger.error(
-                        'Failed to create document: %s', doc_resp.message
+                        '[BUSINESS] Document creation failed | filename=%s | message=%s',
+                        internal_filename,
+                        doc_resp.message,
                     )
                     return
 
             else:
                 logger.error(
-                    'Failed to check document existence: %s', get_resp.message
+                    '[BUSINESS] Document existence check failed | filename=%s | message=%s',
+                    internal_filename,
+                    get_resp.message,
                 )
                 return
 
         except Exception as e:
-            logger.error('Error checking document existence: %s', e)
+            logger.error(
+                '[BUSINESS] Error checking document existence | filename=%s | error_type=%s | error=%s',
+                internal_filename,
+                type(e).__name__,
+                str(e),
+            )
             return
 
         if event.version_id is None:
@@ -140,12 +159,17 @@ async def handle_new_document_creation(event: MinIOEvent, raw: dict) -> None:
             )
 
             logger.info(
-                'Document version creation response: %s, %s, %s, %s',
-                version_resp.status,
+                '[BUSINESS] Document version created | document_id=%s | version_id=%s | status=%s',
+                document_id,
                 version_resp.version_id,
-                version_resp.message,
+                version_resp.status,
             )
 
         except Exception as e:
-            logger.error('Error creating document version: %s', e)
+            logger.error(
+                '[BUSINESS] Error creating document version | document_id=%s | error_type=%s | error=%s',
+                document_id,
+                type(e).__name__,
+                str(e),
+            )
             return

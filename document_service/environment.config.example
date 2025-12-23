@@ -20,3 +20,20 @@ CELERY_BROKER_URL=redis://redis:6379/0
 MONGO_URI=mongodb://mongo:27017/
 MONGO_DB_NAME=document_service
 MONGO_COLLECTION=documents
+
+# ==============================================
+# Logging Configuration
+# ==============================================
+# LOG_LEVEL: Logging verbosity level
+# Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# Default: INFO
+LOG_LEVEL="INFO"
+
+# LOG_OUTPUT: Where to send log output
+# Options: console, file, both
+# Default: console
+LOG_OUTPUT="file"
+
+# LOG_FILE_PATH: Path to log file (only used when LOG_OUTPUT is "file" or "both")
+# Default: logs/moneta.log
+LOG_FILE_PATH="logs/document_serivce_moneta.log"

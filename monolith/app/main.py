@@ -5,7 +5,7 @@ Main FastAPI application module.
 import logging
 import os
 from contextlib import asynccontextmanager
-import logging
+
 import grpc
 from app.gen import document_ingest_pb2_grpc as pbg
 from app.routers import app_router
@@ -13,24 +13,17 @@ from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from moneta_logging import configure_logging
+from moneta_logging.middleware import RequestLoggingMiddleware
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
+# Configure logging from environment variables (LOG_LEVEL, LOG_OUTPUT, LOG_FILE_PATH)
+# See moneta_logging package or docs/logging.md for logging rules and standards
+configure_logging()
 
 logger = logging.getLogger(__name__)
-logger.info('Starting application')
+logger.info('[SYSTEM] Application starting')
 
 GRPC_ADDR = os.getenv('GRPC_ADDR', '[::]:50061')  # gRPC port
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-
-logger = logging.getLogger(__name__)
-logger.info('Starting application')
 
 
 @asynccontextmanager
@@ -57,7 +50,12 @@ app = FastAPI(
     title='Platform API', description='Platform API', lifespan=lifespan
 )
 
+# Middleware order matters: they execute in reverse order of addition
+# 1. RequestLoggingMiddleware (added last, executes first)
+# 2. JWTAuthMiddleware
+# 3. CORSMiddleware (added first, executes last for responses)
 app.add_middleware(JWTAuthMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -69,3 +67,5 @@ app.add_middleware(
     allow_headers=['*', 'Authorization', 'Content-Type'],
 )
 app.include_router(app_router)
+
+logger.info('[SYSTEM] Application initialized successfully')

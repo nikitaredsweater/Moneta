@@ -29,9 +29,9 @@ import logging
 import pkgutil
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-logger = logging.getLogger()
-
 from app.utils.minio_event_parsing import MinIOEvent
+
+logger = logging.getLogger(__name__)
 
 ################################################################################
 #                       List of supported MinIO events
@@ -153,10 +153,40 @@ async def dispatch_event(parsed_event: MinIOEvent, raw_event: dict) -> None:
     """
     fn = best_handler_for(parsed_event.event_name) or _default_handler
     if fn is None:
-        # No handler; you can choose to log or ignore
-        logger.debug('No handler for event %r', parsed_event.event_name)
+        logger.warning(
+            '[BUSINESS] No handler for MinIO event | event_name=%s | bucket=%s | object_key=%s',
+            parsed_event.event_name,
+            parsed_event.bucket_name,
+            parsed_event.object_key,
+        )
         return
-    await fn(parsed_event, raw_event)
+
+    logger.debug(
+        '[BUSINESS] Dispatching MinIO event | event_name=%s | bucket=%s | object_key=%s | handler=%s',
+        parsed_event.event_name,
+        parsed_event.bucket_name,
+        parsed_event.object_key,
+        fn.__name__,
+    )
+
+    try:
+        await fn(parsed_event, raw_event)
+        logger.info(
+            '[BUSINESS] MinIO event handled | event_name=%s | bucket=%s | object_key=%s',
+            parsed_event.event_name,
+            parsed_event.bucket_name,
+            parsed_event.object_key,
+        )
+    except Exception as e:
+        logger.error(
+            '[BUSINESS] MinIO event handler failed | event_name=%s | bucket=%s | object_key=%s | error_type=%s | error=%s',
+            parsed_event.event_name,
+            parsed_event.bucket_name,
+            parsed_event.object_key,
+            type(e).__name__,
+            str(e),
+        )
+        raise
 
 
 def autoload_handlers(package: str) -> None:

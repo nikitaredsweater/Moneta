@@ -22,7 +22,7 @@ from app.exceptions import FailedToCreateEntityException
 from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
 from fastapi import APIRouter, Depends
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 instrument_router = APIRouter()
 
 
@@ -42,6 +42,11 @@ async def search_instruments(
     Returns:
         schemas.Instrument: An Instrument object.
     """
+    logger.debug(
+        '[BUSINESS] Searching instruments | limit=%d | offset=%d',
+        filters.limit,
+        filters.offset,
+    )
     where = build_where_instrument(filters)
     order_list = build_sort_instrument(filters.sort)
 
@@ -51,6 +56,7 @@ async def search_instruments(
         limit=filters.limit,
         offset=filters.offset,
     )
+    logger.info('[BUSINESS] Instrument search completed | results=%d', len(instruments))
     return instruments
 
 
@@ -71,10 +77,15 @@ async def get_instrument(
     Returns:
         schemas.Instrument: An Instrument object.
     """
+    logger.debug('[BUSINESS] Fetching instrument | instrument_id=%s', instrument_id)
     instrument = await instrument_repo.get_by_id(instrument_id)
     if instrument:
+        logger.info('[BUSINESS] Instrument retrieved | instrument_id=%s', instrument_id)
         return instrument
     else:
+        logger.warning(
+            '[BUSINESS] Instrument not found | instrument_id=%s', instrument_id
+        )
         raise WasNotFoundException(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
@@ -105,6 +116,12 @@ async def create_instrument(
 
     # TODO: Add verifications of the payload object
 
+    logger.debug(
+        '[BUSINESS] Creating instrument | name=%s | issuer_id=%s | created_by=%s',
+        instrument_data.name,
+        current_user.company_id,
+        current_user.id,
+    )
     internal_data = schemas.InstrumentCreateInternal(
         **instrument_data.model_dump(exclude={"public_payload"}),
         issuer_id=current_user.company_id,
@@ -112,6 +129,12 @@ async def create_instrument(
     )
 
     instrument = await instrument_repo.create(internal_data)
+    logger.info(
+        '[BUSINESS] Instrument created | instrument_id=%s | name=%s | issuer_id=%s',
+        instrument.id,
+        instrument.name,
+        instrument.issuer_id,
+    )
 
     if instrument is None:
         raise FailedToCreateEntityException
@@ -155,25 +178,47 @@ async def update_drafted_instrument(
     """
     Allows updates to drafted instruments by all members of company.
     """
+    logger.debug(
+        '[BUSINESS] Updating draft instrument | instrument_id=%s | requested_by=%s',
+        instrument_id,
+        current_user.id,
+    )
 
     # Check that the instrument exists
     instrument = await instrument_repo.get_by_id(instrument_id)
     if not instrument:
+        logger.warning(
+            '[BUSINESS] Instrument not found for update | instrument_id=%s',
+            instrument_id,
+        )
         raise WasNotFoundException(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
 
     # Check that the instrument has a status of DRAFT
     if instrument.instrument_status is not InstrumentStatus.DRAFT:
+        logger.warning(
+            '[BUSINESS] Cannot update non-draft instrument | instrument_id=%s | '
+            'status=%s',
+            instrument_id,
+            instrument.instrument_status,
+        )
         raise InsufficientPermissionsException(
-            detail=f'This instrument cannot be updated'
+            detail='This instrument cannot be updated'
         )
 
     # Check that the user belongs to the same company
     # as that which issues the DRAFT
     if instrument.issuer_id != current_user.company_id:
+        logger.warning(
+            '[BUSINESS] Forbidden instrument update | instrument_id=%s | '
+            'issuer_id=%s | requester_company=%s',
+            instrument_id,
+            instrument.issuer_id,
+            current_user.company_id,
+        )
         raise InsufficientPermissionsException(
-            detail=f'This instrument does not belong to you'
+            detail='This instrument does not belong to you'
         )
 
     # Update entity checks
@@ -214,6 +259,12 @@ async def update_drafted_instrument(
         await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
             payload=update_payload
         ))
+
+    logger.info(
+        '[BUSINESS] Draft instrument updated | instrument_id=%s | updated_by=%s',
+        instrument_id,
+        current_user.id,
+    )
     
     return await instrument_repo.get_by_id(instrument_id)
 
@@ -271,8 +322,20 @@ async def update_status(
     """
     A method that handles all logic for the instruments' statuses.
     """
+    logger.debug(
+        '[BUSINESS] Instrument status transition | instrument_id=%s | '
+        'new_status=%s | requested_by=%s | role=%s',
+        instrument_id,
+        body.new_status,
+        current_user.id,
+        current_user.role,
+    )
     instrument = await instrument_repo.get_by_id(instrument_id)
     if not instrument:
+        logger.warning(
+            '[BUSINESS] Instrument not found for transition | instrument_id=%s',
+            instrument_id,
+        )
         raise WasNotFoundException(
             detail=f'Instrument with ID {instrument_id} does not exist'
         )
@@ -280,8 +343,16 @@ async def update_status(
     key = (instrument.instrument_status, current_user.role)
     allowed_next_statuses = TRANSITIONS.get(key, [])
     if body.new_status not in allowed_next_statuses:
+        logger.warning(
+            '[BUSINESS] Invalid status transition | instrument_id=%s | '
+            'current_status=%s | requested_status=%s | role=%s',
+            instrument_id,
+            instrument.instrument_status,
+            body.new_status,
+            current_user.role,
+        )
         raise InsufficientPermissionsException(
-            detail=f'You cannot perform this transition'
+            detail='You cannot perform this transition'
         )
 
     # FIXME: Doing to separate calls to DB is very not advised...
@@ -310,5 +381,19 @@ async def update_status(
                     maturity_status=MaturityStatus.DUE
                 ),
             )
+            logger.info(
+                '[BUSINESS] Instrument activated | instrument_id=%s | '
+                'maturity_status=%s',
+                instrument_id,
+                MaturityStatus.DUE,
+            )
 
+    logger.info(
+        '[BUSINESS] Instrument status transitioned | instrument_id=%s | '
+        'old_status=%s | new_status=%s | transitioned_by=%s',
+        instrument_id,
+        instrument.instrument_status,
+        body.new_status,
+        current_user.id,
+    )
     return updated

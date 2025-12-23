@@ -18,16 +18,21 @@ statuses in the response message.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
 import app.gen.document_ingest_pb2 as pb
 import app.gen.document_ingest_pb2_grpc as pbg
 import grpc
-from app.services.grpc_document_service import (get_document_by_filename,
-                                                save_document,
-                                                save_document_version)
+from app.services.grpc_document_service import (
+    get_document_by_filename,
+    save_document,
+    save_document_version,
+)
 from google.protobuf.timestamp_pb2 import Timestamp
+
+logger = logging.getLogger(__name__)
 
 
 def _to_uuid(value: str) -> uuid.UUID:
@@ -93,11 +98,12 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
       - Delegate to service-layer functions for persistence
       - Map exceptions to gRPC errors or FAILED response statuses
     """
+
     def __init__(self) -> None:
         """
         Initialize the servicer. Currently a no-op.
         """
-        pass
+        logger.info('[EXTERNAL] gRPC DocumentIngestService initialized')
 
     async def CreateDocument(self, request: pb.CreateDocumentRequest, context):
         """
@@ -118,6 +124,11 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                 - row_id: The created document UUID (string) on success.
                 - message: Contextual information on the outcome.
         """
+        logger.debug(
+            '[EXTERNAL] gRPC CreateDocument | filename=%s | mime=%s',
+            request.internal_filename,
+            request.mime,
+        )
         # --- Validation ---
         missing = []
         if not request.internal_filename:
@@ -132,15 +143,23 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
             missing.append('created_by')
 
         if missing:
+            logger.warning(
+                '[EXTERNAL] gRPC CreateDocument validation failed | missing=%s',
+                missing,
+            )
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                f'Missing required fields: {', '.join(missing)}',
+                f'Missing required fields: {", ".join(missing)}',
             )
 
         # Validate created_by as UUID
         try:
             created_by_uuid = _to_uuid(request.created_by)
         except Exception:
+            logger.warning(
+                '[EXTERNAL] gRPC CreateDocument invalid UUID | created_by=%s',
+                request.created_by,
+            )
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
                 'created_by must be a valid UUID',
@@ -164,12 +183,24 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                 created_at=created_at_dt,
             )
         except Exception as e:
+            logger.error(
+                '[EXTERNAL] gRPC CreateDocument failed | filename=%s | '
+                'error_type=%s | error=%s',
+                request.internal_filename,
+                type(e).__name__,
+                str(e),
+            )
             return pb.CreateDocumentResponse(
                 status=pb.CreateDocumentResponse.FAILED,
                 row_id='',
                 message=str(e),
             )
 
+        logger.info(
+            '[EXTERNAL] gRPC CreateDocument success | document_id=%s | filename=%s',
+            getattr(doc, 'id', ''),
+            request.internal_filename,
+        )
         return pb.CreateDocumentResponse(
             status=pb.CreateDocumentResponse.CREATED,
             row_id=str(getattr(doc, 'id', '')),
@@ -198,6 +229,11 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                     (string) on success.
                 - message: Contextual information on the outcome.
         """
+        logger.debug(
+            '[EXTERNAL] gRPC CreateDocumentVersion | document_id=%s | version=%s',
+            request.document_id,
+            request.version_number,
+        )
         # --- Validation ---
         missing = []
         if not request.document_id:
@@ -209,9 +245,13 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
         if not request.created_by:
             missing.append('created_by')
         if missing:
+            logger.warning(
+                '[EXTERNAL] gRPC CreateDocumentVersion validation failed | missing=%s',
+                missing,
+            )
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                f'Missing: {', '.join(missing)}',
+                f'Missing: {", ".join(missing)}',
             )
 
         # Validate IDs
@@ -219,6 +259,12 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
             doc_uuid = _to_uuid(request.document_id)
             created_by_uuid = _to_uuid(request.created_by)
         except Exception:
+            logger.warning(
+                '[EXTERNAL] gRPC CreateDocumentVersion invalid UUID | '
+                'document_id=%s | created_by=%s',
+                request.document_id,
+                request.created_by,
+            )
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
                 'document_id and created_by must be UUIDs',
@@ -238,12 +284,25 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                 created_at=created_at,
             )
         except Exception as e:
+            logger.error(
+                '[EXTERNAL] gRPC CreateDocumentVersion failed | document_id=%s | '
+                'error_type=%s | error=%s',
+                request.document_id,
+                type(e).__name__,
+                str(e),
+            )
             return pb.CreateDocumentVersionResponse(
                 status=pb.CreateDocumentResponse.FAILED,
                 version_id='',
                 message=str(e),
             )
 
+        logger.info(
+            '[EXTERNAL] gRPC CreateDocumentVersion success | version_id=%s | '
+            'document_id=%s',
+            getattr(v, 'id', ''),
+            request.document_id,
+        )
         return pb.CreateDocumentVersionResponse(
             status=pb.CreateDocumentResponse.CREATED,
             version_id=str(getattr(v, 'id', '')),
@@ -272,8 +331,12 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                      Populated on FOUND.
                 - message: Contextual information on the outcome.
         """
+        logger.debug(
+            '[EXTERNAL] gRPC GetDocument | filename=%s', request.internal_filename
+        )
         # --- Validation ---
         if not request.internal_filename:
+            logger.warning('[EXTERNAL] gRPC GetDocument missing filename')
             await context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
                 'Missing required field: internal_filename',
@@ -285,6 +348,10 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
 
             if document is None:
                 # Document not found
+                logger.warning(
+                    '[EXTERNAL] gRPC GetDocument not found | filename=%s',
+                    request.internal_filename,
+                )
                 return pb.GetDocumentResponse(
                     status=pb.GetDocumentResponse.NOT_FOUND,
                     document_id='',
@@ -297,6 +364,11 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
                 )
 
             # Document found - populate response
+            logger.info(
+                '[EXTERNAL] gRPC GetDocument found | document_id=%s | filename=%s',
+                document.id,
+                request.internal_filename,
+            )
             return pb.GetDocumentResponse(
                 status=pb.GetDocumentResponse.FOUND,
                 document_id=str(document.id),
@@ -311,6 +383,13 @@ class DocumentIngestService(pbg.DocumentIngestServicer):
 
         except Exception as e:
             # Map unknown failures to FAILED status
+            logger.error(
+                '[EXTERNAL] gRPC GetDocument failed | filename=%s | '
+                'error_type=%s | error=%s',
+                request.internal_filename,
+                type(e).__name__,
+                str(e),
+            )
             return pb.GetDocumentResponse(
                 status=pb.GetDocumentResponse.FAILED,
                 document_id='',
