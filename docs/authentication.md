@@ -65,6 +65,13 @@ services:
       - JWT_PRIVATE_KEY_PATH=/app/keys/jwt_private.pem
       - JWT_PUBLIC_KEY_PATH=/app/keys/jwt_public.pem
 
+# Document Service - needs only PUBLIC key (verifies tokens)
+  document_service:
+    volumes:
+      - ./monolith/app/keys/jwt_public.pem:/app/keys/jwt_public.pem:ro
+    environment:
+      - JWT_PUBLIC_KEY_PATH=/app/keys/jwt_public.pem
+
 # Other services - need only PUBLIC key
   other-service:
     volumes:

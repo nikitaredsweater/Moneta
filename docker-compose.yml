@@ -38,6 +38,9 @@ services:
       - minio
       - mongodb
       - app
+    volumes:
+      # Public key only - this service verifies tokens but does not create them
+      - ./monolith/app/keys/jwt_public.pem:/app/keys/jwt_public.pem:ro
     environment:
       - RABBIT_URL=amqp://guest:guest@rabbitmq:5672//
       - RABBIT_EXCHANGE=minio-events
@@ -48,6 +51,7 @@ services:
       - LOG_LEVEL=INFO
       - LOG_OUTPUT=file
       - LOG_FILE_PATH=/logs/document_service.log
+      - JWT_PUBLIC_KEY_PATH=/app/keys/jwt_public.pem
 
   scheduler-service:
     build:
