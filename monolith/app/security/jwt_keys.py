@@ -1,5 +1,9 @@
 """
 Module that loads the JWT Keys from .env file
+
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- from moneta_auth import jwt_keys
+- jwt_keys.load_keys()  # or load_public_key() for verification-only services
 """
 
 import logging

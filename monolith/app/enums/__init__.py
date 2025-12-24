@@ -1,6 +1,14 @@
 """Enums entrypoint"""
 
-from app.enums.account_activation_statuses import ActivationStatus
+# Shared enums from moneta-auth package
+from moneta_auth import (
+    ActivationStatus,
+    PermissionEntity,
+    PermissionVerb,
+    UserRole,
+)
+
+# Local enums specific to monolith
 from app.enums.address_types import AddressType
 from app.enums.endpoints.entity_include_search import CompanyInclude
 from app.enums.instrument_status import (
@@ -9,8 +17,6 @@ from app.enums.instrument_status import (
     TradingStatus,
 )
 from app.enums.order_types import OrderType
-from app.enums.permissions import PermissionEntity, PermissionVerb
-from app.enums.roles import UserRole
 
 __all__ = [
     'OrderType',

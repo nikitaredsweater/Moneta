@@ -1,6 +1,9 @@
 """
 Password encryption security module.
 
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- from moneta_auth import encrypt_password, verify_password, is_password_strong
+
 Provides secure password hashing and verification functions using bcrypt.
 This module handles password encryption with salt generation and secure
 hashing algorithms suitable for user authentication systems.

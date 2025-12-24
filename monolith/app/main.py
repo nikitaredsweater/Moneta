@@ -13,6 +13,7 @@ from app.security.middleware import JWTAuthMiddleware
 from app.servers.grpc_server import DocumentIngestService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from moneta_auth import jwt_keys
 from moneta_logging import configure_logging
 from moneta_logging.middleware import RequestLoggingMiddleware
 
@@ -22,6 +23,20 @@ configure_logging()
 
 logger = logging.getLogger(__name__)
 logger.info('[SYSTEM] Application starting')
+
+# Load JWT keys for token signing and verification
+# The monolith needs both keys: private for signing, public for verification
+# This is REQUIRED - fail fast if keys aren't available
+try:
+    jwt_keys.load_keys()
+    logger.info('[SYSTEM] JWT keys loaded successfully')
+except Exception as e:
+    logger.error(
+        '[SYSTEM] FATAL: JWT keys failed to load. '
+        'Ensure JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH environment variables '
+        'are set and point to valid PEM key files. Error: %s', e
+    )
+    raise RuntimeError(f'JWT keys required but failed to load: {e}') from e
 
 GRPC_ADDR = os.getenv('GRPC_ADDR', '[::]:50061')  # gRPC port
 

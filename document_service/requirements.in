@@ -45,6 +45,7 @@ grpcio-tools
 
 # --- Moneta Packages ---
 moneta-logging[fastapi] @ git+https://github.com/adtimokhin/moneta-logging.git
+moneta-auth[fastapi] @ git+https://github.com/adtimokhin/moneta-auth.git@v0.1.1
 
 # --- Additional tools for local pre-commit hooks ---
 # Note: Most of the pre-commit hook tools are provided by the pre-commit-hooks package

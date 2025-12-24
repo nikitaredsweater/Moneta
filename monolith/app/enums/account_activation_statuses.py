@@ -1,5 +1,8 @@
 """
 module for enums for user's statuses of their accounts.
+
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- from moneta_auth import ActivationStatus
 """
 
 from enum import Enum

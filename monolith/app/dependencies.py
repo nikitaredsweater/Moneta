@@ -7,11 +7,11 @@ from uuid import UUID
 
 from app.enums import CompanyInclude
 from app.repositories.user import User
-from app.security.jwt import verify_access_token
 from app.utils.minio_client import minio_client
 from fastapi import HTTPException, Query, Request, status
 from jose import JWTError
 from minio import Minio
+from moneta_auth import verify_access_token
 
 
 async def get_current_user(request: Request) -> object:
@@ -43,6 +43,10 @@ async def get_current_user_from_token(
     Parses JWT token, fetches user from database,
     and sets user to request state.
 
+    Note: This function fetches the full user from DB. For most use cases,
+    the token claims set by JWTAuthMiddleware are sufficient.
+    Use request.state.token_claims for claims-based access.
+
     Args:
         request (Request): The incoming HTTP request containing
                 the Authorization header.
@@ -68,13 +72,9 @@ async def get_current_user_from_token(
 
     token = auth.split(' ')[1]
     try:
-        payload = verify_access_token(token)
-        user_id_str = payload.get('sub')
-        if not user_id_str:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Token missing subject (sub)',
-            )
+        # verify_access_token now returns TokenClaims object
+        claims = verify_access_token(token)
+        user_id_str = claims.user_id
 
         # Parse UUID and fetch user from database
         user_id = UUID(user_id_str)
