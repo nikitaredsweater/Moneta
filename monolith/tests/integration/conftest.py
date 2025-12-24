@@ -5,7 +5,7 @@ Provides database session fixtures and test client setup for integration tests.
 Uses PostgreSQL test database (requires running PostgreSQL instance).
 
 Configuration via environment variables:
-    TEST_DATABASE_URL: Full PostgreSQL connection URL for tests
+    TEST_DATABASE_URL: Full PostgreSQL connection URL for tests (asyncpg format)
                        Default: postgresql+asyncpg://postgres:postgres@localhost:5432/moneta_test
 
 Running locally:
@@ -19,13 +19,14 @@ Running in Docker/CI:
     3. Run tests: pytest tests/integration/ -v
 
 The test fixtures automatically:
-    - Create all tables before each test
+    - Run Alembic migrations to create tables (matching production schema)
     - Drop all tables after each test
     - Rollback any uncommitted transactions
 """
 
 import asyncio
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import AsyncGenerator, Generator
@@ -57,6 +58,48 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+def _get_sync_database_url() -> str:
+    """
+    Convert async database URL to sync format for Alembic.
+
+    Alembic uses synchronous connections, so we need to convert
+    asyncpg URLs to psycopg format.
+    """
+    return TEST_DATABASE_URL.replace(
+        "postgresql+asyncpg://", "postgresql+psycopg://"
+    )
+
+
+def _run_alembic_migrations() -> None:
+    """
+    Run Alembic migrations to set up the test database schema.
+
+    This ensures the test database matches the production schema exactly,
+    including any data migrations or custom SQL in migration files.
+    """
+    sync_url = _get_sync_database_url()
+
+    # Set DATABASE_URL for Alembic's conf.py to pick up
+    env = os.environ.copy()
+    env["DATABASE_URL"] = sync_url
+
+    # Run alembic upgrade head from the monolith root directory
+    result = subprocess.run(
+        ["alembic", "upgrade", "head"],
+        cwd=str(monolith_root),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Alembic migration failed:\n"
+            f"stdout: {result.stdout}\n"
+            f"stderr: {result.stderr}"
+        )
+
+
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create an event loop for the test session."""
@@ -65,24 +108,47 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop.close()
 
 
+# Track whether migrations have been run this session
+_migrations_run = False
+
+
 @pytest_asyncio.fixture(scope="function")
 async def test_engine():
-    """Create a test database engine with PostgreSQL."""
+    """
+    Create a test database engine with PostgreSQL.
+
+    This fixture:
+    1. Runs Alembic migrations once per session (matching production schema)
+    2. Truncates all tables before each test for isolation
+    3. Yields the engine for test use
+    """
+    global _migrations_run
+
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
         pool_pre_ping=True,
     )
 
-    # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Run Alembic migrations only once per session
+    if not _migrations_run:
+        # Drop all tables first to ensure clean state
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+
+        # Run Alembic migrations
+        _run_alembic_migrations()
+        _migrations_run = True
+    else:
+        # Truncate all tables for test isolation (faster than drop/migrate)
+        async with engine.begin() as conn:
+            # Disable foreign key checks, truncate all tables, re-enable
+            await conn.execute(text("SET session_replication_role = 'replica';"))
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(text(f'TRUNCATE TABLE "{table.name}" CASCADE;'))
+            await conn.execute(text("SET session_replication_role = 'origin';"))
 
     yield engine
-
-    # Drop all tables after test
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
 
