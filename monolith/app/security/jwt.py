@@ -1,5 +1,9 @@
 """
 JWT module
+
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- For token creation: from app.security import create_access_token
+- For token verification: from moneta_auth import verify_access_token
 """
 
 import logging

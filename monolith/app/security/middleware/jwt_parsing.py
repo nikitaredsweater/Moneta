@@ -1,20 +1,18 @@
 """
-Middleware module for JWT parsing and setting `request.state.user`.
+Middleware module for JWT parsing and setting request state.
 
-This middleware authenticates incoming requests using JWT tokens and
-loads the associated user object from the database. If valid, the
-user is attached to the request state for downstream access.
+This middleware authenticates incoming requests using JWT tokens from moneta-auth.
+Token claims are extracted and attached to request.state for downstream access.
+
+No database access is required - all authorization data comes from JWT claims.
 """
 
 import fnmatch
 import logging
-from uuid import UUID
+from types import SimpleNamespace
 
-from app.repositories.user import UserRepository
-from app.security.jwt import verify_access_token
-from app.utils.session import async_session
-from fastapi import status
 from jose import JWTError
+from moneta_auth import verify_access_token, ActivationStatus
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -35,7 +33,6 @@ def _is_path_excluded(path: str) -> bool:
     Returns:
         bool: True if the path is excluded from JWT authentication.
     """
-
     for pattern in EXCLUDED_PATH_PATTERNS:
         if fnmatch.fnmatch(path, pattern):
             return True
@@ -46,9 +43,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
     """
     Middleware to authenticate requests using JWT tokens.
 
-    If a request includes a valid JWT in the `Authorization` header, the
-    associated user is fetched from the database and stored in
-    `request.state.user`.
+    Uses moneta-auth package for token verification. Extracts claims from
+    the JWT and attaches them to request.state. No database access required.
+
+    Sets:
+        - request.state.token_claims: Full TokenClaims object
+        - request.state.user_id: User ID string
+        - request.state.role: UserRole enum
+        - request.state.company_id: Company ID string (or None)
+        - request.state.user: SimpleNamespace for backward compatibility
 
     Requests to excluded paths bypass authentication.
     """
@@ -60,9 +63,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         """
         Processes each incoming request.
 
-        Verifies the JWT token, fetches the corresponding user, and stores the
-        user object in `request.state.user`. If the token is invalid or missing,
-        returns a 401 Unauthorized response. Bypasses paths marked as excluded.
+        Verifies the JWT token, extracts claims, and attaches them to
+        request.state. If the token is invalid or missing, returns a
+        401 Unauthorized response. Bypasses paths marked as excluded.
 
         Args:
             request (Request): The incoming HTTP request.
@@ -82,49 +85,72 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                 request.url.path,
             )
             return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=401,
                 content={'detail': 'Missing or malformed Authorization header'},
             )
 
         token = auth.split(' ')[1]
         try:
-            payload = verify_access_token(token)
-            user_id_str = payload.get('sub')
-            if not user_id_str:
-                logger.warning('[AUTH] Token missing subject (sub) | path=%s', request.url.path)
+            # Verify token and get claims using moneta-auth
+            claims = verify_access_token(token)
+
+            # Check account status
+            if claims.account_status != ActivationStatus.ACTIVE:
+                logger.warning(
+                    '[AUTH] Account not active | user_id=%s | status=%s | path=%s',
+                    claims.user_id,
+                    claims.account_status.value,
+                    request.url.path,
+                )
                 return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={'detail': 'Token missing subject (sub)'},
+                    status_code=403,
+                    content={'detail': f'Account is {claims.account_status.value.lower()}'},
                 )
 
-            user_id = UUID(user_id_str)
-            user_repo = UserRepository(async_session)
-            user = await user_repo.get_by_id(user_id)
-            if not user:
-                logger.warning('[AUTH] User not found | user_id=%s', user_id)
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={'detail': 'User not found'},
-                )
+            # Attach claims to request.state (used by has_permission from moneta-auth)
+            request.state.token_claims = claims
 
-            # Attach full user object to request.state
-            request.state.user = user
-            logger.debug('[AUTH] User authenticated | user_id=%s | path=%s', user_id, request.url.path)
+            # Convenience attributes
+            request.state.user_id = claims.user_id
+            request.state.role = claims.role
+            request.state.company_id = claims.company_id
+
+            # Backward compatibility: create a user-like object from claims
+            # This allows existing code using request.state.user to continue working
+            request.state.user = SimpleNamespace(
+                id=claims.user_id,
+                role=claims.role,
+                company_id=claims.company_id,
+                account_status=claims.account_status,
+            )
+
+            logger.debug(
+                '[AUTH] User authenticated | user_id=%s | role=%s | path=%s',
+                claims.user_id,
+                claims.role.value,
+                request.url.path,
+            )
 
             return await call_next(request)
 
-        except (JWTError, ValueError) as e:
+        except JWTError as e:
             logger.warning(
-                '[AUTH] Invalid or expired token | path=%s | error_type=%s',
+                '[AUTH] Invalid or expired token | path=%s | error=%s',
                 request.url.path,
-                type(e).__name__,
+                str(e),
             )
             return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=401,
                 content={'detail': 'Invalid or expired token'},
             )
+        except RuntimeError as e:
+            # Key not loaded
+            logger.error('[AUTH] JWT key not configured | error=%s', str(e))
+            return JSONResponse(
+                status_code=500,
+                content={'detail': 'Authentication service misconfigured'},
+            )
         except Exception as e:
-            # Add general exception handling for database issues
             logger.error(
                 '[AUTH] Internal server error during authentication | path=%s | '
                 'error_type=%s | error=%s',
@@ -133,6 +159,6 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                 str(e),
             )
             return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=500,
                 content={'detail': 'Internal server error'},
             )

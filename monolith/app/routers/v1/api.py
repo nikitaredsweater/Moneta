@@ -13,8 +13,7 @@ from app.routers.v1.endpoints.company_address import company_address_router
 from app.routers.v1.endpoints.document import document_router
 from app.routers.v1.endpoints.instrument import instrument_router
 from app.routers.v1.endpoints.user import user_router
-from app.security import Permission, has_permission, verify_password
-from app.security.jwt import create_access_token
+from app.security import Permission, has_permission, verify_password, create_access_token
 from fastapi import APIRouter, Depends
 
 v1_router = APIRouter()
@@ -61,11 +60,15 @@ async def make_key(user_login: schemas.UserLogin, user_repo: repo.User):
     ):
         raise Exception('Wrong Credentials')
 
-    user_id = user.id
-    token = create_access_token(user_id=user_id)
+    token = create_access_token(
+        user_id=user.id,
+        role=user.role,
+        company_id=user.company_id,
+        account_status=user.account_status,
+    )
     return {'access_token': token, 'token_type': 'bearer'}
 
 
-@v1_router.get('/me', response_model=schemas.User)
+@v1_router.get('/me')
 async def get_me(current_user=Depends(get_current_user)):
     return current_user

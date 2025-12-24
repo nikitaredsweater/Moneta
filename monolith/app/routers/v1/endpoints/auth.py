@@ -80,7 +80,11 @@ async def get_jwt_token(
         raise InvalidCredentialsException
 
     token = create_access_token(
-        user_id=user.id, expires_delta=ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA
+        user_id=user.id,
+        role=user.role,
+        company_id=user.company_id,
+        account_status=user.account_status,
+        expires_delta=ACCESS_TOKEN_EXPIRE_DEFAULT_TIMEDELTA,
     )
 
     return {

@@ -1,5 +1,8 @@
 """
 User permissions. Should be configured based on their role
+
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- from moneta_auth import PermissionVerb, PermissionEntity
 """
 
 from enum import Enum

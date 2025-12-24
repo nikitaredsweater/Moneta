@@ -1,6 +1,9 @@
 """
 Security module for managing user roles and permissions.
 
+DEPRECATED: This module is deprecated. Use moneta_auth package instead.
+- from moneta_auth import Permission, has_permission, DEFAULT_ROLE_PERMISSIONS
+
 Provides utilities for defining permissions, mapping roles to allowed actions,
 and a FastAPI dependency for enforcing permission checks on requests.
 """
