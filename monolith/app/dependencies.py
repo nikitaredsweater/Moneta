@@ -39,10 +39,15 @@ async def get_current_user(request: Request) -> object:
     token_claims = getattr(request.state, 'token_claims', None)
     if token_claims is not None:
         from types import SimpleNamespace
+
+        # Convert string IDs to UUIDs for proper comparison with database entities
+        company_id = (
+            UUID(token_claims.company_id) if token_claims.company_id else None
+        )
         return SimpleNamespace(
-            id=token_claims.user_id,
+            id=UUID(token_claims.user_id),
             role=token_claims.role,
-            company_id=token_claims.company_id,
+            company_id=company_id,
             account_status=token_claims.account_status,
         )
 
@@ -127,8 +132,8 @@ def get_minio_client() -> Generator[Minio, None, None]:
 def parse_company_includes(
     include: Optional[str] = Query(
         None,
-        description="Comma-separated list of related entities to include. "
-        "Allowed: addresses,users,instruments",
+        description='Comma-separated list of related entities to include. '
+        'Allowed: addresses,users,instruments',
     ),
 ) -> Set[CompanyInclude]:
     """
@@ -139,14 +144,14 @@ def parse_company_includes(
         return set()
 
     raw_parts = [
-        part.strip().lower() for part in include.split(",") if part.strip()
+        part.strip().lower() for part in include.split(',') if part.strip()
     ]
     includes: Set[CompanyInclude] = set()
 
     mapping = {
-        "addresses": CompanyInclude.ADDRESSES,
-        "users": CompanyInclude.USERS,
-        "instruments": CompanyInclude.INSTRUMENTS,
+        'addresses': CompanyInclude.ADDRESSES,
+        'users': CompanyInclude.USERS,
+        'instruments': CompanyInclude.INSTRUMENTS,
     }
 
     for part in raw_parts:
