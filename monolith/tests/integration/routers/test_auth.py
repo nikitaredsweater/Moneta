@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.factories import CompanyFactory, UserFactory
 
 
+@pytest.mark.asyncio
 class TestAuthLogin:
     """Tests for POST /v1/auth/login endpoint."""
 
@@ -52,7 +53,6 @@ class TestAuthLogin:
         await db_session.commit()
         return user
 
-    @pytest.mark.asyncio
     async def test_login_success(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):
@@ -92,7 +92,6 @@ class TestAuthLogin:
         assert isinstance(data["access_token"], str)
         assert len(data["access_token"]) > 0
 
-    @pytest.mark.asyncio
     async def test_login_invalid_email_returns_401(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):
@@ -125,7 +124,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_login_wrong_password_returns_401(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):
@@ -158,7 +156,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_login_inactive_account_returns_403(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):
@@ -192,7 +189,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_login_suspended_account_returns_403(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):
@@ -226,7 +222,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_login_missing_email_returns_422(
         self, test_client: AsyncClient
     ):
@@ -246,7 +241,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
     async def test_login_missing_password_returns_422(
         self, test_client: AsyncClient
     ):
@@ -266,7 +260,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
     async def test_login_empty_body_returns_422(self, test_client: AsyncClient):
         """
         Test login with empty body returns 422 validation error.
@@ -284,7 +277,6 @@ class TestAuthLogin:
         # Assert
         assert response.status_code == 422
 
-    @pytest.mark.asyncio
     async def test_login_returns_valid_token_expiry(
         self, test_client: AsyncClient, db_session: AsyncSession
     ):

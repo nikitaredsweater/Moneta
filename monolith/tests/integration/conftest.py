@@ -24,6 +24,7 @@ The test fixtures automatically:
     - Rollback any uncommitted transactions
 """
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -108,37 +109,22 @@ def _run_alembic_migrations() -> None:
     print("[TEST SETUP] Alembic migrations completed successfully")
 
 
-# Global test engine and session factory - created once per test session
-_test_engine = None
-_test_session_factory = None
+@pytest.fixture(scope="function")
+def event_loop():
+    """
+    Create a function-scoped event loop.
+
+    Each test gets its own event loop to avoid conflicts.
+    The test engine/session factory are singletons but work across loops.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+
+
+# Track whether migrations have been run this session
 _migrations_run = False
-
-
-def _get_test_engine():
-    """Get or create the test engine (singleton per test session)."""
-    global _test_engine
-    if _test_engine is None:
-        _test_engine = create_async_engine(
-            TEST_DATABASE_URL,
-            echo=False,
-            pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-        )
-    return _test_engine
-
-
-def _get_test_session_factory():
-    """Get or create the test session factory (singleton per test session)."""
-    global _test_session_factory
-    if _test_session_factory is None:
-        _test_session_factory = async_sessionmaker(
-            _get_test_engine(),
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autoflush=False,
-        )
-    return _test_session_factory
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -147,18 +133,27 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     Create a database session for a test.
 
     This fixture:
-    1. Runs migrations once per test session (on first test)
-    2. Truncates all tables before each test for isolation
-    3. Clears the repository instances cache
-    4. Provides a fresh session for tests
-
-    Note: We create a dedicated test engine to avoid event loop conflicts
-    with the app's engine (which is created at import time).
+    1. Creates a fresh engine for each test (to match the function-scoped event loop)
+    2. Runs migrations once per test session (on first test)
+    3. Truncates all tables before each test for isolation
+    4. Clears the repository instances cache
+    5. Provides a fresh session for tests
     """
     global _migrations_run
 
-    engine = _get_test_engine()
-    session_factory = _get_test_session_factory()
+    # Create engine for this test's event loop
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+    )
+
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
 
     # Clear repository instances cache to force new instances
     from app.repositories.base import BasePGRepository
@@ -185,6 +180,9 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with session_factory() as session:
         yield session
         await session.rollback()
+
+    # Dispose the engine after the test
+    await engine.dispose()
 
 
 def create_test_token(
@@ -293,8 +291,19 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     mock_jwt_keys.load_public_key = MagicMock()
     mock_jwt_keys.load_private_key = MagicMock()
 
-    # Get the test session factory
-    test_session_factory = _get_test_session_factory()
+    # Create engine and session factory for this test
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+    )
+
+    test_session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
 
     # Import repository classes and app session
     from app.repositories.user import UserRepository
@@ -305,9 +314,6 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     test_user_repo = UserRepository(test_session_factory)
     test_company_repo = CompanyRepository(test_session_factory)
 
-    # The _instances dict is shared via BasePGRepository, but make_fastapi_dep
-    # uses cls._instances which creates a copy for each class.
-    # We need to ensure each class has its own _instances dict with the test repo.
     # Force each class to have its own _instances dict (not shared with base)
     UserRepository._instances = {app_session: test_user_repo}
     CompanyRepository._instances = {app_session: test_company_repo}
@@ -335,3 +341,4 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
         # Clean up - reset to empty dicts
         UserRepository._instances = {}
         CompanyRepository._instances = {}
+        await engine.dispose()
