@@ -247,18 +247,19 @@ async def update_drafted_instrument(
     if updated_instrument:
         if updated_instrument.public_payload:
             public_payload_id = updated_instrument.public_payload.id
-    
-    if public_payload_id is None:
-        # Object is still not created. Create an object with passed payload
-        await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
-            instrument_id=instrument_id,
-            payload=update_payload
-        ))
-    elif update_payload is not None:
-        # Update the payload
-        await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
-            payload=update_payload
-        ))
+
+    if update_payload is not None:
+        if public_payload_id is None:
+            # Object is still not created. Create an object with passed payload
+            await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
+                instrument_id=instrument_id,
+                payload=update_payload
+            ))
+        else:
+            # Update the payload
+            await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
+                payload=update_payload
+            ))
 
     logger.info(
         '[BUSINESS] Draft instrument updated | instrument_id=%s | updated_by=%s',
