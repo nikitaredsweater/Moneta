@@ -5,12 +5,21 @@ These factories create database entities following the Arrange-Act-Assert patter
 Each factory creates a single entity and returns it for use in tests.
 """
 
-from datetime import date, datetime
-from typing import Optional
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from app.enums import ActivationStatus, UserRole
+from app.enums import (
+    ActivationStatus,
+    AddressType,
+    InstrumentStatus,
+    MaturityStatus,
+    TradingStatus,
+    UserRole,
+)
 from app.models.company import Company
+from app.models.company_address import CompanyAddress
+from app.models.instrument import Instrument
 from app.models.user import User
 from app.security import encrypt_password
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -170,4 +179,254 @@ class UserFactory:
             last_name="User",
             role=UserRole.BUYER,
             account_status=account_status,
+        )
+
+    @staticmethod
+    async def create_issuer(
+        session: AsyncSession,
+        company: Company,
+        *,
+        email: Optional[str] = None,
+        password: str = "IssuerPassword123!",
+    ) -> User:
+        """
+        Create an issuer User entity in the database.
+
+        Args:
+            session: The async database session.
+            company: The Company the user belongs to.
+            email: User email (auto-generated if not provided).
+            password: Plain text password.
+
+        Returns:
+            The created issuer User ORM model.
+        """
+        return await UserFactory.create(
+            session,
+            company,
+            email=email,
+            password=password,
+            first_name="Issuer",
+            last_name="User",
+            role=UserRole.ISSUER,
+            account_status=ActivationStatus.ACTIVE,
+        )
+
+
+class InstrumentFactory:
+    """Factory for creating Instrument entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        company: Company,
+        user: User,
+        *,
+        name: Optional[str] = None,
+        face_value: float = 10000.00,
+        currency: str = "USD",
+        maturity_date: Optional[date] = None,
+        maturity_payment: float = 10500.00,
+        instrument_status: InstrumentStatus = InstrumentStatus.DRAFT,
+        maturity_status: MaturityStatus = MaturityStatus.NOT_DUE,
+        trading_status: TradingStatus = TradingStatus.DRAFT,
+    ) -> Instrument:
+        """
+        Create an Instrument entity in the database.
+
+        Args:
+            session: The async database session.
+            company: The Company that issues the instrument.
+            user: The User who created the instrument.
+            name: Instrument name (auto-generated if not provided).
+            face_value: Face value of the instrument.
+            currency: Currency code (3 chars, e.g., USD).
+            maturity_date: Date of maturity (defaults to 90 days from now).
+            maturity_payment: Amount to be paid at maturity.
+            instrument_status: Status of the instrument (defaults to DRAFT).
+            maturity_status: Maturity status (defaults to NOT_DUE).
+            trading_status: Trading status (defaults to DRAFT).
+
+        Returns:
+            The created Instrument ORM model.
+        """
+        unique_suffix = uuid4().hex[:8]
+
+        instrument = Instrument(
+            id=uuid4(),
+            name=name or f"Test Instrument {unique_suffix}",
+            face_value=face_value,
+            currency=currency,
+            maturity_date=maturity_date or (date.today() + timedelta(days=90)),
+            maturity_payment=maturity_payment,
+            instrument_status=instrument_status,
+            maturity_status=maturity_status,
+            trading_status=trading_status,
+            issuer_id=company.id,
+            created_by=user.id,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(instrument)
+        await session.flush()
+        await session.refresh(instrument)
+        return instrument
+
+    @staticmethod
+    async def create_pending_approval(
+        session: AsyncSession,
+        company: Company,
+        user: User,
+        *,
+        name: Optional[str] = None,
+    ) -> Instrument:
+        """
+        Create an Instrument with PENDING_APPROVAL status.
+
+        Args:
+            session: The async database session.
+            company: The Company that issues the instrument.
+            user: The User who created the instrument.
+            name: Instrument name (auto-generated if not provided).
+
+        Returns:
+            The created Instrument ORM model with PENDING_APPROVAL status.
+        """
+        return await InstrumentFactory.create(
+            session,
+            company,
+            user,
+            name=name,
+            instrument_status=InstrumentStatus.PENDING_APPROVAL,
+        )
+
+    @staticmethod
+    async def create_active(
+        session: AsyncSession,
+        company: Company,
+        user: User,
+        *,
+        name: Optional[str] = None,
+    ) -> Instrument:
+        """
+        Create an active Instrument.
+
+        Args:
+            session: The async database session.
+            company: The Company that issues the instrument.
+            user: The User who created the instrument.
+            name: Instrument name (auto-generated if not provided).
+
+        Returns:
+            The created active Instrument ORM model.
+        """
+        return await InstrumentFactory.create(
+            session,
+            company,
+            user,
+            name=name,
+            instrument_status=InstrumentStatus.ACTIVE,
+            maturity_status=MaturityStatus.DUE,
+            trading_status=TradingStatus.LISTED,
+        )
+
+
+class CompanyAddressFactory:
+    """Factory for creating CompanyAddress entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        company: Company,
+        *,
+        address_type: AddressType = AddressType.REGISTERED,
+        street: Optional[str] = None,
+        city: str = "New York",
+        state: Optional[str] = "NY",
+        postal_code: str = "10001",
+        country: str = "US",
+    ) -> CompanyAddress:
+        """
+        Create a CompanyAddress entity in the database.
+
+        Args:
+            session: The async database session.
+            company: The Company this address belongs to.
+            address_type: Type of address (defaults to REGISTERED).
+            street: Street address (auto-generated if not provided).
+            city: City name.
+            state: State/province (optional).
+            postal_code: Postal/ZIP code.
+            country: ISO 3166-1 alpha-2 country code.
+
+        Returns:
+            The created CompanyAddress ORM model.
+        """
+        unique_suffix = uuid4().hex[:8]
+
+        address = CompanyAddress(
+            id=uuid4(),
+            company_id=company.id,
+            type=address_type,
+            street=street or f"123 Test Street {unique_suffix}",
+            city=city,
+            state=state,
+            postal_code=postal_code,
+            country=country,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(address)
+        await session.flush()
+        await session.refresh(address)
+        return address
+
+    @staticmethod
+    async def create_billing(
+        session: AsyncSession,
+        company: Company,
+        *,
+        street: Optional[str] = None,
+    ) -> CompanyAddress:
+        """
+        Create a billing CompanyAddress.
+
+        Args:
+            session: The async database session.
+            company: The Company this address belongs to.
+            street: Street address (auto-generated if not provided).
+
+        Returns:
+            The created billing CompanyAddress ORM model.
+        """
+        return await CompanyAddressFactory.create(
+            session,
+            company,
+            address_type=AddressType.BILLING,
+            street=street,
+        )
+
+    @staticmethod
+    async def create_office(
+        session: AsyncSession,
+        company: Company,
+        *,
+        street: Optional[str] = None,
+    ) -> CompanyAddress:
+        """
+        Create an office CompanyAddress.
+
+        Args:
+            session: The async database session.
+            company: The Company this address belongs to.
+            street: Street address (auto-generated if not provided).
+
+        Returns:
+            The created office CompanyAddress ORM model.
+        """
+        return await CompanyAddressFactory.create(
+            session,
+            company,
+            address_type=AddressType.OFFICE,
+            street=street,
         )
