@@ -42,6 +42,9 @@ class BasePGRepository(Generic[T]):
         orm_model = BaseEntity
         exclusion_fields: Optional[set]
         eager_relations: list | None = None
+        # Map of relationship name -> list of nested relationships to eagerly load
+        # Example: {"instruments": ["public_payload"]}
+        nested_eager_relations: dict[str, list[str]] | None = None
 
     _instances: ClassVar[dict[sessionmaker, BasePGRepository]] = {}
 
@@ -376,11 +379,25 @@ class BasePGRepository(Generic[T]):
                     )  # noqa: E711
 
                 if includes:
+                    nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                     for name in includes:
                         if hasattr(orm_model, name):
-                            query = query.options(
-                                selectinload(getattr(orm_model, name))
-                            )
+                            rel_attr = getattr(orm_model, name)
+                            loader = selectinload(rel_attr)
+
+                            # Check if this relationship has nested relations to load
+                            if name in nested_eager:
+                                # Get the related model class for nested loading
+                                # orm_model is already the class, so access property directly
+                                rel_property = getattr(orm_model, name).property
+                                related_model = rel_property.mapper.class_
+                                for nested_name in nested_eager[name]:
+                                    if hasattr(related_model, nested_name):
+                                        loader = loader.selectinload(
+                                            getattr(related_model, nested_name)
+                                        )
+
+                            query = query.options(loader)
 
                 result = await session.execute(query)
                 entity = result.scalars().first()

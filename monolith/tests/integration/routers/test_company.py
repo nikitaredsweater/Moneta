@@ -361,10 +361,6 @@ class TestGetCompanyById:
         assert "user2@company.com" in emails
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="Nested relationship loading not implemented - instruments.public_payload "
-        "requires nested selectinload which is not currently supported by repository"
-    )
     async def test_get_company_by_id_with_instruments_include(
         self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
     ):
@@ -373,7 +369,7 @@ class TestGetCompanyById:
 
         Arrange: Create company with instruments.
         Act: GET /v1/company/{id}?include=instruments.
-        Assert: Response includes instruments array.
+        Assert: Response includes instruments array with public_payload.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
@@ -406,25 +402,26 @@ class TestGetCompanyById:
         names = [i["name"] for i in data["instruments"]]
         assert "Instrument Alpha" in names
         assert "Instrument Beta" in names
+        # Verify that public_payload is included (nested relationship loading works)
+        for instrument in data["instruments"]:
+            assert "publicPayload" in instrument
 
     @pytest.mark.asyncio
     async def test_get_company_by_id_with_multiple_includes(
         self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
     ):
         """
-        Test get company by ID with multiple includes (addresses and users only).
+        Test get company by ID with multiple includes.
 
-        Arrange: Create company with addresses and users.
-        Act: GET /v1/company/{id}?include=addresses&include=users.
+        Arrange: Create company with addresses, users, and instruments.
+        Act: GET /v1/company/{id}?include=addresses,users,instruments.
         Assert: Response includes all requested relations.
-
-        Note: instruments include is excluded due to nested relationship loading
-        issue with instruments.public_payload.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
         admin = await UserFactory.create_admin(db_session, company)
         await CompanyAddressFactory.create(db_session, company)
+        await InstrumentFactory.create(db_session, company, admin)
         await db_session.commit()
 
         headers = auth_headers(
@@ -433,10 +430,9 @@ class TestGetCompanyById:
             company_id=str(company.id),
         )
 
-        # Act - only include addresses and users (not instruments)
-        # Note: include parameter expects comma-separated values
+        # Act - include all relations (comma-separated values)
         response = await test_client.get(
-            f"/v1/company/{company.id}?include=addresses,users",
+            f"/v1/company/{company.id}?include=addresses,users,instruments",
             headers=headers,
         )
 
@@ -445,10 +441,13 @@ class TestGetCompanyById:
         data = response.json()
         assert "addresses" in data
         assert "users" in data
+        assert "instruments" in data
         assert data["addresses"] is not None
         assert data["users"] is not None
+        assert data["instruments"] is not None
         assert len(data["addresses"]) >= 1
         assert len(data["users"]) >= 1
+        assert len(data["instruments"]) >= 1
 
     @pytest.mark.asyncio
     async def test_get_company_by_id_without_includes_returns_null_relations(
