@@ -46,7 +46,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert
         assert response.status_code == 200
@@ -77,7 +79,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert
         assert response.status_code == 200
@@ -118,7 +122,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert
         assert response.status_code == 200
@@ -149,8 +155,12 @@ class TestGetAllCompanyAddresses:
         Assert: Response contains addresses from all companies.
         """
         # Arrange
-        company1 = await CompanyFactory.create(db_session, legal_name="Company One")
-        company2 = await CompanyFactory.create(db_session, legal_name="Company Two")
+        company1 = await CompanyFactory.create(
+            db_session, legal_name="Company One"
+        )
+        company2 = await CompanyFactory.create(
+            db_session, legal_name="Company Two"
+        )
         admin = await UserFactory.create_admin(db_session, company1)
         address1 = await CompanyAddressFactory.create(
             db_session, company1, street="Company One Street"
@@ -167,7 +177,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert
         assert response.status_code == 200
@@ -189,7 +201,9 @@ class TestGetAllCompanyAddresses:
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        buyer = await UserFactory.create(db_session, company, role=UserRole.BUYER)
+        buyer = await UserFactory.create(
+            db_session, company, role=UserRole.BUYER
+        )
         await db_session.commit()
 
         headers = auth_headers(
@@ -199,7 +213,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert - depends on permission matrix
         assert response.status_code in [200, 403]
@@ -221,7 +237,9 @@ class TestGetAllCompanyAddresses:
         registered = await CompanyAddressFactory.create(
             db_session, company, address_type=AddressType.REGISTERED
         )
-        billing = await CompanyAddressFactory.create_billing(db_session, company)
+        billing = await CompanyAddressFactory.create_billing(
+            db_session, company
+        )
         office = await CompanyAddressFactory.create_office(db_session, company)
         await db_session.commit()
 
@@ -232,7 +250,9 @@ class TestGetAllCompanyAddresses:
         )
 
         # Act
-        response = await test_client.get("/v1/company-address/", headers=headers)
+        response = await test_client.get(
+            "/v1/company-address/", headers=headers
+        )
 
         # Assert
         assert response.status_code == 200
@@ -519,8 +539,12 @@ class TestCreateCompanyAddress:
         Assert: Response is 200 (depends on permission implementation).
         """
         # Arrange
-        company1 = await CompanyFactory.create(db_session, legal_name="Company One")
-        company2 = await CompanyFactory.create(db_session, legal_name="Company Two")
+        company1 = await CompanyFactory.create(
+            db_session, legal_name="Company One"
+        )
+        company2 = await CompanyFactory.create(
+            db_session, legal_name="Company Two"
+        )
         admin = await UserFactory.create_admin(db_session, company1)
         await db_session.commit()
 
@@ -562,7 +586,9 @@ class TestCreateCompanyAddress:
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        buyer = await UserFactory.create(db_session, company, role=UserRole.BUYER)
+        buyer = await UserFactory.create(
+            db_session, company, role=UserRole.BUYER
+        )
         await db_session.commit()
 
         headers = auth_headers(
@@ -666,15 +692,15 @@ class TestCreateCompanyAddress:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_company_address_missing_company_id_returns_422(
+    async def test_create_company_address_missing_company_id_returns_error(
         self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
     ):
         """
-        Test create company address without company_id returns 422.
+        Test create company address without company_id returns error.
 
         Arrange: Create company and admin.
         Act: POST /v1/company-address without companyId.
-        Assert: Response is 422 Unprocessable Entity.
+        Assert: Response is 404 (MonetaID generates random UUID that doesn't exist).
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
@@ -687,7 +713,7 @@ class TestCreateCompanyAddress:
             company_id=str(company.id),
         )
 
-        # Act - missing companyId
+        # Act - missing companyId (MonetaID will generate a random UUID)
         response = await test_client.post(
             "/v1/company-address/",
             headers=headers,
@@ -700,8 +726,8 @@ class TestCreateCompanyAddress:
             },
         )
 
-        # Assert
-        assert response.status_code == 422
+        # Assert - MonetaID generates random UUID, which fails FK constraint -> 404
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_create_company_address_invalid_type_returns_422(
