@@ -24,12 +24,11 @@ The test fixtures automatically:
     - Rollback any uncommitted transactions
 """
 
-import asyncio
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 from unittest.mock import MagicMock, patch
 
 # Add app to path BEFORE any app imports
@@ -52,11 +51,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.enums import ActivationStatus, UserRole
 from app.models.base import Base
@@ -113,41 +108,66 @@ def _run_alembic_migrations() -> None:
     print("[TEST SETUP] Alembic migrations completed successfully")
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create an event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-# Track whether migrations have been run this session
+# Global test engine and session factory - created once per test session
+_test_engine = None
+_test_session_factory = None
 _migrations_run = False
 
 
+def _get_test_engine():
+    """Get or create the test engine (singleton per test session)."""
+    global _test_engine
+    if _test_engine is None:
+        _test_engine = create_async_engine(
+            TEST_DATABASE_URL,
+            echo=False,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+        )
+    return _test_engine
+
+
+def _get_test_session_factory():
+    """Get or create the test session factory (singleton per test session)."""
+    global _test_session_factory
+    if _test_session_factory is None:
+        _test_session_factory = async_sessionmaker(
+            _get_test_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+        )
+    return _test_session_factory
+
+
 @pytest_asyncio.fixture(scope="function")
-async def test_engine():
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Create a test database engine with PostgreSQL.
+    Create a database session for a test.
 
     This fixture:
-    1. Runs Alembic migrations once per session (matching production schema)
+    1. Runs migrations once per test session (on first test)
     2. Truncates all tables before each test for isolation
-    3. Yields the engine for test use
+    3. Clears the repository instances cache
+    4. Provides a fresh session for tests
+
+    Note: We create a dedicated test engine to avoid event loop conflicts
+    with the app's engine (which is created at import time).
     """
     global _migrations_run
 
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        echo=False,
-        pool_pre_ping=True,
-    )
+    engine = _get_test_engine()
+    session_factory = _get_test_session_factory()
 
-    # Run Alembic migrations only once per session
+    # Clear repository instances cache to force new instances
+    from app.repositories.base import BasePGRepository
+    BasePGRepository._instances = {}
+
+    # Run migrations once per session
     if not _migrations_run:
         # Drop all tables first to ensure clean state
         async with engine.begin() as conn:
-            # Drop alembic_version table so migrations will run fresh
             await conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE;"))
             await conn.run_sync(Base.metadata.drop_all)
 
@@ -155,43 +175,16 @@ async def test_engine():
         _run_alembic_migrations()
         _migrations_run = True
     else:
-        # Truncate all tables for test isolation (faster than drop/migrate)
+        # Truncate all tables for test isolation
         async with engine.begin() as conn:
-            # Disable foreign key checks, truncate all tables, re-enable
             await conn.execute(text("SET session_replication_role = 'replica';"))
             for table in reversed(Base.metadata.sorted_tables):
                 await conn.execute(text(f'TRUNCATE TABLE "{table.name}" CASCADE;'))
             await conn.execute(text("SET session_replication_role = 'origin';"))
 
-    yield engine
-
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a database session for a test."""
-    async_session_maker = async_sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False,
-    )
-
-    async with async_session_maker() as session:
+    async with session_factory() as session:
         yield session
         await session.rollback()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def test_session_maker(test_engine):
-    """Create a session maker for dependency injection override."""
-    return async_sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False,
-    )
 
 
 def create_test_token(
@@ -279,14 +272,15 @@ _TEST_PRIVATE_KEY, _TEST_PUBLIC_KEY = _generate_test_rsa_keys()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_client(test_session_maker) -> AsyncGenerator[AsyncClient, None]:
+async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     """
-    Create an async test client with database session override.
+    Create an async test client for testing endpoints.
 
     This fixture:
-    1. Mocks JWT key manager with real test RSA keys for token creation/verification
-    2. Uses the test database (DATABASE_URL set at module load time)
-    3. Provides an async HTTP client for testing endpoints
+    1. Depends on db_session for table truncation and cache clearing
+    2. Mocks JWT key manager with real test RSA keys for token creation/verification
+    3. Injects test repositories into each repository class's own cache
+    4. Provides an async HTTP client for testing endpoints
     """
     # Create a mock JWTKeyManager with real RSA keys for testing
     mock_jwt_keys = MagicMock()
@@ -299,22 +293,45 @@ async def test_client(test_session_maker) -> AsyncGenerator[AsyncClient, None]:
     mock_jwt_keys.load_public_key = MagicMock()
     mock_jwt_keys.load_private_key = MagicMock()
 
-    # Patch jwt_keys in all locations where it's imported
-    # The key location is moneta_auth.jwt.tokens where create_access_token uses it
-    with patch("moneta_auth.jwt_keys", mock_jwt_keys):
-        with patch("moneta_auth.jwt.jwt_keys", mock_jwt_keys):
-            with patch("moneta_auth.jwt.keys.jwt_keys", mock_jwt_keys):
-                with patch("moneta_auth.jwt.tokens.jwt_keys", mock_jwt_keys):
-                    # Import app after mocking
-                    from app.routers.v1.api import v1_router
-                    from fastapi import FastAPI
+    # Get the test session factory
+    test_session_factory = _get_test_session_factory()
 
-                    # Create a minimal test app without the full lifespan
-                    test_app = FastAPI()
-                    test_app.include_router(v1_router, prefix="/v1")
+    # Import repository classes and app session
+    from app.repositories.user import UserRepository
+    from app.repositories.company import CompanyRepository
+    from app.utils.session import async_session as app_session
 
-                    transport = ASGITransport(app=test_app)
-                    async with AsyncClient(
-                        transport=transport, base_url="http://test"
-                    ) as client:
-                        yield client
+    # Create test repository instances with the test session factory
+    test_user_repo = UserRepository(test_session_factory)
+    test_company_repo = CompanyRepository(test_session_factory)
+
+    # The _instances dict is shared via BasePGRepository, but make_fastapi_dep
+    # uses cls._instances which creates a copy for each class.
+    # We need to ensure each class has its own _instances dict with the test repo.
+    # Force each class to have its own _instances dict (not shared with base)
+    UserRepository._instances = {app_session: test_user_repo}
+    CompanyRepository._instances = {app_session: test_company_repo}
+
+    try:
+        # Patch jwt_keys in all locations where it's imported
+        with patch("moneta_auth.jwt_keys", mock_jwt_keys):
+            with patch("moneta_auth.jwt.jwt_keys", mock_jwt_keys):
+                with patch("moneta_auth.jwt.keys.jwt_keys", mock_jwt_keys):
+                    with patch("moneta_auth.jwt.tokens.jwt_keys", mock_jwt_keys):
+                        # Import app after setting up mocks
+                        from app.routers.v1.api import v1_router
+                        from fastapi import FastAPI
+
+                        # Create a minimal test app without the full lifespan
+                        test_app = FastAPI()
+                        test_app.include_router(v1_router, prefix="/v1")
+
+                        transport = ASGITransport(app=test_app)
+                        async with AsyncClient(
+                            transport=transport, base_url="http://test"
+                        ) as client:
+                            yield client
+    finally:
+        # Clean up - reset to empty dicts
+        UserRepository._instances = {}
+        CompanyRepository._instances = {}
