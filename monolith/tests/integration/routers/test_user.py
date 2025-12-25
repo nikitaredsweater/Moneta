@@ -116,7 +116,7 @@ class TestGetUserById:
 
         headers = auth_headers(
             user_id=str(user.id),
-            role=UserRole.BUYER,
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
@@ -148,7 +148,7 @@ class TestGetUserById:
 
         headers = auth_headers(
             user_id=str(user.id),
-            role=UserRole.BUYER,
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
         fake_uuid = "00000000-0000-0000-0000-000000000000"
