@@ -392,18 +392,18 @@ class TestCreateInstrument:
         """
         Test create instrument with valid data returns created instrument.
 
-        Arrange: Create company and issuer user.
+        Arrange: Create company and admin user.
         Act: POST /v1/instrument with valid instrument data.
         Assert: Response is 200 with created instrument data.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        issuer = await UserFactory.create_issuer(db_session, company)
+        admin = await UserFactory.create_admin(db_session, company)
         await db_session.commit()
 
         headers = auth_headers(
-            user_id=str(issuer.id),
-            role=UserRole.ISSUER,
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
@@ -438,18 +438,18 @@ class TestCreateInstrument:
         """
         Test create instrument with public payload.
 
-        Arrange: Create company and issuer user.
+        Arrange: Create company and admin user.
         Act: POST /v1/instrument with public_payload.
         Assert: Response includes created instrument with payload.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        issuer = await UserFactory.create_issuer(db_session, company)
+        admin = await UserFactory.create_admin(db_session, company)
         await db_session.commit()
 
         headers = auth_headers(
-            user_id=str(issuer.id),
-            role=UserRole.ISSUER,
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
@@ -482,18 +482,18 @@ class TestCreateInstrument:
         """
         Test create instrument sets issuer_id and created_by from current user.
 
-        Arrange: Create company and issuer user.
+        Arrange: Create company and admin user.
         Act: POST /v1/instrument.
         Assert: issuer_id matches company_id, created_by matches user_id.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        issuer = await UserFactory.create_issuer(db_session, company)
+        admin = await UserFactory.create_admin(db_session, company)
         await db_session.commit()
 
         headers = auth_headers(
-            user_id=str(issuer.id),
-            role=UserRole.ISSUER,
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
@@ -516,7 +516,7 @@ class TestCreateInstrument:
         assert response.status_code == 200
         data = response.json()
         assert data["issuerId"] == str(company.id)
-        assert data["createdBy"] == str(issuer.id)
+        assert data["createdBy"] == str(admin.id)
 
     @pytest.mark.asyncio
     async def test_create_instrument_without_permission_returns_403(
@@ -565,18 +565,18 @@ class TestCreateInstrument:
         """
         Test create instrument without required fields returns 422.
 
-        Arrange: Create company and issuer.
+        Arrange: Create company and admin.
         Act: POST /v1/instrument with missing name.
         Assert: Response is 422 Unprocessable Entity.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        issuer = await UserFactory.create_issuer(db_session, company)
+        admin = await UserFactory.create_admin(db_session, company)
         await db_session.commit()
 
         headers = auth_headers(
-            user_id=str(issuer.id),
-            role=UserRole.ISSUER,
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
@@ -602,18 +602,18 @@ class TestCreateInstrument:
         """
         Test create instrument with invalid currency returns 422.
 
-        Arrange: Create company and issuer.
+        Arrange: Create company and admin.
         Act: POST /v1/instrument with currency longer than 3 chars.
         Assert: Response is 422 Unprocessable Entity.
         """
         # Arrange
         company = await CompanyFactory.create(db_session)
-        issuer = await UserFactory.create_issuer(db_session, company)
+        admin = await UserFactory.create_admin(db_session, company)
         await db_session.commit()
 
         headers = auth_headers(
-            user_id=str(issuer.id),
-            role=UserRole.ISSUER,
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
             company_id=str(company.id),
         )
 
