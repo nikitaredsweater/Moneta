@@ -32,6 +32,22 @@ from pathlib import Path
 from typing import AsyncGenerator, Generator
 from unittest.mock import MagicMock, patch
 
+# Add app to path BEFORE any app imports
+monolith_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(monolith_root))
+
+# Test database URL - Use PostgreSQL test database
+# Set TEST_DATABASE_URL env var or use default local test database
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/moneta_test",
+)
+
+# CRITICAL: Set DATABASE_URL environment variable BEFORE importing app modules
+# This ensures that app.utils.session and conf.py use the test database
+_sync_url = TEST_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+os.environ["DATABASE_URL"] = _sync_url
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -42,20 +58,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-# Add app to path
-monolith_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(monolith_root))
-
 from app.enums import ActivationStatus, UserRole
 from app.models.base import Base
 from app.security import create_access_token
-
-# Test database URL - Use PostgreSQL test database
-# Set TEST_DATABASE_URL env var or use default local test database
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/moneta_test",
-)
 
 
 def _get_sync_database_url() -> str:
@@ -83,6 +88,8 @@ def _run_alembic_migrations() -> None:
     env = os.environ.copy()
     env["DATABASE_URL"] = sync_url
 
+    print(f"[TEST SETUP] Running Alembic migrations with DATABASE_URL: {sync_url}")
+
     # Run alembic upgrade head from the monolith root directory
     result = subprocess.run(
         ["alembic", "upgrade", "head"],
@@ -92,12 +99,18 @@ def _run_alembic_migrations() -> None:
         text=True,
     )
 
+    print(f"[TEST SETUP] Alembic stdout: {result.stdout}")
+    if result.stderr:
+        print(f"[TEST SETUP] Alembic stderr: {result.stderr}")
+
     if result.returncode != 0:
         raise RuntimeError(
-            f"Alembic migration failed:\n"
+            f"Alembic migration failed (exit code {result.returncode}):\n"
             f"stdout: {result.stdout}\n"
             f"stderr: {result.stderr}"
         )
+
+    print("[TEST SETUP] Alembic migrations completed successfully")
 
 
 @pytest.fixture(scope="session")
@@ -134,6 +147,8 @@ async def test_engine():
     if not _migrations_run:
         # Drop all tables first to ensure clean state
         async with engine.begin() as conn:
+            # Drop alembic_version table so migrations will run fresh
+            await conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE;"))
             await conn.run_sync(Base.metadata.drop_all)
 
         # Run Alembic migrations
@@ -226,57 +241,80 @@ def auth_headers():
     return _create_headers
 
 
+def _generate_test_rsa_keys():
+    """
+    Generate RSA key pair for testing JWT token creation/verification.
+
+    Returns a tuple of (private_key_pem, public_key_pem) as bytes.
+    """
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.backends import default_backend
+
+    # Generate a 2048-bit RSA key pair
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend(),
+    )
+
+    # Serialize private key to PEM format
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+    # Serialize public key to PEM format
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    return private_pem, public_pem
+
+
+# Generate test keys once at module load time
+_TEST_PRIVATE_KEY, _TEST_PUBLIC_KEY = _generate_test_rsa_keys()
+
+
 @pytest_asyncio.fixture(scope="function")
 async def test_client(test_session_maker) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an async test client with database session override.
 
     This fixture:
-    1. Mocks JWT key loading to avoid file system dependencies
-    2. Overrides the database session with the test session
+    1. Mocks JWT key manager with real test RSA keys for token creation/verification
+    2. Uses the test database (DATABASE_URL set at module load time)
     3. Provides an async HTTP client for testing endpoints
     """
-    # Mock the JWT keys before importing the app
-    mock_private_key = MagicMock()
-    mock_public_key = MagicMock()
+    # Create a mock JWTKeyManager with real RSA keys for testing
+    mock_jwt_keys = MagicMock()
+    mock_jwt_keys.private_key = _TEST_PRIVATE_KEY
+    mock_jwt_keys.public_key = _TEST_PUBLIC_KEY
+    mock_jwt_keys.can_sign = True
+    mock_jwt_keys.can_verify = True
+    mock_jwt_keys.is_loaded = True
+    mock_jwt_keys.load_keys = MagicMock()
+    mock_jwt_keys.load_public_key = MagicMock()
+    mock_jwt_keys.load_private_key = MagicMock()
 
-    with patch.dict(
-        os.environ,
-        {
-            "JWT_PRIVATE_KEY_PATH": "/fake/path/private.pem",
-            "JWT_PUBLIC_KEY_PATH": "/fake/path/public.pem",
-        },
-    ):
-        with patch("moneta_auth.jwt_keys.load_keys"):
-            with patch(
-                "moneta_auth.jwt_keys.get_private_key",
-                return_value=mock_private_key,
-            ):
-                with patch(
-                    "moneta_auth.jwt_keys.get_public_key",
-                    return_value=mock_public_key,
-                ):
+    # Patch jwt_keys in all locations where it's imported
+    # The key location is moneta_auth.jwt.tokens where create_access_token uses it
+    with patch("moneta_auth.jwt_keys", mock_jwt_keys):
+        with patch("moneta_auth.jwt.jwt_keys", mock_jwt_keys):
+            with patch("moneta_auth.jwt.keys.jwt_keys", mock_jwt_keys):
+                with patch("moneta_auth.jwt.tokens.jwt_keys", mock_jwt_keys):
                     # Import app after mocking
-                    from app.routers.v1.api import router as v1_router
+                    from app.routers.v1.api import v1_router
                     from fastapi import FastAPI
 
                     # Create a minimal test app without the full lifespan
                     test_app = FastAPI()
                     test_app.include_router(v1_router, prefix="/v1")
 
-                    # Override the session dependency
-                    from app.utils.session import async_session
-
-                    async def override_session():
-                        async with test_session_maker() as session:
-                            yield session
-
-                    # Patch the session maker used by repositories
-                    with patch(
-                        "app.utils.session.async_session", test_session_maker
-                    ):
-                        transport = ASGITransport(app=test_app)
-                        async with AsyncClient(
-                            transport=transport, base_url="http://test"
-                        ) as client:
-                            yield client
+                    transport = ASGITransport(app=test_app)
+                    async with AsyncClient(
+                        transport=transport, base_url="http://test"
+                    ) as client:
+                        yield client
