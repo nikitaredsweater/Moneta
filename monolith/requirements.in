@@ -10,6 +10,8 @@ asyncpg
 # --- Testing ---
 pytest
 pytest-asyncio
+httpx
+aiosqlite
 
 # --- Formatters & Linters ---
 isort

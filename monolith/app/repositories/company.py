@@ -16,6 +16,10 @@ class CompanyRepository(BasePGRepository[schemas.Company]):
         response_model = schemas.Company  # This should be your schema
         orm_model = models.Company  # This should be your ORM model
         exclusion_fields = None
+        # When loading instruments, also eagerly load their public_payload
+        nested_eager_relations = {
+            "instruments": ["public_payload"],
+        }
 
 
 Company = Annotated[

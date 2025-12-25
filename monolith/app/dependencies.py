@@ -18,22 +18,43 @@ async def get_current_user(request: Request) -> object:
     """
     Gets user from request state (set by middleware or other dependencies).
 
+    First checks for request.state.user (legacy middleware support).
+    Falls back to creating a user-like object from token_claims (moneta_auth).
+
     Args:
         request (Request): The incoming HTTP request.
 
     Returns:
-        object: The user object from request state.
+        object: The user object from request state or token claims.
 
     Raises:
         HTTPException: 401 Unauthorized if user is not found in state.
     """
+    # First check for legacy request.state.user
     user = getattr(request.state, 'user', None)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='User not found in request state',
+    if user is not None:
+        return user
+
+    # Fall back to creating user-like object from moneta_auth token_claims
+    token_claims = getattr(request.state, 'token_claims', None)
+    if token_claims is not None:
+        from types import SimpleNamespace
+
+        # Convert string IDs to UUIDs for proper comparison with database entities
+        company_id = (
+            UUID(token_claims.company_id) if token_claims.company_id else None
         )
-    return user
+        return SimpleNamespace(
+            id=UUID(token_claims.user_id),
+            role=token_claims.role,
+            company_id=company_id,
+            account_status=token_claims.account_status,
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail='User not found in request state',
+    )
 
 
 async def get_current_user_from_token(
@@ -111,8 +132,8 @@ def get_minio_client() -> Generator[Minio, None, None]:
 def parse_company_includes(
     include: Optional[str] = Query(
         None,
-        description="Comma-separated list of related entities to include. "
-        "Allowed: addresses,users,instruments",
+        description='Comma-separated list of related entities to include. '
+        'Allowed: addresses,users,instruments',
     ),
 ) -> Set[CompanyInclude]:
     """
@@ -123,14 +144,14 @@ def parse_company_includes(
         return set()
 
     raw_parts = [
-        part.strip().lower() for part in include.split(",") if part.strip()
+        part.strip().lower() for part in include.split(',') if part.strip()
     ]
     includes: Set[CompanyInclude] = set()
 
     mapping = {
-        "addresses": CompanyInclude.ADDRESSES,
-        "users": CompanyInclude.USERS,
-        "instruments": CompanyInclude.INSTRUMENTS,
+        'addresses': CompanyInclude.ADDRESSES,
+        'users': CompanyInclude.USERS,
+        'instruments': CompanyInclude.INSTRUMENTS,
     }
 
     for part in raw_parts:

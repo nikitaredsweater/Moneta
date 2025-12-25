@@ -236,29 +236,33 @@ async def update_drafted_instrument(
             instrument_data.maturity_payment, 'maturity_payment'
         )
 
-    # Update the entity in the database
-    instrument_data_trimmed = schemas.InstrumentDRAFTUpdate(
-        **instrument_data.model_dump(exclude={"public_payload"}),
-    )
-    updated_instrument = await instrument_repo.update_by_id(instrument_id, instrument_data_trimmed)
+    # Update the entity in the database (only if there are non-payload fields to update)
+    instrument_fields = instrument_data.model_dump(exclude={"public_payload"}, exclude_none=True)
+    if instrument_fields:
+        updated_instrument = await instrument_repo.update_by_id(
+            instrument_id,
+            schemas.InstrumentDRAFTUpdate(**instrument_fields),
+        )
+    else:
+        updated_instrument = instrument
 
     public_payload_id = None
     update_payload = instrument_data.public_payload
-    if updated_instrument:
-        if updated_instrument.public_payload:
-            public_payload_id = updated_instrument.public_payload.id
-    
-    if public_payload_id is None:
-        # Object is still not created. Create an object with passed payload
-        await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
-            instrument_id=instrument_id,
-            payload=update_payload
-        ))
-    elif update_payload is not None:
-        # Update the payload
-        await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
-            payload=update_payload
-        ))
+    if updated_instrument.public_payload:
+        public_payload_id = updated_instrument.public_payload.id
+
+    if update_payload is not None:
+        if public_payload_id is None:
+            # Object is still not created. Create an object with passed payload
+            await public_payload_repo.create(schemas.InstrumentPublicPayloadFull(
+                instrument_id=instrument_id,
+                payload=update_payload
+            ))
+        else:
+            # Update the payload
+            await public_payload_repo.update_by_id(public_payload_id, schemas.InstrumentPublicPayloadFull(
+                payload=update_payload
+            ))
 
     logger.info(
         '[BUSINESS] Draft instrument updated | instrument_id=%s | updated_by=%s',

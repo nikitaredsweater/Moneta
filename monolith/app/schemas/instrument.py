@@ -6,10 +6,9 @@ from datetime import date
 from typing import List, Optional, Dict, Any
 
 from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
-from app.exceptions import EmptyEntityException
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
 from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull, InstrumentPublicPayloadCreate
-from pydantic import Field, root_validator, ConfigDict
+from pydantic import Field, model_validator, ConfigDict
 
 
 class Instrument(BaseDTO):
@@ -88,22 +87,24 @@ class InstrumentDRAFTUpdate(CamelModel):
     maturity_payment: Optional[float] = None
     public_payload: Optional[Dict[str, Any]] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
+    @classmethod
     def at_least_one_field(cls, values):
+        # Check for both snake_case and camelCase field names since
+        # mode='before' receives raw input before alias conversion
+        allowed_fields = {
+            'name',
+            'face_value', 'faceValue',
+            'currency',
+            'maturity_date', 'maturityDate',
+            'maturity_payment', 'maturityPayment',
+            'public_payload', 'publicPayload'
+        }
         if not any(
-            v is not None
-            for k, v in values.items()
-            if k
-            in {
-                'name',
-                'face_value',
-                'currency',
-                'maturity_date',
-                'maturity_payment',
-                'public_payload'
-            }
+            values.get(k) is not None
+            for k in allowed_fields
         ):
-            raise EmptyEntityException
+            raise ValueError('At least one field must be provided')
         # optional: normalize currency to upper
         cur = values.get('currency')
         if isinstance(cur, str):

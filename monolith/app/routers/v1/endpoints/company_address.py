@@ -2,15 +2,20 @@
 Company address endpoints
 """
 
+import logging
 from typing import List, Optional
+
+from sqlalchemy.exc import IntegrityError
 
 from app import repositories as repo
 from app import schemas
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
+from app.exceptions import WasNotFoundException
 from app.security import Permission, has_permission
 from fastapi import APIRouter, Depends
 
+logger = logging.getLogger(__name__)
 company_address_router = APIRouter()
 
 
@@ -41,14 +46,23 @@ async def create_company_address(
     ),
 ) -> schemas.Company:
     """
-    Create a new user
+    Create a new company address
 
     Args:
-        company_data: Company creation data
-        company_repo: Company repository dependency
+        company_data: Company address creation data
+        company_repo: Company address repository dependency
 
     Returns:
-        Company: The created user object
+        CompanyAddress: The created company address object
     """
-    company = await company_repo.create(company_data)
-    return company
+    try:
+        company = await company_repo.create(company_data)
+        return company
+    except IntegrityError as e:
+        logger.warning(
+            '[BUSINESS] Failed to create company address - FK violation | company_id=%s',
+            company_data.company_id,
+        )
+        raise WasNotFoundException(
+            detail=f'Company with ID {company_data.company_id} does not exist'
+        )
