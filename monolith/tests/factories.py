@@ -20,6 +20,7 @@ from app.enums import (
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
 from app.models.instrument import Instrument
+from app.models.instrument_public_payload import InstrumentPublicPayload
 from app.models.user import User
 from app.security import encrypt_password
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -230,6 +231,7 @@ class InstrumentFactory:
         instrument_status: InstrumentStatus = InstrumentStatus.DRAFT,
         maturity_status: MaturityStatus = MaturityStatus.NOT_DUE,
         trading_status: TradingStatus = TradingStatus.DRAFT,
+        public_payload: Optional[Dict[str, Any]] = None,
     ) -> Instrument:
         """
         Create an Instrument entity in the database.
@@ -246,14 +248,16 @@ class InstrumentFactory:
             instrument_status: Status of the instrument (defaults to DRAFT).
             maturity_status: Maturity status (defaults to NOT_DUE).
             trading_status: Trading status (defaults to DRAFT).
+            public_payload: Optional payload dict (defaults to empty dict).
 
         Returns:
             The created Instrument ORM model.
         """
         unique_suffix = uuid4().hex[:8]
+        instrument_id = uuid4()
 
         instrument = Instrument(
-            id=uuid4(),
+            id=instrument_id,
             name=name or f"Test Instrument {unique_suffix}",
             face_value=face_value,
             currency=currency,
@@ -269,6 +273,17 @@ class InstrumentFactory:
 
         session.add(instrument)
         await session.flush()
+
+        # Create associated public payload
+        payload_record = InstrumentPublicPayload(
+            id=uuid4(),
+            instrument_id=instrument_id,
+            payload=public_payload if public_payload is not None else {},
+            created_at=datetime.utcnow(),
+        )
+        session.add(payload_record)
+        await session.flush()
+
         await session.refresh(instrument)
         return instrument
 
