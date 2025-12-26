@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 
 from app.enums import InstrumentStatus, MaturityStatus, TradingStatus
 from app.schemas.base import BaseDTO, CamelModel, MonetaID
+from app.schemas.documents.instrument_document import InstrumentDocumentWithDocument
 from app.schemas.instrument_public_payload import InstrumentPublicPayloadFull, InstrumentPublicPayloadCreate
 from pydantic import Field, model_validator, ConfigDict
 
@@ -30,6 +31,15 @@ class Instrument(BaseDTO):
     public_payload: Optional[InstrumentPublicPayloadFull] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InstrumentIncludes(Instrument):
+    """
+    Return model for optional including of related entities
+    with the instrument.
+    """
+
+    instrument_documents: Optional[List[InstrumentDocumentWithDocument]] = None
 
 
 class InstrumentFilters(CamelModel):

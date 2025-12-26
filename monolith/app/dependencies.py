@@ -5,7 +5,7 @@ Dependencies module
 from typing import Generator, Optional, Set
 from uuid import UUID
 
-from app.enums import CompanyInclude
+from app.enums import CompanyInclude, InstrumentInclude
 from app.repositories.user import User
 from app.utils.minio_client import minio_client
 from fastapi import HTTPException, Query, Request, status
@@ -152,6 +152,37 @@ def parse_company_includes(
         'addresses': CompanyInclude.ADDRESSES,
         'users': CompanyInclude.USERS,
         'instruments': CompanyInclude.INSTRUMENTS,
+    }
+
+    for part in raw_parts:
+        if part in mapping:
+            includes.add(mapping[part])
+        # silently ignore unknown values, or raise HTTPException if you prefer
+
+    return includes
+
+
+def parse_instrument_includes(
+    include: Optional[str] = Query(
+        None,
+        description='Comma-separated list of related entities to include. '
+        'Allowed: documents',
+    ),
+) -> Set[InstrumentInclude]:
+    """
+    Set of additional entities that a user requested to be retrieved with
+    every instrument they are searching
+    """
+    if not include:
+        return set()
+
+    raw_parts = [
+        part.strip().lower() for part in include.split(',') if part.strip()
+    ]
+    includes: Set[InstrumentInclude] = set()
+
+    mapping = {
+        'documents': InstrumentInclude.DOCUMENTS,
     }
 
     for part in raw_parts:

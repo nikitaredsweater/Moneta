@@ -22,6 +22,7 @@ from app.schemas.documents.document_version import (
 from app.schemas.documents.instrument_document import (
     InstrumentDocument,
     InstrumentDocumentCreate,
+    InstrumentDocumentWithDocument,
 )
 from app.schemas.instrument import (
     Instrument,
@@ -29,6 +30,7 @@ from app.schemas.instrument import (
     InstrumentCreateInternal,
     InstrumentDRAFTUpdate,
     InstrumentFilters,
+    InstrumentIncludes,
     InstrumentMaturityStatusUpdate,
     InstrumentStatusUpdate,
     InstrumentTransitionRequest,
@@ -76,8 +78,11 @@ __all__ = [
     'DocumentVersionCreate',
     'InstrumentDocument',
     'InstrumentDocumentCreate',
+    'InstrumentDocumentWithDocument',
+    'InstrumentIncludes',
     'MonetaID',
     'InstrumentPublicPayloadFull',
     'InstrumentPublicPayloadCreate',
-    'InstrumentPublicPayloadUpdate' 'CompanyIncludes',
+    'InstrumentPublicPayloadUpdate',
+    'CompanyIncludes',
 ]
