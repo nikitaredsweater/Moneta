@@ -19,6 +19,7 @@ from app.exceptions import (
     WasNotFoundException,
 )
 from app.security import Permission, has_permission
+from app.services import instrument_ownership_service
 from app.utils import validations
 from app.utils.filters.instrument_filters import build_sort_instrument, build_where_instrument
 from fastapi import APIRouter, Depends
@@ -365,6 +366,7 @@ async def update_status(
     instrument_id: schemas.MonetaID,
     body: schemas.InstrumentTransitionRequest,
     instrument_repo: repo.Instrument,
+    ownership_repo: repo.InstrumentOwnership,
     current_user=Depends(get_current_user),
     _=Depends(has_permission([Permission(Verb.UPDATE, Entity.INSTRUMENT)])),
 ) -> schemas.Instrument:
@@ -435,6 +437,13 @@ async def update_status(
                 'maturity_status=%s',
                 instrument_id,
                 MaturityStatus.DUE,
+            )
+
+            # Record initial ownership - issuer becomes the owner
+            await instrument_ownership_service.record_issuance(
+                repo=ownership_repo,
+                instrument_id=instrument_id,
+                owner_id=instrument.issuer_id,
             )
 
     logger.info(
