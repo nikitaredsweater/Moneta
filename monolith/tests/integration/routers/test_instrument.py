@@ -16,7 +16,13 @@ import pytest_asyncio
 from app.enums import InstrumentStatus, UserRole
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from tests.factories import CompanyFactory, InstrumentFactory, UserFactory
+from tests.factories import (
+    CompanyFactory,
+    DocumentFactory,
+    InstrumentDocumentFactory,
+    InstrumentFactory,
+    UserFactory,
+)
 
 
 class TestSearchInstruments:
@@ -1213,3 +1219,281 @@ class TestInstrumentStatusTransition:
 
         # Assert
         assert response.status_code == 422
+
+
+class TestGetInstrumentWithIncludes:
+    """Tests for GET /v1/instrument/{instrument_id}?include=documents endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_without_include_returns_no_documents(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument without include parameter returns instrument_documents as None.
+
+        Arrange: Create instrument with associated documents.
+        Act: GET /v1/instrument/{instrument_id} without include parameter.
+        Assert: Response contains instrument data with instrumentDocuments as None.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(
+            db_session, company, issuer, name="Instrument With Docs"
+        )
+        document = await DocumentFactory.create(db_session, issuer)
+        await InstrumentDocumentFactory.create(db_session, instrument, document)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Instrument With Docs"
+        assert data.get("instrumentDocuments") is None
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_with_include_documents_returns_documents(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument with include=documents returns associated documents.
+
+        Arrange: Create instrument with multiple associated documents.
+        Act: GET /v1/instrument/{instrument_id}?include=documents.
+        Assert: Response contains instrument data with instrumentDocuments list.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(
+            db_session, company, issuer, name="Instrument With Multiple Docs"
+        )
+        document1 = await DocumentFactory.create(
+            db_session, issuer, internal_filename="doc1.pdf"
+        )
+        document2 = await DocumentFactory.create(
+            db_session, issuer, internal_filename="doc2.pdf"
+        )
+        await InstrumentDocumentFactory.create(db_session, instrument, document1)
+        await InstrumentDocumentFactory.create(db_session, instrument, document2)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}?include=documents",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Instrument With Multiple Docs"
+        assert data["instrumentDocuments"] is not None
+        assert isinstance(data["instrumentDocuments"], list)
+        assert len(data["instrumentDocuments"]) == 2
+
+        # Verify each instrument_document contains the nested document
+        for inst_doc in data["instrumentDocuments"]:
+            assert "instrumentId" in inst_doc
+            assert "documentId" in inst_doc
+            assert "document" in inst_doc
+            assert inst_doc["document"] is not None
+            assert "internalFilename" in inst_doc["document"]
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_with_include_documents_returns_nested_document_data(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument with include=documents returns nested document details.
+
+        Arrange: Create instrument with associated document with specific data.
+        Act: GET /v1/instrument/{instrument_id}?include=documents.
+        Assert: Response contains nested document with correct field values.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document = await DocumentFactory.create(
+            db_session,
+            issuer,
+            internal_filename="test_prospectus.pdf",
+            mime="application/pdf",
+            storage_bucket="documents-bucket",
+        )
+        await InstrumentDocumentFactory.create(db_session, instrument, document)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}?include=documents",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["instrumentDocuments"]) == 1
+
+        inst_doc = data["instrumentDocuments"][0]
+        nested_doc = inst_doc["document"]
+        assert nested_doc["internalFilename"] == "test_prospectus.pdf"
+        assert nested_doc["mime"] == "application/pdf"
+        assert nested_doc["storageBucket"] == "documents-bucket"
+        assert nested_doc["id"] == str(document.id)
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_with_no_documents_returns_empty_list(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument with include=documents when no documents exist.
+
+        Arrange: Create instrument without any associated documents.
+        Act: GET /v1/instrument/{instrument_id}?include=documents.
+        Assert: Response contains empty instrumentDocuments list.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(
+            db_session, company, issuer, name="Instrument Without Docs"
+        )
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}?include=documents",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Instrument Without Docs"
+        assert data["instrumentDocuments"] is not None
+        assert isinstance(data["instrumentDocuments"], list)
+        assert len(data["instrumentDocuments"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_with_invalid_include_ignores_unknown_value(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument with invalid include value is silently ignored.
+
+        Arrange: Create instrument.
+        Act: GET /v1/instrument/{instrument_id}?include=invalid_value.
+        Assert: Response returns instrument data without errors.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}?include=invalid_value",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(instrument.id)
+        # instrumentDocuments should be None since no valid include was provided
+        assert data.get("instrumentDocuments") is None
+
+    @pytest.mark.asyncio
+    async def test_get_instrument_with_include_preserves_other_fields(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test get instrument with include=documents still returns all base fields.
+
+        Arrange: Create instrument with specific field values.
+        Act: GET /v1/instrument/{instrument_id}?include=documents.
+        Assert: Response contains all standard instrument fields plus documents.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        maturity_date = date.today() + timedelta(days=180)
+        instrument = await InstrumentFactory.create(
+            db_session,
+            company,
+            issuer,
+            name="Complete Instrument",
+            face_value=50000.00,
+            currency="EUR",
+            maturity_date=maturity_date,
+            maturity_payment=52000.00,
+        )
+        document = await DocumentFactory.create(db_session, issuer)
+        await InstrumentDocumentFactory.create(db_session, instrument, document)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.get(
+            f"/v1/instrument/{instrument.id}?include=documents",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        # Verify base fields are present
+        assert data["name"] == "Complete Instrument"
+        assert data["faceValue"] == 50000.00
+        assert data["currency"] == "EUR"
+        assert data["maturityPayment"] == 52000.00
+        assert data["instrumentStatus"] == "DRAFT"
+        assert data["issuerId"] == str(company.id)
+        assert data["createdBy"] == str(issuer.id)
+        # Verify documents are included
+        assert data["instrumentDocuments"] is not None
+        assert len(data["instrumentDocuments"]) == 1
