@@ -34,5 +34,11 @@ class Company(Base, BaseEntity):
         back_populates='company', cascade='all, delete-orphan'
     )
     instruments: Mapped[list['Instrument']] = relationship(
-    back_populates='issuer', cascade='all, delete-orphan'
+        back_populates='issuer', cascade='all, delete-orphan'
+    )
+
+    instrument_ownerships: Mapped[list['InstrumentOwnership']] = relationship(
+        'InstrumentOwnership',
+        back_populates='owner',
+        cascade='all, delete-orphan',
     )

@@ -17,6 +17,10 @@ from app.repositories.documents.instrument_document import (
     InstrumentDocumentRepository,
 )
 from app.repositories.instrument import Instrument, InstrumentRepository
+from app.repositories.instrument_ownership import (
+    InstrumentOwnership,
+    InstrumentOwnershipRepository,
+)
 from app.repositories.instrument_public_payload import (
     InstrumentPublicPayload,
     InstrumentPublicPayloadRepository,
@@ -40,4 +44,6 @@ __all__ = [
     'InstrumentDocument',
     'InstrumentPublicPayloadRepository',
     'InstrumentPublicPayload',
+    'InstrumentOwnershipRepository',
+    'InstrumentOwnership',
 ]

@@ -35,6 +35,11 @@ from app.schemas.instrument import (
     InstrumentStatusUpdate,
     InstrumentTransitionRequest,
 )
+from app.schemas.instrument_ownership import (
+    InstrumentOwnership,
+    InstrumentOwnershipClose,
+    InstrumentOwnershipCreate,
+)
 from app.schemas.instrument_public_payload import (
     InstrumentPublicPayloadCreate,
     InstrumentPublicPayloadFull,
@@ -85,4 +90,7 @@ __all__ = [
     'InstrumentPublicPayloadCreate',
     'InstrumentPublicPayloadUpdate',
     'CompanyIncludes',
+    'InstrumentOwnership',
+    'InstrumentOwnershipCreate',
+    'InstrumentOwnershipClose',
 ]

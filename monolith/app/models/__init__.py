@@ -14,6 +14,7 @@ from app.models.documents.document import Document
 from app.models.documents.document_version import DocumentVersion
 from app.models.documents.instrument_document import InstrumentDocument
 from app.models.instrument import Instrument
+from app.models.instrument_ownership import InstrumentOwnership
 from app.models.instrument_public_payload import InstrumentPublicPayload
 from app.models.user import User
 from sqlalchemy import MetaData
@@ -25,6 +26,7 @@ __all__ = [
     'CompanyAddress',
     'InstrumentPublicPayload',
     'InstrumentDocument',
+    'InstrumentOwnership',
 ]
 
 
@@ -47,4 +49,5 @@ with warnings.catch_warnings():
         DocumentVersion.metadata,
         InstrumentPublicPayload.metadata,
         InstrumentDocument.metadata,
+        InstrumentOwnership.metadata,
     )

@@ -70,3 +70,9 @@ class Instrument(Base, BaseEntity):
         back_populates='instrument',
         cascade='all, delete-orphan',
     )
+
+    ownerships: Mapped[list['InstrumentOwnership']] = relationship(
+        'InstrumentOwnership',
+        back_populates='instrument',
+        cascade='all, delete-orphan',
+    )
