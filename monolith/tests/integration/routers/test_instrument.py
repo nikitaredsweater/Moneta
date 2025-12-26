@@ -1497,3 +1497,324 @@ class TestGetInstrumentWithIncludes:
         # Verify documents are included
         assert data["instrumentDocuments"] is not None
         assert len(data["instrumentDocuments"]) == 1
+
+
+class TestAssociateDocumentWithInstrument:
+    """Tests for POST /v1/instrument/{instrument_id}/documents/{document_id} endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_associate_document_with_instrument_success(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test successful association of a document with an instrument.
+
+        Arrange: Create instrument and document.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id}.
+        Assert: Response is 200 with InstrumentDocument association.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document = await DocumentFactory.create(db_session, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["instrumentId"] == str(instrument.id)
+        assert data["documentId"] == str(document.id)
+        assert "id" in data
+
+    @pytest.mark.asyncio
+    async def test_associate_document_with_nonexistent_instrument_returns_404(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating document with non-existent instrument returns 404.
+
+        Arrange: Create company, user, and document.
+        Act: POST /v1/instrument/{fake_uuid}/documents/{document_id}.
+        Assert: Response is 404 Not Found.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        document = await DocumentFactory.create(db_session, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+        fake_uuid = "00000000-0000-0000-0000-000000000000"
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{fake_uuid}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 404
+        data = response.json()
+        assert "Instrument" in data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_associate_nonexistent_document_with_instrument_returns_404(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating non-existent document with instrument returns 404.
+
+        Arrange: Create company, user, and instrument.
+        Act: POST /v1/instrument/{instrument_id}/documents/{fake_uuid}.
+        Assert: Response is 404 Not Found.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+        fake_uuid = "00000000-0000-0000-0000-000000000000"
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{fake_uuid}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 404
+        data = response.json()
+        assert "Document" in data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_associate_document_already_associated_returns_409(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating document that is already associated returns 409.
+
+        Arrange: Create instrument, document, and existing association.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id}.
+        Assert: Response is 409 Conflict.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document = await DocumentFactory.create(db_session, issuer)
+        # Create existing association
+        await InstrumentDocumentFactory.create(db_session, instrument, document)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 409
+        data = response.json()
+        assert "already associated" in data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_associate_document_without_permission_returns_403(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating document without UPDATE.INSTRUMENT permission returns 403.
+
+        Arrange: Create instrument, document, and buyer user.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id} with buyer auth.
+        Assert: Response is 403 Forbidden.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        buyer = await UserFactory.create(db_session, company, role=UserRole.BUYER)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document = await DocumentFactory.create(db_session, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(buyer.id),
+            role=UserRole.BUYER,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_associate_document_by_admin_success(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test admin can associate document with instrument.
+
+        Arrange: Create instrument, document, and admin user.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id} with admin auth.
+        Assert: Response is 200 with InstrumentDocument association.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        admin = await UserFactory.create_admin(db_session, company)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document = await DocumentFactory.create(db_session, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(admin.id),
+            role=UserRole.ADMIN,
+            company_id=str(company.id),
+        )
+
+        # Act
+        response = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["instrumentId"] == str(instrument.id)
+        assert data["documentId"] == str(document.id)
+
+    @pytest.mark.asyncio
+    async def test_associate_multiple_documents_with_same_instrument(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating multiple different documents with the same instrument.
+
+        Arrange: Create instrument and multiple documents.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id} for each.
+        Assert: Each response is 200 with correct associations.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument = await InstrumentFactory.create(db_session, company, issuer)
+        document1 = await DocumentFactory.create(
+            db_session, issuer, internal_filename="doc1.pdf"
+        )
+        document2 = await DocumentFactory.create(
+            db_session, issuer, internal_filename="doc2.pdf"
+        )
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act - Associate first document
+        response1 = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document1.id}",
+            headers=headers,
+        )
+
+        # Act - Associate second document
+        response2 = await test_client.post(
+            f"/v1/instrument/{instrument.id}/documents/{document2.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+        data1 = response1.json()
+        data2 = response2.json()
+        assert data1["documentId"] == str(document1.id)
+        assert data2["documentId"] == str(document2.id)
+        assert data1["instrumentId"] == str(instrument.id)
+        assert data2["instrumentId"] == str(instrument.id)
+
+    @pytest.mark.asyncio
+    async def test_associate_same_document_with_multiple_instruments(
+        self, test_client: AsyncClient, db_session: AsyncSession, auth_headers
+    ):
+        """
+        Test associating the same document with multiple instruments.
+
+        Arrange: Create multiple instruments and one document.
+        Act: POST /v1/instrument/{instrument_id}/documents/{document_id} for each instrument.
+        Assert: Each response is 200 with correct associations.
+        """
+        # Arrange
+        company = await CompanyFactory.create(db_session)
+        issuer = await UserFactory.create_issuer(db_session, company)
+        instrument1 = await InstrumentFactory.create(
+            db_session, company, issuer, name="Instrument 1"
+        )
+        instrument2 = await InstrumentFactory.create(
+            db_session, company, issuer, name="Instrument 2"
+        )
+        document = await DocumentFactory.create(db_session, issuer)
+        await db_session.commit()
+
+        headers = auth_headers(
+            user_id=str(issuer.id),
+            role=UserRole.ISSUER,
+            company_id=str(company.id),
+        )
+
+        # Act - Associate document with first instrument
+        response1 = await test_client.post(
+            f"/v1/instrument/{instrument1.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Act - Associate same document with second instrument
+        response2 = await test_client.post(
+            f"/v1/instrument/{instrument2.id}/documents/{document.id}",
+            headers=headers,
+        )
+
+        # Assert
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+        data1 = response1.json()
+        data2 = response2.json()
+        assert data1["instrumentId"] == str(instrument1.id)
+        assert data2["instrumentId"] == str(instrument2.id)
+        assert data1["documentId"] == str(document.id)
+        assert data2["documentId"] == str(document.id)
