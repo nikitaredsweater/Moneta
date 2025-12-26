@@ -42,3 +42,9 @@ class Company(Base, BaseEntity):
         back_populates='owner',
         cascade='all, delete-orphan',
     )
+
+    listings: Mapped[list['Listing']] = relationship(
+        'Listing',
+        back_populates='seller_company',
+        cascade='all, delete-orphan',
+    )

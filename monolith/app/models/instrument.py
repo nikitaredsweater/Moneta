@@ -76,3 +76,9 @@ class Instrument(Base, BaseEntity):
         back_populates='instrument',
         cascade='all, delete-orphan',
     )
+
+    listings: Mapped[list['Listing']] = relationship(
+        'Listing',
+        back_populates='instrument',
+        cascade='all, delete-orphan',
+    )

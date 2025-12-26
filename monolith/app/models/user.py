@@ -35,5 +35,11 @@ class User(Base, BaseEntity):
         default=ActivationStatus.AWAITING_APPROVAL,
     )
     instruments: Mapped[list['Instrument']] = relationship(
-    back_populates='creator', cascade='all, delete-orphan'
+        back_populates='creator', cascade='all, delete-orphan'
+    )
+
+    listings: Mapped[list['Listing']] = relationship(
+        'Listing',
+        back_populates='listing_creator',
+        cascade='all, delete-orphan',
     )

@@ -25,6 +25,7 @@ from app.repositories.instrument_public_payload import (
     InstrumentPublicPayload,
     InstrumentPublicPayloadRepository,
 )
+from app.repositories.listing import Listing, ListingRepository
 from app.repositories.user import User, UserRepository
 
 __all__ = [
@@ -46,4 +47,6 @@ __all__ = [
     'InstrumentPublicPayload',
     'InstrumentOwnershipRepository',
     'InstrumentOwnership',
+    'ListingRepository',
+    'Listing',
 ]
