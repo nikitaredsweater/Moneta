@@ -7,7 +7,7 @@ from datetime import datetime
 
 from app.models.base import Base, BaseEntity
 from sqlalchemy import DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class Document(Base, BaseEntity):
@@ -35,4 +35,11 @@ class Document(Base, BaseEntity):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    instrument_documents: Mapped[list['InstrumentDocument']] = relationship(
+        'InstrumentDocument',
+        back_populates='document',
+        cascade='all, delete-orphan',
     )
