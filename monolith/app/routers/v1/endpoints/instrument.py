@@ -13,6 +13,7 @@ from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.enums import UserRole
 from app.exceptions import (
+    EntityAlreadyExistsException,
     FailedToCreateEntityException,
     InsufficientPermissionsException,
     WasNotFoundException,
@@ -445,3 +446,111 @@ async def update_status(
         current_user.id,
     )
     return updated
+
+
+################################################################################
+#                        Instrument Document Association
+################################################################################
+@instrument_router.post(
+    "/{instrument_id}/documents/{document_id}",
+    response_model=schemas.InstrumentDocument,
+)
+async def associate_document_with_instrument(
+    instrument_id: schemas.MonetaID,
+    document_id: schemas.MonetaID,
+    instrument_repo: repo.Instrument,
+    document_repo: repo.Document,
+    instrument_document_repo: repo.InstrumentDocument,
+    _=Depends(has_permission([Permission(Verb.UPDATE, Entity.INSTRUMENT)])),
+) -> schemas.InstrumentDocument:
+    """
+    Associate a document with an instrument.
+
+    Args:
+        instrument_id: The ID of the instrument.
+        document_id: The ID of the document to associate.
+        instrument_repo: Instrument repository dependency.
+        document_repo: Document repository dependency.
+        instrument_document_repo: InstrumentDocument repository dependency.
+
+    Returns:
+        InstrumentDocument: The created association.
+
+    Raises:
+        WasNotFoundException: If instrument or document does not exist.
+        EntityAlreadyExistsException: If association already exists.
+        FailedToCreateEntityException: If association creation fails.
+    """
+    logger.debug(
+        '[BUSINESS] Associating document with instrument | '
+        'instrument_id=%s | document_id=%s',
+        instrument_id,
+        document_id,
+    )
+
+    # Check that the instrument exists
+    instrument = await instrument_repo.get_by_id(instrument_id)
+    if not instrument:
+        logger.warning(
+            '[BUSINESS] Instrument not found for document association | '
+            'instrument_id=%s',
+            instrument_id,
+        )
+        raise WasNotFoundException(
+            detail=f'Instrument with ID {instrument_id} does not exist'
+        )
+
+    # Check that the document exists
+    document = await document_repo.get_by_id(document_id)
+    if not document:
+        logger.warning(
+            '[BUSINESS] Document not found for instrument association | '
+            'document_id=%s',
+            document_id,
+        )
+        raise WasNotFoundException(
+            detail=f'Document with ID {document_id} does not exist'
+        )
+
+    # Check that the association does not already exist
+    existing = await instrument_document_repo.get_by_instrument_and_document(
+        instrument_id, document_id
+    )
+    if existing:
+        logger.warning(
+            '[BUSINESS] Document already associated with instrument | '
+            'instrument_id=%s | document_id=%s',
+            instrument_id,
+            document_id,
+        )
+        raise EntityAlreadyExistsException(
+            detail='This document is already associated with this instrument'
+        )
+
+    # Create the association
+    association = await instrument_document_repo.create(
+        schemas.InstrumentDocumentCreate(
+            instrument_id=instrument_id,
+            document_id=document_id,
+        )
+    )
+
+    if not association:
+        logger.error(
+            '[BUSINESS] Failed to create document association | '
+            'instrument_id=%s | document_id=%s',
+            instrument_id,
+            document_id,
+        )
+        raise FailedToCreateEntityException(
+            detail='Failed to associate document with instrument'
+        )
+
+    logger.info(
+        '[BUSINESS] Document associated with instrument | '
+        'instrument_id=%s | document_id=%s | association_id=%s',
+        instrument_id,
+        document_id,
+        association.id,
+    )
+    return association

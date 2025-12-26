@@ -38,6 +38,18 @@ class InstrumentDocumentRepository(
             [self.Meta.orm_model.document_id == document_id]
         )
 
+    async def get_by_instrument_and_document(
+        self, instrument_id: MonetaID, document_id: MonetaID
+    ) -> schemas.InstrumentDocument | None:
+        """Get a specific association by instrument and document IDs."""
+        results = await self.get_all(
+            [
+                self.Meta.orm_model.instrument_id == instrument_id,
+                self.Meta.orm_model.document_id == document_id,
+            ]
+        )
+        return results[0] if results else None
+
 
 InstrumentDocument = Annotated[
     InstrumentDocumentRepository,
