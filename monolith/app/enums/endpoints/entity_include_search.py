@@ -15,3 +15,12 @@ class CompanyInclude(str, Enum):
     ADDRESSES = "addresses"
     USERS = "users"
     INSTRUMENTS = "instruments"
+
+
+class InstrumentInclude(str, Enum):
+    """
+    Entities that can be additionally searched for when looking up an instrument
+    object.
+    """
+
+    DOCUMENTS = "documents"

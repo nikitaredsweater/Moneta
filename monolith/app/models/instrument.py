@@ -64,3 +64,9 @@ class Instrument(Base, BaseEntity):
 
     issuer: Mapped['Company'] = relationship(back_populates='instruments')
     creator: Mapped['User'] = relationship(back_populates='instruments')
+
+    instrument_documents: Mapped[list['InstrumentDocument']] = relationship(
+        'InstrumentDocument',
+        back_populates='instrument',
+        cascade='all, delete-orphan',
+    )

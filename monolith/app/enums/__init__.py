@@ -10,7 +10,7 @@ from moneta_auth import (
 
 # Local enums specific to monolith
 from app.enums.address_types import AddressType
-from app.enums.endpoints.entity_include_search import CompanyInclude
+from app.enums.endpoints.entity_include_search import CompanyInclude, InstrumentInclude
 from app.enums.instrument_status import (
     InstrumentStatus,
     MaturityStatus,
@@ -29,4 +29,5 @@ __all__ = [
     'TradingStatus',
     'ActivationStatus',
     'CompanyInclude',
+    'InstrumentInclude',
 ]

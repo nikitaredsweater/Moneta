@@ -19,15 +19,26 @@ from app.schemas.documents.document_version import (
     DocumentVersion,
     DocumentVersionCreate,
 )
+from app.schemas.documents.instrument_document import (
+    InstrumentDocument,
+    InstrumentDocumentCreate,
+    InstrumentDocumentWithDocument,
+)
 from app.schemas.instrument import (
     Instrument,
     InstrumentCreate,
     InstrumentCreateInternal,
     InstrumentDRAFTUpdate,
     InstrumentFilters,
+    InstrumentIncludes,
     InstrumentMaturityStatusUpdate,
     InstrumentStatusUpdate,
     InstrumentTransitionRequest,
+)
+from app.schemas.instrument_public_payload import (
+    InstrumentPublicPayloadCreate,
+    InstrumentPublicPayloadFull,
+    InstrumentPublicPayloadUpdate,
 )
 from app.schemas.user import (
     User,
@@ -38,9 +49,6 @@ from app.schemas.user import (
     UserLogin,
     UserPatch,
 )
-
-from app.schemas.instrument_public_payload import (InstrumentPublicPayloadFull,
-                                                    InstrumentPublicPayloadCreate, InstrumentPublicPayloadUpdate)
 
 __all__ = [
     'MonetaID',
@@ -68,9 +76,13 @@ __all__ = [
     'DocumentCreate',
     'DocumentVersion',
     'DocumentVersionCreate',
+    'InstrumentDocument',
+    'InstrumentDocumentCreate',
+    'InstrumentDocumentWithDocument',
+    'InstrumentIncludes',
     'MonetaID',
     'InstrumentPublicPayloadFull',
     'InstrumentPublicPayloadCreate',
-    'InstrumentPublicPayloadUpdate'
+    'InstrumentPublicPayloadUpdate',
     'CompanyIncludes',
 ]

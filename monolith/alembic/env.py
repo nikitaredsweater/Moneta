@@ -3,6 +3,7 @@ Migrations core
 """
 
 from alembic import context
+from app import models  # noqa: F401 - Import all models for autogenerate
 from app.models.base import Base
 from conf import conf
 from sqlalchemy import engine_from_config, pool

@@ -19,6 +19,8 @@ from app.enums import (
 )
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
+from app.models.documents.document import Document
+from app.models.documents.instrument_document import InstrumentDocument
 from app.models.instrument import Instrument
 from app.models.instrument_public_payload import InstrumentPublicPayload
 from app.models.user import User
@@ -445,3 +447,81 @@ class CompanyAddressFactory:
             address_type=AddressType.OFFICE,
             street=street,
         )
+
+
+class DocumentFactory:
+    """Factory for creating Document entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        user: User,
+        *,
+        internal_filename: Optional[str] = None,
+        mime: str = "application/pdf",
+        storage_bucket: str = "test-bucket",
+        storage_object_key: Optional[str] = None,
+    ) -> Document:
+        """
+        Create a Document entity in the database.
+
+        Args:
+            session: The async database session.
+            user: The User who created the document.
+            internal_filename: Internal file name (auto-generated if not provided).
+            mime: MIME type of the document.
+            storage_bucket: Storage bucket name.
+            storage_object_key: Storage object key (auto-generated if not provided).
+
+        Returns:
+            The created Document ORM model.
+        """
+        unique_suffix = uuid4().hex[:8]
+
+        document = Document(
+            id=uuid4(),
+            internal_filename=internal_filename or f"test_document_{unique_suffix}.pdf",
+            mime=mime,
+            storage_bucket=storage_bucket,
+            storage_object_key=storage_object_key or f"documents/{unique_suffix}",
+            created_by=user.id,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(document)
+        await session.flush()
+        await session.refresh(document)
+        return document
+
+
+class InstrumentDocumentFactory:
+    """Factory for creating InstrumentDocument entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        instrument: Instrument,
+        document: Document,
+    ) -> InstrumentDocument:
+        """
+        Create an InstrumentDocument association entity in the database.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument to associate.
+            document: The Document to associate.
+
+        Returns:
+            The created InstrumentDocument ORM model.
+        """
+        instrument_document = InstrumentDocument(
+            id=uuid4(),
+            instrument_id=instrument.id,
+            document_id=document.id,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(instrument_document)
+        await session.flush()
+        await session.refresh(instrument_document)
+        return instrument_document
