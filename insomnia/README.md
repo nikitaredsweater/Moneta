@@ -11,6 +11,8 @@ This folder contains Insomnia API collections for testing the Moneta API.
 - **collections/auth_collection.yaml** - Authentication endpoints (`/v1/auth/*`)
 - **collections/user_collection.yaml** - User management endpoints (`/v1/user/*`)
 - **collections/company_collection.yaml** - Company management endpoints (`/v1/company/*`)
+- **collections/company_address_collection.yaml** - Company address endpoints (`/v1/company-address/*`)
+- **collections/instrument_collection.yaml** - Instrument management endpoints (`/v1/instrument/*`)
 
 ## How to Import
 
@@ -47,6 +49,8 @@ This folder contains Insomnia API collections for testing the Moneta API.
 | `test_password` | Test user password | `TestPassword123!` |
 | `test_user_id` | UUID for testing user endpoints | `` |
 | `test_company_id` | UUID for testing company endpoints | `` |
+| `test_instrument_id` | UUID for testing instrument endpoints | `` |
+| `test_document_id` | UUID for testing document association | `` |
 
 ## Auth Collection Endpoints
 
@@ -145,4 +149,110 @@ When fetching a company by ID, you can include related entities using the `?incl
 | `createdAtBefore` | date | Companies created before this date |
 | `sort` | string | Sort order (e.g., `-createdAt,legalName`) |
 | `limit` | int | Results per page (default: 50, max: 200) |
+| `offset` | int | Pagination offset (default: 0) |
+
+## Company Address Collection Endpoints
+
+**Note:** All company address endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Get All Company Addresses | GET | `/v1/company-address/` | Get all addresses | VIEW.COMPANY_ADDRESS |
+| Create Company Address - Registered | POST | `/v1/company-address/` | Create registered address | CREATE.COMPANY_ADDRESS |
+| Create Company Address - Billing | POST | `/v1/company-address/` | Create billing address | CREATE.COMPANY_ADDRESS |
+| Create Company Address - Office | POST | `/v1/company-address/` | Create office address | CREATE.COMPANY_ADDRESS |
+| Create Company Address - Shipping | POST | `/v1/company-address/` | Create shipping address | CREATE.COMPANY_ADDRESS |
+| Create Company Address - Other | POST | `/v1/company-address/` | Create other address type | CREATE.COMPANY_ADDRESS |
+| Create Company Address - International (UK) | POST | `/v1/company-address/` | Create international address | CREATE.COMPANY_ADDRESS |
+
+### Address Types
+
+- `REGISTERED` - Registered business address
+- `BILLING` - Billing/invoicing address
+- `OFFICE` - Office/headquarters address
+- `SHIPPING` - Shipping/delivery address
+- `OTHER` - Other address type
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | AddressType | One of: REGISTERED, BILLING, OFFICE, SHIPPING, OTHER |
+| `street` | string | Street address |
+| `city` | string | City name |
+| `postalCode` | string | Postal/ZIP code |
+| `country` | string | ISO 3166-1 alpha-2 country code (e.g., "US", "GB") |
+| `companyId` | UUID | Company this address belongs to |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | string | State/province (optional for some countries) |
+
+## Instrument Collection Endpoints
+
+**Note:** All instrument endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Search Instruments | POST | `/v1/instrument/search` | Search with filters | VIEW.INSTRUMENT |
+| Get Instrument by ID | GET | `/v1/instrument/{id}` | Get specific instrument | VIEW.INSTRUMENT |
+| Get Instrument with Documents | GET | `/v1/instrument/{id}?include=documents` | Get instrument with documents | VIEW.INSTRUMENT |
+| Create Instrument | POST | `/v1/instrument/` | Create new instrument | CREATE.INSTRUMENT |
+| Update Draft Instrument | PATCH | `/v1/instrument/{id}` | Update instrument in DRAFT status | UPDATE.INSTRUMENT |
+| Transition: Submit for Approval | POST | `/v1/instrument/{id}/transition` | DRAFT → PENDING_APPROVAL | UPDATE.INSTRUMENT |
+| Transition: Approve | POST | `/v1/instrument/{id}/transition` | PENDING_APPROVAL → ACTIVE | APPROVE.INSTRUMENT |
+| Transition: Reject | POST | `/v1/instrument/{id}/transition` | PENDING_APPROVAL → REJECTED | APPROVE.INSTRUMENT |
+| Associate Document | POST | `/v1/instrument/{id}/documents/{document_id}` | Link document to instrument | UPDATE.INSTRUMENT |
+
+### Instrument Status Values
+
+| Status | Description |
+|--------|-------------|
+| `DRAFT` | Initial state, can be edited |
+| `PENDING_APPROVAL` | Submitted for review |
+| `ACTIVE` | Approved and available |
+| `REJECTED` | Declined by reviewer |
+
+### Instrument Status Transitions
+
+| From | To | Required Permission |
+|------|-----|---------------------|
+| DRAFT | PENDING_APPROVAL | UPDATE.INSTRUMENT |
+| PENDING_APPROVAL | ACTIVE | APPROVE.INSTRUMENT |
+| PENDING_APPROVAL | REJECTED | APPROVE.INSTRUMENT |
+
+### Maturity Status Values
+
+- `NOT_MATURED` - Not yet matured
+- `MATURED` - Has reached maturity
+- `EXTENDED` - Maturity extended
+
+### Trading Status Values
+
+- `OPEN` - Open for trading
+- `HALTED` - Trading temporarily suspended
+- `CLOSED` - Trading closed
+
+### Instrument Search Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `name` | string | Partial match on instrument name |
+| `isin` | string | Partial match on ISIN code |
+| `status` | InstrumentStatus | Filter by status |
+| `maturityStatus` | MaturityStatus | Filter by maturity status |
+| `tradingStatus` | TradingStatus | Filter by trading status |
+| `issueDateAfter` | date | Instruments issued after this date |
+| `issueDateBefore` | date | Instruments issued before this date |
+| `maturityDateAfter` | date | Instruments maturing after this date |
+| `maturityDateBefore` | date | Instruments maturing before this date |
+| `faceValueMin` | decimal | Minimum face value |
+| `faceValueMax` | decimal | Maximum face value |
+| `interestRateMin` | decimal | Minimum interest rate |
+| `interestRateMax` | decimal | Maximum interest rate |
+| `companyId` | UUID | Filter by issuing company |
+| `sort` | string | Sort order (e.g., `-createdAt,name`) |
+| `limit` | int | Results per page (default: 50) |
 | `offset` | int | Pagination offset (default: 0) |

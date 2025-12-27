@@ -21,6 +21,8 @@ resources:
       test_password: "TestPassword123!"
       test_user_id: ""
       test_company_id: ""
+      test_instrument_id: ""
+      test_document_id: ""
     dataPropertyOrder:
       "&":
         - base_url
@@ -32,6 +34,8 @@ resources:
         - test_password
         - test_user_id
         - test_company_id
+        - test_instrument_id
+        - test_document_id
     color: "#7d69cb"
     isPrivate: false
     metaSortKey: 1703635200000
