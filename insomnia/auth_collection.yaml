@@ -1,0 +1,243 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_auth
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Auth API
+    description: Collection for Moneta authentication endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_base
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_local
+    parentId: env_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      test_email: "test@example.com"
+      test_password: "TestPassword123!"
+      admin_email: "admin@example.com"
+      admin_password: "password123"
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - test_email
+        - test_password
+        - admin_email
+        - admin_password
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Auth Folder
+  - _id: fld_auth
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Auth
+    description: "Authentication endpoints (/v1/auth)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Login Request
+  - _id: req_login
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: Login
+    description: |
+      Authenticate a user and receive a JWT access token.
+
+      Provide valid email and password to receive a bearer token that can be used for authenticated requests.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.test_email }}",
+          "password": "{{ _.test_password }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Admin
+  - _id: req_login_admin
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Admin"
+    description: |
+      Authenticate as an ADMIN user and receive a JWT access token.
+
+      Uses admin credentials to get a bearer token with admin privileges.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.admin_email }}",
+          "password": "{{ _.admin_password }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635199500
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Invalid Email
+  - _id: req_login_invalid_email
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Invalid Email (401)"
+    description: |
+      Test login with non-existent email.
+
+      Expected: 401 Unauthorized with InvalidCredentialsException
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "nonexistent@example.com",
+          "password": "AnyPassword123!"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Invalid Password
+  - _id: req_login_invalid_password
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Invalid Password (401)"
+    description: |
+      Test login with wrong password.
+
+      Expected: 401 Unauthorized with InvalidCredentialsException
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.test_email }}",
+          "password": "WrongPassword123!"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635198080
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Missing Fields
+  - _id: req_login_missing_fields
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Missing Fields (422)"
+    description: |
+      Test login with missing required fields.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "test@example.com"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
