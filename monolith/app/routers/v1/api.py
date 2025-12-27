@@ -7,6 +7,7 @@ from app import schemas
 from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
+from app.routers.v1.endpoints.ask import ask_router
 from app.routers.v1.endpoints.auth import auth_router
 from app.routers.v1.endpoints.bid import bid_router
 from app.routers.v1.endpoints.company import company_router
@@ -15,7 +16,12 @@ from app.routers.v1.endpoints.document import document_router
 from app.routers.v1.endpoints.instrument import instrument_router
 from app.routers.v1.endpoints.listing import listing_router
 from app.routers.v1.endpoints.user import user_router
-from app.security import Permission, has_permission, verify_password, create_access_token
+from app.security import (
+    Permission,
+    create_access_token,
+    has_permission,
+    verify_password,
+)
 from fastapi import APIRouter, Depends
 
 v1_router = APIRouter()
@@ -28,6 +34,7 @@ v1_router.include_router(auth_router, prefix='/auth')
 v1_router.include_router(document_router, prefix='/document')
 v1_router.include_router(listing_router, prefix='/listing')
 v1_router.include_router(bid_router, prefix='/bid')
+v1_router.include_router(ask_router, prefix='/ask')
 
 
 VIEW_ALL_DATA_PERMISSION = has_permission(

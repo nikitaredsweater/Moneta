@@ -53,15 +53,16 @@ os.environ["DATABASE_URL"] = _sync_url
 # JWT Key Setup - MUST happen before importing app.security or moneta_auth
 # =============================================================================
 
+
 def _generate_test_rsa_keys():
     """
     Generate RSA key pair for testing JWT token creation/verification.
 
     Returns a tuple of (private_key_pem, public_key_pem) as bytes.
     """
+    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.backends import default_backend
 
     # Generate a 2048-bit RSA key pair
     private_key = rsa.generate_private_key(
@@ -125,13 +126,16 @@ moneta_auth.jwt.tokens.jwt_keys = _MOCK_JWT_KEYS
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from app.enums import ActivationStatus, UserRole
 from app.models.base import Base
 from app.security import create_access_token
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 
 def _get_sync_database_url() -> str:
@@ -159,7 +163,9 @@ def _run_alembic_migrations() -> None:
     env = os.environ.copy()
     env["DATABASE_URL"] = sync_url
 
-    print(f"[TEST SETUP] Running Alembic migrations with DATABASE_URL: {sync_url}")
+    print(
+        f"[TEST SETUP] Running Alembic migrations with DATABASE_URL: {sync_url}"
+    )
 
     # Run alembic upgrade head from the monolith root directory
     result = subprocess.run(
@@ -232,13 +238,16 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
     # Clear repository instances cache to force new instances
     from app.repositories.base import BasePGRepository
+
     BasePGRepository._instances = {}
 
     # Run migrations once per session
     if not _migrations_run:
         # Drop all tables first to ensure clean state
         async with engine.begin() as conn:
-            await conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE;"))
+            await conn.execute(
+                text("DROP TABLE IF EXISTS alembic_version CASCADE;")
+            )
             await conn.run_sync(Base.metadata.drop_all)
 
         # Run Alembic migrations
@@ -247,9 +256,13 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     else:
         # Truncate all tables for test isolation
         async with engine.begin() as conn:
-            await conn.execute(text("SET session_replication_role = 'replica';"))
+            await conn.execute(
+                text("SET session_replication_role = 'replica';")
+            )
             for table in reversed(Base.metadata.sorted_tables):
-                await conn.execute(text(f'TRUNCATE TABLE "{table.name}" CASCADE;'))
+                await conn.execute(
+                    text(f'TRUNCATE TABLE "{table.name}" CASCADE;')
+                )
             await conn.execute(text("SET session_replication_role = 'origin';"))
 
     async with session_factory() as session:
@@ -333,16 +346,23 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     )
 
     # Import repository classes and app session
-    from app.repositories.user import UserRepository
+    from app.repositories.ask import AskRepository
+    from app.repositories.bid import BidRepository
     from app.repositories.company import CompanyRepository
     from app.repositories.company_address import CompanyAddressRepository
-    from app.repositories.instrument import InstrumentRepository
-    from app.repositories.instrument_public_payload import InstrumentPublicPayloadRepository
-    from app.repositories.instrument_ownership import InstrumentOwnershipRepository
-    from app.repositories.listing import ListingRepository
-    from app.repositories.bid import BidRepository
     from app.repositories.documents.document import DocumentRepository
-    from app.repositories.documents.instrument_document import InstrumentDocumentRepository
+    from app.repositories.documents.instrument_document import (
+        InstrumentDocumentRepository,
+    )
+    from app.repositories.instrument import InstrumentRepository
+    from app.repositories.instrument_ownership import (
+        InstrumentOwnershipRepository,
+    )
+    from app.repositories.instrument_public_payload import (
+        InstrumentPublicPayloadRepository,
+    )
+    from app.repositories.listing import ListingRepository
+    from app.repositories.user import UserRepository
     from app.utils.session import async_session as app_session
 
     # Create test repository instances with the test session factory
@@ -350,31 +370,47 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     test_company_repo = CompanyRepository(test_session_factory)
     test_company_address_repo = CompanyAddressRepository(test_session_factory)
     test_instrument_repo = InstrumentRepository(test_session_factory)
-    test_instrument_public_payload_repo = InstrumentPublicPayloadRepository(test_session_factory)
-    test_instrument_ownership_repo = InstrumentOwnershipRepository(test_session_factory)
+    test_instrument_public_payload_repo = InstrumentPublicPayloadRepository(
+        test_session_factory
+    )
+    test_instrument_ownership_repo = InstrumentOwnershipRepository(
+        test_session_factory
+    )
     test_listing_repo = ListingRepository(test_session_factory)
     test_bid_repo = BidRepository(test_session_factory)
+    test_ask_repo = AskRepository(test_session_factory)
     test_document_repo = DocumentRepository(test_session_factory)
-    test_instrument_document_repo = InstrumentDocumentRepository(test_session_factory)
+    test_instrument_document_repo = InstrumentDocumentRepository(
+        test_session_factory
+    )
 
     # Force each class to have its own _instances dict (not shared with base)
     UserRepository._instances = {app_session: test_user_repo}
     CompanyRepository._instances = {app_session: test_company_repo}
-    CompanyAddressRepository._instances = {app_session: test_company_address_repo}
+    CompanyAddressRepository._instances = {
+        app_session: test_company_address_repo
+    }
     InstrumentRepository._instances = {app_session: test_instrument_repo}
-    InstrumentPublicPayloadRepository._instances = {app_session: test_instrument_public_payload_repo}
-    InstrumentOwnershipRepository._instances = {app_session: test_instrument_ownership_repo}
+    InstrumentPublicPayloadRepository._instances = {
+        app_session: test_instrument_public_payload_repo
+    }
+    InstrumentOwnershipRepository._instances = {
+        app_session: test_instrument_ownership_repo
+    }
     ListingRepository._instances = {app_session: test_listing_repo}
     BidRepository._instances = {app_session: test_bid_repo}
+    AskRepository._instances = {app_session: test_ask_repo}
     DocumentRepository._instances = {app_session: test_document_repo}
-    InstrumentDocumentRepository._instances = {app_session: test_instrument_document_repo}
+    InstrumentDocumentRepository._instances = {
+        app_session: test_instrument_document_repo
+    }
 
     try:
         # JWT keys are already mocked at module level (see top of file)
         # Import app after repositories are set up
         from app.routers.v1.api import v1_router
-        from moneta_auth import JWTAuthMiddleware
         from fastapi import FastAPI
+        from moneta_auth import JWTAuthMiddleware
 
         # Create a minimal test app without the full lifespan
         test_app = FastAPI()
@@ -402,6 +438,7 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
         InstrumentOwnershipRepository._instances = {}
         ListingRepository._instances = {}
         BidRepository._instances = {}
+        AskRepository._instances = {}
         DocumentRepository._instances = {}
         InstrumentDocumentRepository._instances = {}
         await engine.dispose()

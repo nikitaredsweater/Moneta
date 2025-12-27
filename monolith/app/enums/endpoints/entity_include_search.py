@@ -42,3 +42,12 @@ class BidInclude(str, Enum):
     """
 
     LISTING = "listing"
+
+
+class AskInclude(str, Enum):
+    """
+    Entities that can be additionally searched for when looking up an ask
+    object.
+    """
+
+    LISTING = "listing"

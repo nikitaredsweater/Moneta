@@ -54,3 +54,9 @@ class Company(Base, BaseEntity):
         back_populates='bidder_company',
         cascade='all, delete-orphan',
     )
+
+    asks: Mapped[list['Ask']] = relationship(
+        'Ask',
+        back_populates='asker_company',
+        cascade='all, delete-orphan',
+    )

@@ -13,13 +13,16 @@ from app.enums import (
     AcquisitionReason,
     ActivationStatus,
     AddressType,
+    AskStatus,
     BidStatus,
+    ExecutionMode,
     InstrumentStatus,
     ListingStatus,
     MaturityStatus,
     TradingStatus,
     UserRole,
 )
+from app.models.ask import Ask
 from app.models.bid import Bid
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
@@ -486,10 +489,12 @@ class DocumentFactory:
 
         document = Document(
             id=uuid4(),
-            internal_filename=internal_filename or f"test_document_{unique_suffix}.pdf",
+            internal_filename=internal_filename
+            or f"test_document_{unique_suffix}.pdf",
             mime=mime,
             storage_bucket=storage_bucket,
-            storage_object_key=storage_object_key or f"documents/{unique_suffix}",
+            storage_object_key=storage_object_key
+            or f"documents/{unique_suffix}",
             created_by=user.id,
             created_at=datetime.utcnow(),
         )
@@ -900,4 +905,161 @@ class BidFactory:
             amount=amount,
             currency=currency,
             status=BidStatus.SELECTED,
+        )
+
+
+class AskFactory:
+    """Factory for creating Ask entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        listing: Listing,
+        asker_company: Company,
+        asker_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+        valid_until: Optional[datetime] = None,
+        execution_mode: ExecutionMode = ExecutionMode.MANUAL,
+        binding: bool = False,
+        status: AskStatus = AskStatus.ACTIVE,
+    ) -> Ask:
+        """
+        Create an Ask entity in the database.
+
+        Args:
+            session: The async database session.
+            listing: The Listing this ask is for.
+            asker_company: The Company making the ask (must be the listing owner).
+            asker_user: The User who created the ask.
+            amount: Ask amount (defaults to 10000.00).
+            currency: ISO 4217 currency code (defaults to USD).
+            valid_until: Optional ask expiration timestamp.
+            execution_mode: Execution mode (defaults to MANUAL).
+            binding: Whether the ask is binding (defaults to False).
+            status: Ask status (defaults to ACTIVE).
+
+        Returns:
+            The created Ask ORM model.
+        """
+        ask = Ask(
+            id=uuid4(),
+            listing_id=listing.id,
+            asker_company_id=asker_company.id,
+            asker_user_id=asker_user.id,
+            amount=amount,
+            currency=currency,
+            valid_until=valid_until,
+            execution_mode=execution_mode,
+            binding=binding,
+            status=status,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(ask)
+        await session.flush()
+        await session.refresh(ask)
+        return ask
+
+    @staticmethod
+    async def create_active(
+        session: AsyncSession,
+        listing: Listing,
+        asker_company: Company,
+        asker_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Ask:
+        """
+        Create an ACTIVE Ask.
+
+        Args:
+            session: The async database session.
+            listing: The Listing this ask is for.
+            asker_company: The Company making the ask.
+            asker_user: The User who created the ask.
+            amount: Ask amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created ACTIVE Ask ORM model.
+        """
+        return await AskFactory.create(
+            session,
+            listing,
+            asker_company,
+            asker_user,
+            amount=amount,
+            currency=currency,
+            status=AskStatus.ACTIVE,
+        )
+
+    @staticmethod
+    async def create_withdrawn(
+        session: AsyncSession,
+        listing: Listing,
+        asker_company: Company,
+        asker_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Ask:
+        """
+        Create a WITHDRAWN Ask.
+
+        Args:
+            session: The async database session.
+            listing: The Listing this ask is for.
+            asker_company: The Company making the ask.
+            asker_user: The User who created the ask.
+            amount: Ask amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created WITHDRAWN Ask ORM model.
+        """
+        return await AskFactory.create(
+            session,
+            listing,
+            asker_company,
+            asker_user,
+            amount=amount,
+            currency=currency,
+            status=AskStatus.WITHDRAWN,
+        )
+
+    @staticmethod
+    async def create_suspended(
+        session: AsyncSession,
+        listing: Listing,
+        asker_company: Company,
+        asker_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Ask:
+        """
+        Create a SUSPENDED Ask.
+
+        Args:
+            session: The async database session.
+            listing: The Listing this ask is for.
+            asker_company: The Company making the ask.
+            asker_user: The User who created the ask.
+            amount: Ask amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created SUSPENDED Ask ORM model.
+        """
+        return await AskFactory.create(
+            session,
+            listing,
+            asker_company,
+            asker_user,
+            amount=amount,
+            currency=currency,
+            status=AskStatus.SUSPENDED,
         )
