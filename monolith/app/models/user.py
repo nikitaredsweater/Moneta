@@ -2,7 +2,7 @@
 User ORM model
 """
 
-from app.enums import UserRole, ActivationStatus
+from app.enums import ActivationStatus, UserRole
 from app.models.base import Base, BaseEntity
 from sqlalchemy import Enum, ForeignKey, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -47,5 +47,11 @@ class User(Base, BaseEntity):
     bids: Mapped[list['Bid']] = relationship(
         'Bid',
         back_populates='bidder_user',
+        cascade='all, delete-orphan',
+    )
+
+    asks: Mapped[list['Ask']] = relationship(
+        'Ask',
+        back_populates='asker_user',
         cascade='all, delete-orphan',
     )

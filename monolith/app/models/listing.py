@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
+    from app.models.ask import Ask
     from app.models.bid import Bid
     from app.models.company import Company
     from app.models.instrument import Instrument
@@ -72,5 +73,10 @@ class Listing(Base, BaseEntity):
 
     bids: Mapped[List['Bid']] = relationship(
         'Bid',
+        back_populates='listing',
+    )
+
+    asks: Mapped[List['Ask']] = relationship(
+        'Ask',
         back_populates='listing',
     )

@@ -2,6 +2,7 @@
 This package contains the repositories for the application.
 """
 
+from app.repositories.ask import Ask, AskRepository
 from app.repositories.bid import Bid, BidRepository
 from app.repositories.company import Company, CompanyRepository
 from app.repositories.company_address import (
@@ -52,4 +53,6 @@ __all__ = [
     'Listing',
     'BidRepository',
     'Bid',
+    'AskRepository',
+    'Ask',
 ]
