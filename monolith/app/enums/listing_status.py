@@ -12,8 +12,10 @@ class ListingStatus(str, Enum):
     OPEN - Listing is active and available for trading
     WITHDRAWN - Listing was voluntarily withdrawn by the seller
     SUSPENDED - Listing was suspended by admin/platform
+    CLOSED - Listing has found a bidder and is closed
     """
 
     OPEN = 'OPEN'
     WITHDRAWN = 'WITHDRAWN'
     SUSPENDED = 'SUSPENDED'
+    CLOSED = 'CLOSED'
