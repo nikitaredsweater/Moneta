@@ -10,9 +10,11 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 from app.enums import (
+    AcquisitionReason,
     ActivationStatus,
     AddressType,
     InstrumentStatus,
+    ListingStatus,
     MaturityStatus,
     TradingStatus,
     UserRole,
@@ -22,7 +24,9 @@ from app.models.company_address import CompanyAddress
 from app.models.documents.document import Document
 from app.models.documents.instrument_document import InstrumentDocument
 from app.models.instrument import Instrument
+from app.models.instrument_ownership import InstrumentOwnership
 from app.models.instrument_public_payload import InstrumentPublicPayload
+from app.models.listing import Listing
 from app.models.user import User
 from app.security import encrypt_password
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -525,3 +529,222 @@ class InstrumentDocumentFactory:
         await session.flush()
         await session.refresh(instrument_document)
         return instrument_document
+
+
+class InstrumentOwnershipFactory:
+    """Factory for creating InstrumentOwnership entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        instrument: Instrument,
+        owner: Company,
+        *,
+        acquired_at: Optional[datetime] = None,
+        relinquished_at: Optional[datetime] = None,
+        acquisition_reason: AcquisitionReason = AcquisitionReason.ISSUANCE,
+    ) -> InstrumentOwnership:
+        """
+        Create an InstrumentOwnership entity in the database.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being owned.
+            owner: The Company that owns the instrument.
+            acquired_at: When ownership was acquired (defaults to now).
+            relinquished_at: When ownership was relinquished (None if still active).
+            acquisition_reason: Reason for acquiring ownership.
+
+        Returns:
+            The created InstrumentOwnership ORM model.
+        """
+        ownership = InstrumentOwnership(
+            id=uuid4(),
+            instrument_id=instrument.id,
+            owner_id=owner.id,
+            acquired_at=acquired_at or datetime.utcnow(),
+            relinquished_at=relinquished_at,
+            acquisition_reason=acquisition_reason,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(ownership)
+        await session.flush()
+        await session.refresh(ownership)
+        return ownership
+
+    @staticmethod
+    async def create_active(
+        session: AsyncSession,
+        instrument: Instrument,
+        owner: Company,
+        *,
+        acquisition_reason: AcquisitionReason = AcquisitionReason.ISSUANCE,
+    ) -> InstrumentOwnership:
+        """
+        Create an active (non-relinquished) InstrumentOwnership.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being owned.
+            owner: The Company that owns the instrument.
+            acquisition_reason: Reason for acquiring ownership.
+
+        Returns:
+            The created active InstrumentOwnership ORM model.
+        """
+        return await InstrumentOwnershipFactory.create(
+            session,
+            instrument,
+            owner,
+            acquisition_reason=acquisition_reason,
+            relinquished_at=None,
+        )
+
+
+class ListingFactory:
+    """Factory for creating Listing entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        instrument: Instrument,
+        seller_company: Company,
+        creator_user: User,
+        *,
+        status: ListingStatus = ListingStatus.OPEN,
+    ) -> Listing:
+        """
+        Create a Listing entity in the database.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being listed.
+            seller_company: The Company selling the instrument.
+            creator_user: The User who created the listing.
+            status: Listing status (defaults to OPEN).
+
+        Returns:
+            The created Listing ORM model.
+        """
+        listing = Listing(
+            id=uuid4(),
+            instrument_id=instrument.id,
+            seller_company_id=seller_company.id,
+            listing_creator_user_id=creator_user.id,
+            status=status,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(listing)
+        await session.flush()
+        await session.refresh(listing)
+        return listing
+
+    @staticmethod
+    async def create_open(
+        session: AsyncSession,
+        instrument: Instrument,
+        seller_company: Company,
+        creator_user: User,
+    ) -> Listing:
+        """
+        Create an OPEN Listing.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being listed.
+            seller_company: The Company selling the instrument.
+            creator_user: The User who created the listing.
+
+        Returns:
+            The created OPEN Listing ORM model.
+        """
+        return await ListingFactory.create(
+            session,
+            instrument,
+            seller_company,
+            creator_user,
+            status=ListingStatus.OPEN,
+        )
+
+    @staticmethod
+    async def create_withdrawn(
+        session: AsyncSession,
+        instrument: Instrument,
+        seller_company: Company,
+        creator_user: User,
+    ) -> Listing:
+        """
+        Create a WITHDRAWN Listing.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being listed.
+            seller_company: The Company selling the instrument.
+            creator_user: The User who created the listing.
+
+        Returns:
+            The created WITHDRAWN Listing ORM model.
+        """
+        return await ListingFactory.create(
+            session,
+            instrument,
+            seller_company,
+            creator_user,
+            status=ListingStatus.WITHDRAWN,
+        )
+
+    @staticmethod
+    async def create_suspended(
+        session: AsyncSession,
+        instrument: Instrument,
+        seller_company: Company,
+        creator_user: User,
+    ) -> Listing:
+        """
+        Create a SUSPENDED Listing.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being listed.
+            seller_company: The Company selling the instrument.
+            creator_user: The User who created the listing.
+
+        Returns:
+            The created SUSPENDED Listing ORM model.
+        """
+        return await ListingFactory.create(
+            session,
+            instrument,
+            seller_company,
+            creator_user,
+            status=ListingStatus.SUSPENDED,
+        )
+
+    @staticmethod
+    async def create_closed(
+        session: AsyncSession,
+        instrument: Instrument,
+        seller_company: Company,
+        creator_user: User,
+    ) -> Listing:
+        """
+        Create a CLOSED Listing.
+
+        Args:
+            session: The async database session.
+            instrument: The Instrument being listed.
+            seller_company: The Company selling the instrument.
+            creator_user: The User who created the listing.
+
+        Returns:
+            The created CLOSED Listing ORM model.
+        """
+        return await ListingFactory.create(
+            session,
+            instrument,
+            seller_company,
+            creator_user,
+            status=ListingStatus.CLOSED,
+        )

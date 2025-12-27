@@ -338,6 +338,10 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     from app.repositories.company_address import CompanyAddressRepository
     from app.repositories.instrument import InstrumentRepository
     from app.repositories.instrument_public_payload import InstrumentPublicPayloadRepository
+    from app.repositories.instrument_ownership import InstrumentOwnershipRepository
+    from app.repositories.listing import ListingRepository
+    from app.repositories.documents.document import DocumentRepository
+    from app.repositories.documents.instrument_document import InstrumentDocumentRepository
     from app.utils.session import async_session as app_session
 
     # Create test repository instances with the test session factory
@@ -346,6 +350,10 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     test_company_address_repo = CompanyAddressRepository(test_session_factory)
     test_instrument_repo = InstrumentRepository(test_session_factory)
     test_instrument_public_payload_repo = InstrumentPublicPayloadRepository(test_session_factory)
+    test_instrument_ownership_repo = InstrumentOwnershipRepository(test_session_factory)
+    test_listing_repo = ListingRepository(test_session_factory)
+    test_document_repo = DocumentRepository(test_session_factory)
+    test_instrument_document_repo = InstrumentDocumentRepository(test_session_factory)
 
     # Force each class to have its own _instances dict (not shared with base)
     UserRepository._instances = {app_session: test_user_repo}
@@ -353,6 +361,10 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     CompanyAddressRepository._instances = {app_session: test_company_address_repo}
     InstrumentRepository._instances = {app_session: test_instrument_repo}
     InstrumentPublicPayloadRepository._instances = {app_session: test_instrument_public_payload_repo}
+    InstrumentOwnershipRepository._instances = {app_session: test_instrument_ownership_repo}
+    ListingRepository._instances = {app_session: test_listing_repo}
+    DocumentRepository._instances = {app_session: test_document_repo}
+    InstrumentDocumentRepository._instances = {app_session: test_instrument_document_repo}
 
     try:
         # JWT keys are already mocked at module level (see top of file)
@@ -384,4 +396,8 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
         CompanyAddressRepository._instances = {}
         InstrumentRepository._instances = {}
         InstrumentPublicPayloadRepository._instances = {}
+        InstrumentOwnershipRepository._instances = {}
+        ListingRepository._instances = {}
+        DocumentRepository._instances = {}
+        InstrumentDocumentRepository._instances = {}
         await engine.dispose()

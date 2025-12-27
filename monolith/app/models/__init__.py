@@ -16,6 +16,7 @@ from app.models.documents.instrument_document import InstrumentDocument
 from app.models.instrument import Instrument
 from app.models.instrument_ownership import InstrumentOwnership
 from app.models.instrument_public_payload import InstrumentPublicPayload
+from app.models.listing import Listing
 from app.models.user import User
 from sqlalchemy import MetaData
 from sqlalchemy import exc as sa_exc
@@ -27,6 +28,7 @@ __all__ = [
     'InstrumentPublicPayload',
     'InstrumentDocument',
     'InstrumentOwnership',
+    'Listing',
 ]
 
 
@@ -50,4 +52,5 @@ with warnings.catch_warnings():
         InstrumentPublicPayload.metadata,
         InstrumentDocument.metadata,
         InstrumentOwnership.metadata,
+        Listing.metadata,
     )

@@ -24,3 +24,12 @@ class InstrumentInclude(str, Enum):
     """
 
     DOCUMENTS = "documents"
+
+
+class ListingInclude(str, Enum):
+    """
+    Entities that can be additionally searched for when looking up a listing
+    object.
+    """
+
+    INSTRUMENT = "instrument"
