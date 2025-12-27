@@ -43,3 +43,9 @@ class User(Base, BaseEntity):
         back_populates='listing_creator',
         cascade='all, delete-orphan',
     )
+
+    bids: Mapped[list['Bid']] = relationship(
+        'Bid',
+        back_populates='bidder_user',
+        cascade='all, delete-orphan',
+    )

@@ -13,12 +13,14 @@ from app.enums import (
     AcquisitionReason,
     ActivationStatus,
     AddressType,
+    BidStatus,
     InstrumentStatus,
     ListingStatus,
     MaturityStatus,
     TradingStatus,
     UserRole,
 )
+from app.models.bid import Bid
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
 from app.models.documents.document import Document
@@ -747,4 +749,155 @@ class ListingFactory:
             seller_company,
             creator_user,
             status=ListingStatus.CLOSED,
+        )
+
+
+class BidFactory:
+    """Factory for creating Bid entities in the test database."""
+
+    @staticmethod
+    async def create(
+        session: AsyncSession,
+        listing: Listing,
+        bidder_company: Company,
+        bidder_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+        valid_until: Optional[datetime] = None,
+        status: BidStatus = BidStatus.PENDING,
+    ) -> Bid:
+        """
+        Create a Bid entity in the database.
+
+        Args:
+            session: The async database session.
+            listing: The Listing being bid on.
+            bidder_company: The Company making the bid.
+            bidder_user: The User who created the bid.
+            amount: Bid amount (defaults to 10000.00).
+            currency: ISO 4217 currency code (defaults to USD).
+            valid_until: Optional bid expiration timestamp.
+            status: Bid status (defaults to PENDING).
+
+        Returns:
+            The created Bid ORM model.
+        """
+        bid = Bid(
+            id=uuid4(),
+            listing_id=listing.id,
+            bidder_company_id=bidder_company.id,
+            bidder_user_id=bidder_user.id,
+            amount=amount,
+            currency=currency,
+            valid_until=valid_until,
+            status=status,
+            created_at=datetime.utcnow(),
+        )
+
+        session.add(bid)
+        await session.flush()
+        await session.refresh(bid)
+        return bid
+
+    @staticmethod
+    async def create_pending(
+        session: AsyncSession,
+        listing: Listing,
+        bidder_company: Company,
+        bidder_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Bid:
+        """
+        Create a PENDING Bid.
+
+        Args:
+            session: The async database session.
+            listing: The Listing being bid on.
+            bidder_company: The Company making the bid.
+            bidder_user: The User who created the bid.
+            amount: Bid amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created PENDING Bid ORM model.
+        """
+        return await BidFactory.create(
+            session,
+            listing,
+            bidder_company,
+            bidder_user,
+            amount=amount,
+            currency=currency,
+            status=BidStatus.PENDING,
+        )
+
+    @staticmethod
+    async def create_withdrawn(
+        session: AsyncSession,
+        listing: Listing,
+        bidder_company: Company,
+        bidder_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Bid:
+        """
+        Create a WITHDRAWN Bid.
+
+        Args:
+            session: The async database session.
+            listing: The Listing being bid on.
+            bidder_company: The Company making the bid.
+            bidder_user: The User who created the bid.
+            amount: Bid amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created WITHDRAWN Bid ORM model.
+        """
+        return await BidFactory.create(
+            session,
+            listing,
+            bidder_company,
+            bidder_user,
+            amount=amount,
+            currency=currency,
+            status=BidStatus.WITHDRAWN,
+        )
+
+    @staticmethod
+    async def create_selected(
+        session: AsyncSession,
+        listing: Listing,
+        bidder_company: Company,
+        bidder_user: User,
+        *,
+        amount: float = 10000.00,
+        currency: str = "USD",
+    ) -> Bid:
+        """
+        Create a SELECTED Bid.
+
+        Args:
+            session: The async database session.
+            listing: The Listing being bid on.
+            bidder_company: The Company making the bid.
+            bidder_user: The User who created the bid.
+            amount: Bid amount.
+            currency: ISO 4217 currency code.
+
+        Returns:
+            The created SELECTED Bid ORM model.
+        """
+        return await BidFactory.create(
+            session,
+            listing,
+            bidder_company,
+            bidder_user,
+            amount=amount,
+            currency=currency,
+            status=BidStatus.SELECTED,
         )

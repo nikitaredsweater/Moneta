@@ -33,3 +33,12 @@ class ListingInclude(str, Enum):
     """
 
     INSTRUMENT = "instrument"
+
+
+class BidInclude(str, Enum):
+    """
+    Entities that can be additionally searched for when looking up a bid
+    object.
+    """
+
+    LISTING = "listing"
