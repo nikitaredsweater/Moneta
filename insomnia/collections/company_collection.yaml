@@ -1,0 +1,704 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_company
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Company API
+    description: Collection for Moneta company management endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_company_base
+    parentId: wrk_moneta_company
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_company_local
+    parentId: env_company_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_company_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_company_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Company Folder
+  - _id: fld_company
+    parentId: wrk_moneta_company
+    modified: 1703635200000
+    created: 1703635200000
+    name: Company
+    description: "Company management endpoints (/v1/company)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Get All Companies
+  - _id: req_get_all_companies
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/"
+    name: "Get All Companies"
+    description: |
+      Get all companies in the system.
+
+      Required Permission: VIEW.COMPANY
+
+      Returns a list of all company objects.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Companies
+  - _id: req_search_companies
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
+    name: "Search Companies"
+    description: |
+      Search companies with filters, pagination, and sorting.
+
+      Required Permission: VIEW.COMPANY
+
+      Filters (all optional):
+      - legalName: partial match (ilike)
+      - tradeName: partial match (ilike)
+      - registrationNumber: partial match (ilike)
+      - incorporationDateAfter: date (YYYY-MM-DD)
+      - incorporationDateBefore: date (YYYY-MM-DD)
+      - createdAtAfter: date (YYYY-MM-DD)
+      - createdAtBefore: date (YYYY-MM-DD)
+
+      Pagination & Sorting:
+      - sort: e.g. "-createdAt,legalName" (prefix with - for desc)
+      - limit: 1-200 (default 50)
+      - offset: 0+ (default 0)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Companies with Filters
+  - _id: req_search_companies_filtered
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
+    name: "Search Companies - With Filters"
+    description: |
+      Search companies with various filters applied.
+
+      Required Permission: VIEW.COMPANY
+
+      Example with legal name and date filters.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "legalName": "Corp",
+          "incorporationDateAfter": "2020-01-01",
+          "limit": 10,
+          "offset": 0,
+          "sort": "-incorporationDate"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company by ID - No Includes
+  - _id: req_get_company_by_id
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company by ID"
+    description: |
+      Get a specific company by ID without any includes.
+
+      Required Permission: VIEW.COMPANY
+
+      Set the test_company_id environment variable to a valid company UUID.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Addresses Include
+  - _id: req_get_company_include_addresses
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Addresses"
+    description: |
+      Get a company with its addresses included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=addresses
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: addresses
+        id: param_include_addresses
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Users Include
+  - _id: req_get_company_include_users
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Users"
+    description: |
+      Get a company with its users included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=users
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: users
+        id: param_include_users
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Instruments Include
+  - _id: req_get_company_include_instruments
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Instruments"
+    description: |
+      Get a company with its instruments included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=instruments
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: instruments
+        id: param_include_instruments
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Addresses + Users
+  - _id: req_get_company_include_addresses_users
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Addresses + Users"
+    description: |
+      Get a company with addresses and users included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=addresses,users
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: addresses,users
+        id: param_include_addresses_users
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Addresses + Instruments
+  - _id: req_get_company_include_addresses_instruments
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Addresses + Instruments"
+    description: |
+      Get a company with addresses and instruments included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=addresses,instruments
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: addresses,instruments
+        id: param_include_addresses_instruments
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635192000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with Users + Instruments
+  - _id: req_get_company_include_users_instruments
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include Users + Instruments"
+    description: |
+      Get a company with users and instruments included.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=users,instruments
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: users,instruments
+        id: param_include_users_instruments
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635191000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Company with All Includes
+  - _id: req_get_company_include_all
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Include All"
+    description: |
+      Get a company with all available includes.
+
+      Required Permission: VIEW.COMPANY
+
+      Query param: ?include=addresses,users,instruments
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: addresses,users,instruments
+        id: param_include_all
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635190000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company
+  - _id: req_create_company
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/"
+    name: "Create Company"
+    description: |
+      Create a new company in the system.
+
+      Required Permission: CREATE.COMPANY (ADMIN only)
+
+      Required fields:
+      - legalName: official company name
+      - registrationNumber: company registration number
+      - incorporationDate: date of incorporation (YYYY-MM-DD)
+
+      Optional fields:
+      - tradeName: trading/brand name
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "legalName": "New Company LLC",
+          "tradeName": "NewCo",
+          "registrationNumber": "REG-12345",
+          "incorporationDate": "2024-01-15"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635189000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company - Minimal
+  - _id: req_create_company_minimal
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/"
+    name: "Create Company - Minimal"
+    description: |
+      Create a company with only required fields.
+
+      Required Permission: CREATE.COMPANY (ADMIN only)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "legalName": "Minimal Company Inc",
+          "registrationNumber": "MIN-99999",
+          "incorporationDate": "2023-06-01"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635188000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_company_errors
+    parentId: wrk_moneta_company
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Get Company - Not Found (404)
+  - _id: req_get_company_not_found
+    parentId: fld_company_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/00000000-0000-0000-0000-000000000000"
+    name: "Get Company - Not Found (404)"
+    description: |
+      Test getting a company that doesn't exist.
+
+      Expected: 404 Not Found
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company - Missing Fields (422)
+  - _id: req_create_company_missing_fields
+    parentId: fld_company_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/"
+    name: "Create Company - Missing Fields (422)"
+    description: |
+      Test creating a company with missing required fields.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "legalName": "Incomplete Company"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_get_companies_no_auth
+    parentId: fld_company_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/"
+    name: "Get All Companies - No Auth (401)"
+    description: |
+      Test accessing companies endpoint without authentication.
+
+      Expected: 401 Unauthorized
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Invalid Include Parameter
+  - _id: req_get_company_invalid_include
+    parentId: fld_company_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
+    name: "Get Company - Invalid Include (422)"
+    description: |
+      Test getting a company with an invalid include parameter.
+
+      Expected: 422 Unprocessable Entity
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: invalid_relation
+        id: param_invalid_include
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635097000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

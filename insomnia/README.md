@@ -4,9 +4,13 @@ This folder contains Insomnia API collections for testing the Moneta API.
 
 ## Files
 
-- **global_environment.yaml** - Global environment with shared variables (import FIRST)
-- **auth_collection.yaml** - Authentication endpoints (`/v1/auth/*`)
-- **user_collection.yaml** - User management endpoints (`/v1/user/*`)
+### Environments
+- **environments/global_environment.yaml** - Global environment with shared variables (import FIRST)
+
+### Collections
+- **collections/auth_collection.yaml** - Authentication endpoints (`/v1/auth/*`)
+- **collections/user_collection.yaml** - User management endpoints (`/v1/user/*`)
+- **collections/company_collection.yaml** - Company management endpoints (`/v1/company/*`)
 
 ## How to Import
 
@@ -20,7 +24,7 @@ This folder contains Insomnia API collections for testing the Moneta API.
 
 ### Step 2: Import Collections
 
-1. Import `auth_collection.yaml` and `user_collection.yaml`
+1. Import all collection files from `collections/` folder
 2. For each collection, go to **Manage Environments**
 3. Set the base environment to inherit from **Moneta Global**
 
@@ -97,3 +101,48 @@ The `admin_token` variable is in the global environment, so it's shared across a
 - `INACTIVE` - Account is inactive
 - `PENDING` - Account is pending activation
 - `SUSPENDED` - Account is suspended
+
+## Company Collection Endpoints
+
+**Note:** All company endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Get All Companies | GET | `/v1/company/` | Get all companies | VIEW.COMPANY |
+| Search Companies | POST | `/v1/company/search` | Search with filters | VIEW.COMPANY |
+| Get Company by ID | GET | `/v1/company/{id}` | Get specific company | VIEW.COMPANY |
+| Create Company | POST | `/v1/company/` | Create new company | CREATE.COMPANY |
+
+### Company Include Options
+
+When fetching a company by ID, you can include related entities using the `?include=` query parameter:
+
+| Include | Description |
+|---------|-------------|
+| `addresses` | Company addresses |
+| `users` | Users belonging to the company |
+| `instruments` | Instruments issued by the company |
+
+**Examples:**
+- `?include=addresses` - Include addresses only
+- `?include=users` - Include users only
+- `?include=instruments` - Include instruments only
+- `?include=addresses,users` - Include addresses and users
+- `?include=addresses,instruments` - Include addresses and instruments
+- `?include=users,instruments` - Include users and instruments
+- `?include=addresses,users,instruments` - Include all
+
+### Company Search Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `legalName` | string | Partial match on legal name |
+| `tradeName` | string | Partial match on trade name |
+| `registrationNumber` | string | Partial match on registration number |
+| `incorporationDateAfter` | date | Companies incorporated after this date |
+| `incorporationDateBefore` | date | Companies incorporated before this date |
+| `createdAtAfter` | date | Companies created after this date |
+| `createdAtBefore` | date | Companies created before this date |
+| `sort` | string | Sort order (e.g., `-createdAt,legalName`) |
+| `limit` | int | Results per page (default: 50, max: 200) |
+| `offset` | int | Pagination offset (default: 0) |
