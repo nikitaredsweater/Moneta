@@ -2,38 +2,47 @@
 
 This folder contains Insomnia API collections for testing the Moneta API.
 
-## Collections
+## Files
 
+- **global_environment.yaml** - Global environment with shared variables (import FIRST)
 - **auth_collection.yaml** - Authentication endpoints (`/v1/auth/*`)
+- **user_collection.yaml** - User management endpoints (`/v1/user/*`)
 
 ## How to Import
+
+### Step 1: Import the Global Environment (do this first!)
 
 1. Open Insomnia
 2. Click on the **Import** button (or `Ctrl+I` / `Cmd+I`)
 3. Select **From File**
-4. Navigate to this folder and select the desired `.yaml` file
-5. Click **Import**
+4. Import `global_environment.yaml`
+5. This creates the **Moneta Global** environment with all shared variables
 
-## Environments
+### Step 2: Import Collections
 
-Each collection includes environments for different setups:
+1. Import `auth_collection.yaml` and `user_collection.yaml`
+2. For each collection, go to **Manage Environments**
+3. Set the base environment to inherit from **Moneta Global**
 
-### Base Environment
-- `base_url`: `http://localhost:8000`
-- `api_version`: `v1`
+### Step 3: Activate the Global Environment
 
-### Local Development
-- Inherits from Base Environment
-- `test_email`: `test@example.com`
-- `test_password`: `TestPassword123!`
+1. Click the environment dropdown (top-left of any collection)
+2. Select **Moneta Global** as your active environment
+3. All collections will now share the same variables
 
-## Customizing Environments
+## Global Environment Variables
 
-After importing, you can modify environment variables:
-
-1. Click on the environment dropdown (top-left)
-2. Select **Manage Environments**
-3. Edit the values as needed for your local setup
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `base_url` | API base URL | `http://localhost:8080` |
+| `api_version` | API version | `v1` |
+| `admin_email` | Admin login email | `admin@example.com` |
+| `admin_password` | Admin login password | `password123` |
+| `admin_token` | JWT token (set after login) | `` |
+| `test_email` | Test user email | `test@example.com` |
+| `test_password` | Test user password | `TestPassword123!` |
+| `test_user_id` | UUID for testing user endpoints | `` |
+| `test_company_id` | UUID for testing company endpoints | `` |
 
 ## Auth Collection Endpoints
 
@@ -46,13 +55,45 @@ After importing, you can modify environment variables:
 
 ## Using the Token
 
-After a successful login, copy the `access_token` from the response and use it in other requests:
+After a successful admin login, copy the `access_token` from the response and set it in the `admin_token` environment variable:
 
-1. In any authenticated request, go to the **Auth** tab
-2. Select **Bearer Token**
-3. Paste the token value
+1. Run the **Login - Admin** request
+2. Copy the `access_token` from the response
+3. Go to **Manage Environments** (click environment dropdown, top-left)
+4. Paste the token into the `admin_token` field
+5. All authenticated requests will now use this token automatically
 
-Or add a header manually:
-```
-Authorization: Bearer <your_token_here>
-```
+The `admin_token` variable is in the global environment, so it's shared across all collections.
+
+## User Collection Endpoints
+
+**Note:** All user endpoints require Bearer token authentication. Run the Admin Login from auth_collection first and set the `admin_token` environment variable.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Get All Users | GET | `/v1/user/` | Get all users | VIEW.ALL_USERS |
+| Search Users | POST | `/v1/user/search` | Search with filters | VIEW.ALL_USERS |
+| Get User by ID | GET | `/v1/user/{id}` | Get specific user | VIEW.USER |
+| Create User | POST | `/v1/user/` | Create new user | CREATE.USER |
+| Patch User | PATCH | `/v1/user/{id}` | Update user fields | UPDATE.USER |
+| Delete User | DELETE | `/v1/user/{id}` | Delete a user | DELETE.USER |
+
+### User Collection Environment Variables
+
+- `admin_token`: JWT token from admin login (required for all authenticated requests)
+- `test_user_id`: UUID of a user to test GET/PATCH/DELETE operations
+- `test_company_id`: UUID of a company for creating users
+
+### Available Roles
+
+- `ADMIN` - Full system access
+- `BUYER` - Can purchase instruments
+- `SELLER` - Can sell instruments
+- `ISSUER` - Can issue instruments
+
+### Available Account Statuses
+
+- `ACTIVE` - Account is active
+- `INACTIVE` - Account is inactive
+- `PENDING` - Account is pending activation
+- `SUSPENDED` - Account is suspended

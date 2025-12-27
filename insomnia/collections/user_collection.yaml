@@ -1,0 +1,588 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_user
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta User API
+    description: Collection for Moneta user management endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_user_base
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_user_local
+    parentId: env_user_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_user_id: ""
+      test_company_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_user_id
+        - test_company_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # User Folder
+  - _id: fld_user
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: User
+    description: "User management endpoints (/v1/user)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Get All Users
+  - _id: req_get_all_users
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Get All Users"
+    description: |
+      Get all users in the system.
+
+      Required Permission: VIEW.ALL_USERS (ADMIN only)
+
+      Returns a list of all user objects.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Users
+  - _id: req_search_users
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/search"
+    name: "Search Users"
+    description: |
+      Search users with filters, pagination, and sorting.
+
+      Required Permission: VIEW.ALL_USERS (ADMIN only)
+
+      Filters (all optional):
+      - email: partial match (ilike)
+      - firstName: partial match (ilike)
+      - lastName: partial match (ilike)
+      - role: exact match (ADMIN, BUYER, SELLER, ISSUER)
+      - companyId: exact match (UUID)
+      - createdAtAfter: date (YYYY-MM-DD)
+      - createdAtBefore: date (YYYY-MM-DD)
+
+      Pagination & Sorting:
+      - sort: e.g. "-createdAt,firstName" (prefix with - for desc)
+      - limit: 1-200 (default 50)
+      - offset: 0+ (default 0)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Users with Filters
+  - _id: req_search_users_filtered
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/search"
+    name: "Search Users - With Filters"
+    description: |
+      Search users with various filters applied.
+
+      Required Permission: VIEW.ALL_USERS (ADMIN only)
+
+      Example with role and email filters.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "role": "ISSUER",
+          "email": "test",
+          "limit": 10,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get User by ID
+  - _id: req_get_user_by_id
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Get User by ID"
+    description: |
+      Get a specific user by their ID.
+
+      Required Permission: VIEW.USER
+
+      Set the test_user_id environment variable to a valid user UUID.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User
+  - _id: req_create_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User"
+    description: |
+      Create a new user in the system.
+
+      Required Permission: CREATE.USER (ADMIN only)
+
+      Required fields:
+      - email: valid email address
+      - firstName: user's first name
+      - lastName: user's last name
+      - password: user's password
+      - companyId: UUID of the company the user belongs to
+      - role: one of ADMIN, BUYER, SELLER, ISSUER
+
+      Set test_company_id environment variable to a valid company UUID.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "newuser@example.com",
+          "firstName": "John",
+          "lastName": "Doe",
+          "password": "SecurePassword123!",
+          "companyId": "{{ _.test_company_id }}",
+          "role": "ISSUER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User
+  - _id: req_patch_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User"
+    description: |
+      Update user fields. Only pass fields you want to update.
+
+      Required Permission: UPDATE.USER
+      Restriction: Can only update users from the same company.
+
+      Optional fields:
+      - email: new email address
+      - firstName: new first name
+      - lastName: new last name
+      - accountStatus: ACTIVE, INACTIVE, PENDING, SUSPENDED
+      - role: ADMIN, BUYER, SELLER, ISSUER
+
+      Set test_user_id environment variable to a valid user UUID.
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "firstName": "Jane",
+          "lastName": "Smith"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User - Change Role
+  - _id: req_patch_user_role
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User - Change Role"
+    description: |
+      Update a user's role.
+
+      Required Permission: UPDATE.USER
+      Restriction: Can only update users from the same company.
+
+      Available roles: ADMIN, BUYER, SELLER, ISSUER
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "role": "BUYER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User - Change Status
+  - _id: req_patch_user_status
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User - Change Status"
+    description: |
+      Update a user's account status.
+
+      Required Permission: UPDATE.USER
+      Restriction: Can only update users from the same company.
+
+      Available statuses: ACTIVE, INACTIVE, PENDING, SUSPENDED
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "accountStatus": "ACTIVE"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Delete User
+  - _id: req_delete_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Delete User"
+    description: |
+      Delete a user from the system.
+
+      Required Permission: DELETE.USER
+      Restriction: Can only delete users from the same company.
+
+      WARNING: This action is irreversible!
+
+      Set test_user_id environment variable to a valid user UUID.
+    method: DELETE
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635192000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_user_errors
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Get User - Not Found (404)
+  - _id: req_get_user_not_found
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/00000000-0000-0000-0000-000000000000"
+    name: "Get User - Not Found (404)"
+    description: |
+      Test getting a user that doesn't exist.
+
+      Expected: 404 Not Found or null response
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User - Duplicate Email (409)
+  - _id: req_create_user_duplicate
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User - Duplicate Email (409)"
+    description: |
+      Test creating a user with an email that already exists.
+
+      Expected: 409 Conflict (EntityAlreadyExistsException)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "admin@example.com",
+          "firstName": "Duplicate",
+          "lastName": "User",
+          "password": "Password123!",
+          "companyId": "{{ _.test_company_id }}",
+          "role": "ISSUER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User - Missing Fields (422)
+  - _id: req_create_user_missing_fields
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User - Missing Fields (422)"
+    description: |
+      Test creating a user with missing required fields.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "incomplete@example.com"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_get_users_no_auth
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Get All Users - No Auth (401)"
+    description: |
+      Test accessing users endpoint without authentication.
+
+      Expected: 401 Unauthorized
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635097000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
