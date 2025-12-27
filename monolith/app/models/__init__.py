@@ -8,6 +8,7 @@ with schemas module.
 
 import warnings
 
+from app.models.bid import Bid
 from app.models.company import Company
 from app.models.company_address import CompanyAddress
 from app.models.documents.document import Document
@@ -29,6 +30,7 @@ __all__ = [
     'InstrumentDocument',
     'InstrumentOwnership',
     'Listing',
+    'Bid',
 ]
 
 
@@ -53,4 +55,5 @@ with warnings.catch_warnings():
         InstrumentDocument.metadata,
         InstrumentOwnership.metadata,
         Listing.metadata,
+        Bid.metadata,
     )

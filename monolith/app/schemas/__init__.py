@@ -7,6 +7,14 @@ with models module.
 """
 
 from app.schemas.base import MonetaID
+from app.schemas.bid import (
+    Bid,
+    BidCreate,
+    BidCreateInternal,
+    BidFilters,
+    BidStatusUpdate,
+    BidWithListing,
+)
 from app.schemas.company import (
     Company,
     CompanyCreate,
@@ -93,7 +101,6 @@ __all__ = [
     'InstrumentDocumentCreate',
     'InstrumentDocumentWithDocument',
     'InstrumentIncludes',
-    'MonetaID',
     'InstrumentPublicPayloadFull',
     'InstrumentPublicPayloadCreate',
     'InstrumentPublicPayloadUpdate',
@@ -107,4 +114,10 @@ __all__ = [
     'ListingFilters',
     'ListingStatusUpdate',
     'ListingWithInstrument',
+    'Bid',
+    'BidCreate',
+    'BidCreateInternal',
+    'BidFilters',
+    'BidStatusUpdate',
+    'BidWithListing',
 ]

@@ -8,6 +8,7 @@ from app.dependencies import get_current_user
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
 from app.routers.v1.endpoints.auth import auth_router
+from app.routers.v1.endpoints.bid import bid_router
 from app.routers.v1.endpoints.company import company_router
 from app.routers.v1.endpoints.company_address import company_address_router
 from app.routers.v1.endpoints.document import document_router
@@ -26,6 +27,7 @@ v1_router.include_router(instrument_router, prefix='/instrument')
 v1_router.include_router(auth_router, prefix='/auth')
 v1_router.include_router(document_router, prefix='/document')
 v1_router.include_router(listing_router, prefix='/listing')
+v1_router.include_router(bid_router, prefix='/bid')
 
 
 VIEW_ALL_DATA_PERMISSION = has_permission(

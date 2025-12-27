@@ -11,7 +11,13 @@ from moneta_auth import (
 # Local enums specific to monolith
 from app.enums.acquisition_reason import AcquisitionReason
 from app.enums.address_types import AddressType
-from app.enums.endpoints.entity_include_search import CompanyInclude, InstrumentInclude, ListingInclude
+from app.enums.bid_status import BidStatus
+from app.enums.endpoints.entity_include_search import (
+    BidInclude,
+    CompanyInclude,
+    InstrumentInclude,
+    ListingInclude,
+)
 from app.enums.instrument_status import (
     InstrumentStatus,
     MaturityStatus,
@@ -33,6 +39,8 @@ __all__ = [
     'CompanyInclude',
     'InstrumentInclude',
     'ListingInclude',
+    'BidInclude',
     'AcquisitionReason',
     'ListingStatus',
+    'BidStatus',
 ]

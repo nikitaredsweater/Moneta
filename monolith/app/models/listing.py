@@ -3,7 +3,7 @@ Listing ORM model
 Represents an instrument that is listed for trading on the platform.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from app.enums import ListingStatus
 from app.models.base import Base, BaseEntity
@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
+    from app.models.bid import Bid
     from app.models.company import Company
     from app.models.instrument import Instrument
     from app.models.user import User
@@ -67,4 +68,9 @@ class Listing(Base, BaseEntity):
     listing_creator: Mapped['User'] = relationship(
         'User',
         back_populates='listings',
+    )
+
+    bids: Mapped[List['Bid']] = relationship(
+        'Bid',
+        back_populates='listing',
     )

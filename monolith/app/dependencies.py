@@ -5,7 +5,7 @@ Dependencies module
 from typing import Generator, Optional, Set
 from uuid import UUID
 
-from app.enums import CompanyInclude, InstrumentInclude, ListingInclude
+from app.enums import BidInclude, CompanyInclude, InstrumentInclude, ListingInclude
 from app.repositories.user import User
 from app.utils.minio_client import minio_client
 from fastapi import HTTPException, Query, Request, status
@@ -214,6 +214,37 @@ def parse_listing_includes(
 
     mapping = {
         'instrument': ListingInclude.INSTRUMENT,
+    }
+
+    for part in raw_parts:
+        if part in mapping:
+            includes.add(mapping[part])
+        # silently ignore unknown values
+
+    return includes
+
+
+def parse_bid_includes(
+    include: Optional[str] = Query(
+        None,
+        description='Comma-separated list of related entities to include. '
+        'Allowed: listing',
+    ),
+) -> Set[BidInclude]:
+    """
+    Set of additional entities that a user requested to be retrieved with
+    every bid they are searching
+    """
+    if not include:
+        return set()
+
+    raw_parts = [
+        part.strip().lower() for part in include.split(',') if part.strip()
+    ]
+    includes: Set[BidInclude] = set()
+
+    mapping = {
+        'listing': BidInclude.LISTING,
     }
 
     for part in raw_parts:

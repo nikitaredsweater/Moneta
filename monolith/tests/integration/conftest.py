@@ -340,6 +340,7 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     from app.repositories.instrument_public_payload import InstrumentPublicPayloadRepository
     from app.repositories.instrument_ownership import InstrumentOwnershipRepository
     from app.repositories.listing import ListingRepository
+    from app.repositories.bid import BidRepository
     from app.repositories.documents.document import DocumentRepository
     from app.repositories.documents.instrument_document import InstrumentDocumentRepository
     from app.utils.session import async_session as app_session
@@ -352,6 +353,7 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     test_instrument_public_payload_repo = InstrumentPublicPayloadRepository(test_session_factory)
     test_instrument_ownership_repo = InstrumentOwnershipRepository(test_session_factory)
     test_listing_repo = ListingRepository(test_session_factory)
+    test_bid_repo = BidRepository(test_session_factory)
     test_document_repo = DocumentRepository(test_session_factory)
     test_instrument_document_repo = InstrumentDocumentRepository(test_session_factory)
 
@@ -363,6 +365,7 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
     InstrumentPublicPayloadRepository._instances = {app_session: test_instrument_public_payload_repo}
     InstrumentOwnershipRepository._instances = {app_session: test_instrument_ownership_repo}
     ListingRepository._instances = {app_session: test_listing_repo}
+    BidRepository._instances = {app_session: test_bid_repo}
     DocumentRepository._instances = {app_session: test_document_repo}
     InstrumentDocumentRepository._instances = {app_session: test_instrument_document_repo}
 
@@ -398,6 +401,7 @@ async def test_client(db_session) -> AsyncGenerator[AsyncClient, None]:
         InstrumentPublicPayloadRepository._instances = {}
         InstrumentOwnershipRepository._instances = {}
         ListingRepository._instances = {}
+        BidRepository._instances = {}
         DocumentRepository._instances = {}
         InstrumentDocumentRepository._instances = {}
         await engine.dispose()
