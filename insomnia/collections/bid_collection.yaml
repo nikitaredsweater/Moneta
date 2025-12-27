@@ -1,0 +1,767 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_bid
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Bid API
+    description: Collection for Moneta bid endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_bid_base
+    parentId: wrk_moneta_bid
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_bid_local
+    parentId: env_bid_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_bid_id: ""
+      test_listing_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_bid_id
+        - test_listing_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Bid Folder
+  - _id: fld_bid
+    parentId: wrk_moneta_bid
+    modified: 1703635200000
+    created: 1703635200000
+    name: Bid
+    description: "Bid endpoints (/v1/bid)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Search Bids
+  - _id: req_search_bids
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
+    name: "Search Bids"
+    description: |
+      Search bids with filters.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Supports ?include=listing query parameter.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Bids with Include
+  - _id: req_search_bids_with_include
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search?include=listing"
+    name: "Search Bids with Listing"
+    description: |
+      Search bids with the listing relationship included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Bids by Status
+  - _id: req_search_bids_by_status
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
+    name: "Search Bids by Status (PENDING)"
+    description: |
+      Search for bids with PENDING status.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Available statuses: PENDING, WITHDRAWN, SUSPENDED, SELECTED, NOT_SELECTED
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "PENDING",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Bids by Listing
+  - _id: req_search_bids_by_listing
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
+    name: "Search Bids by Listing"
+    description: |
+      Search for bids on a specific listing.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": ["{{ _.test_listing_id }}"],
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Bids by Amount Range
+  - _id: req_search_bids_by_amount
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
+    name: "Search Bids by Amount Range"
+    description: |
+      Search for bids within a specific amount range.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "minAmount": 10000,
+          "maxAmount": 100000,
+          "currency": "USD",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Bid by ID
+  - _id: req_get_bid_by_id
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}"
+    name: "Get Bid by ID"
+    description: |
+      Get a specific bid by its UUID.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Bid with Listing
+  - _id: req_get_bid_with_listing
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}?include=listing"
+    name: "Get Bid with Listing"
+    description: |
+      Get a bid with the related listing included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Bid
+  - _id: req_create_bid
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
+    name: "Create Bid"
+    description: |
+      Create a new bid on a listing.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Requirements:
+      - The listing must be in OPEN status
+      - User's company cannot be the seller (no self-bidding)
+      - One company can make multiple bids on the same listing
+
+      The bidder_company_id and bidder_user_id are derived from the authenticated user.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 50000.00,
+          "currency": "USD",
+          "validUntil": "2025-12-31T23:59:59Z"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Bid without validUntil
+  - _id: req_create_bid_no_expiry
+    parentId: fld_bid
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
+    name: "Create Bid (No Expiry)"
+    description: |
+      Create a bid without an expiration date.
+
+      Required Permission: UPDATE.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 75000.00,
+          "currency": "EUR"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635192000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition Folder
+  - _id: fld_bid_transitions
+    parentId: wrk_moneta_bid
+    modified: 1703635200000
+    created: 1703635200000
+    name: Status Transitions
+    description: "Bid status transition endpoints"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Transition: PENDING -> WITHDRAWN (Bidder)
+  - _id: req_bid_transition_withdraw
+    parentId: fld_bid_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/transition"
+    name: "Transition: Withdraw Bid"
+    description: |
+      Withdraw a bid (PENDING -> WITHDRAWN).
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Can only be done by a user from the bidder company.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "WITHDRAWN"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: PENDING -> SUSPENDED (Admin)
+  - _id: req_bid_transition_suspend
+    parentId: fld_bid_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/transition"
+    name: "Transition: Suspend Bid (Admin)"
+    description: |
+      Suspend a bid (PENDING -> SUSPENDED).
+
+      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+
+      Can only be done by admins.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "SUSPENDED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Actions Folder
+  - _id: fld_bid_actions
+    parentId: wrk_moneta_bid
+    modified: 1703635200000
+    created: 1703635200000
+    name: Bid Actions
+    description: "Accept/Reject bid endpoints (for listing owners)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635050000
+    _type: request_group
+
+  # Accept Bid
+  - _id: req_accept_bid
+    parentId: fld_bid_actions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/accept"
+    name: "Accept Bid"
+    description: |
+      Accept a bid on a listing.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Can only be done by a user from the company that owns the listing.
+      Sets this bid to SELECTED and all other PENDING bids to NOT_SELECTED.
+    method: POST
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635050000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Reject Bid
+  - _id: req_reject_bid
+    parentId: fld_bid_actions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/reject"
+    name: "Reject Bid"
+    description: |
+      Reject a bid on a listing.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Can only be done by a user from the company that owns the listing.
+      Sets this bid to NOT_SELECTED.
+    method: POST
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635049000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_bid_errors
+    parentId: wrk_moneta_bid
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635000000
+    _type: request_group
+
+  # Create Bid - Non-existent Listing (404)
+  - _id: req_create_bid_invalid_listing
+    parentId: fld_bid_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
+    name: "Create Bid - Invalid Listing (404)"
+    description: |
+      Test creating a bid for a non-existent listing.
+
+      Expected: 404 Not Found
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "00000000-0000-0000-0000-000000000000",
+          "amount": 50000.00,
+          "currency": "USD"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635000000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Bid - Invalid Amount (422)
+  - _id: req_create_bid_invalid_amount
+    parentId: fld_bid_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
+    name: "Create Bid - Invalid Amount (422)"
+    description: |
+      Test creating a bid with zero or negative amount.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": -100.00,
+          "currency": "USD"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634999000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Bid - Invalid Currency (422)
+  - _id: req_create_bid_invalid_currency
+    parentId: fld_bid_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
+    name: "Create Bid - Invalid Currency (422)"
+    description: |
+      Test creating a bid with invalid currency code.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 50000.00,
+          "currency": "INVALID"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634998000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Bid - Not Found (404)
+  - _id: req_get_bid_not_found
+    parentId: fld_bid_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/00000000-0000-0000-0000-000000000000"
+    name: "Get Bid - Not Found (404)"
+    description: |
+      Test getting a non-existent bid.
+
+      Expected: 404 Not Found
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634997000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_search_bids_no_auth
+    parentId: fld_bid_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
+    name: "Search Bids - No Auth (401)"
+    description: |
+      Test searching bids without authentication.
+
+      Expected: 401 Unauthorized
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703634996000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

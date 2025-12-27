@@ -1,0 +1,565 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_listing
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Listing API
+    description: Collection for Moneta listing endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_listing_base
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_listing_local
+    parentId: env_listing_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_listing_id: ""
+      test_instrument_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_listing_id
+        - test_instrument_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Listing Folder
+  - _id: fld_listing
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Listing
+    description: "Listing endpoints (/v1/listing)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Search Listings
+  - _id: req_search_listings
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings"
+    description: |
+      Search listings with filters.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Supports ?include=instrument query parameter.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings with Include
+  - _id: req_search_listings_with_include
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search?include=instrument"
+    name: "Search Listings with Instrument"
+    description: |
+      Search listings with the instrument relationship included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings by Status
+  - _id: req_search_listings_by_status
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings by Status (OPEN)"
+    description: |
+      Search for listings with OPEN status.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Available statuses: OPEN, WITHDRAWN, SUSPENDED, CLOSED
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "OPEN",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings by Seller Company
+  - _id: req_search_listings_by_seller
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings by Seller Company"
+    description: |
+      Search for listings by seller company ID.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "sellerCompanyId": ["{{ _.test_company_id }}"],
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing by ID
+  - _id: req_get_listing_by_id
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}"
+    name: "Get Listing by ID"
+    description: |
+      Get a specific listing by its UUID.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing with Instrument
+  - _id: req_get_listing_with_instrument
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}?include=instrument"
+    name: "Get Listing with Instrument"
+    description: |
+      Get a listing with the related instrument included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Listing
+  - _id: req_create_listing
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/"
+    name: "Create Listing"
+    description: |
+      Create a new listing for an instrument.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Requirements:
+      - User must be from the company that currently owns the instrument
+      - No OPEN listing can already exist for the instrument
+
+      The seller_company_id and listing_creator_user_id are derived from the authenticated user.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "instrumentId": "{{ _.test_instrument_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition Folder
+  - _id: fld_listing_transitions
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Status Transitions
+    description: "Listing status transition endpoints"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Transition: OPEN -> WITHDRAWN (Company User)
+  - _id: req_listing_transition_withdraw
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Withdraw Listing"
+    description: |
+      Withdraw a listing (OPEN -> WITHDRAWN).
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Can only be done by a user from the seller company.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "WITHDRAWN"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: OPEN -> SUSPENDED (Admin)
+  - _id: req_listing_transition_suspend
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Suspend Listing (Admin)"
+    description: |
+      Suspend a listing (OPEN -> SUSPENDED).
+
+      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+
+      Can only be done by admins.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "SUSPENDED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: OPEN -> CLOSED (Admin)
+  - _id: req_listing_transition_close
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Close Listing (Admin)"
+    description: |
+      Close a listing (OPEN -> CLOSED).
+
+      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+
+      Can only be done by admins when a bid has been selected.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "CLOSED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_listing_errors
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635000000
+    _type: request_group
+
+  # Create Listing - Non-existent Instrument (404)
+  - _id: req_create_listing_invalid_instrument
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/"
+    name: "Create Listing - Invalid Instrument (404)"
+    description: |
+      Test creating a listing for a non-existent instrument.
+
+      Expected: 404 Not Found
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "instrumentId": "00000000-0000-0000-0000-000000000000"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635000000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing - Not Found (404)
+  - _id: req_get_listing_not_found
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/00000000-0000-0000-0000-000000000000"
+    name: "Get Listing - Not Found (404)"
+    description: |
+      Test getting a non-existent listing.
+
+      Expected: 404 Not Found
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634999000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_search_listings_no_auth
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings - No Auth (401)"
+    description: |
+      Test searching listings without authentication.
+
+      Expected: 401 Unauthorized
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703634998000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

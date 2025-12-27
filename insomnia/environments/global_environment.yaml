@@ -23,6 +23,9 @@ resources:
       test_company_id: ""
       test_instrument_id: ""
       test_document_id: ""
+      test_listing_id: ""
+      test_bid_id: ""
+      test_ask_id: ""
     dataPropertyOrder:
       "&":
         - base_url
@@ -36,6 +39,9 @@ resources:
         - test_company_id
         - test_instrument_id
         - test_document_id
+        - test_listing_id
+        - test_bid_id
+        - test_ask_id
     color: "#7d69cb"
     isPrivate: false
     metaSortKey: 1703635200000

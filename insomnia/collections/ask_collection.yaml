@@ -1,0 +1,910 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_ask
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Ask API
+    description: Collection for Moneta ask endpoints
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_ask_base
+    parentId: wrk_moneta_ask
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_ask_local
+    parentId: env_ask_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_ask_id: ""
+      test_listing_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_ask_id
+        - test_listing_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Ask Folder
+  - _id: fld_ask
+    parentId: wrk_moneta_ask
+    modified: 1703635200000
+    created: 1703635200000
+    name: Ask
+    description: "Ask endpoints (/v1/ask)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Search Asks
+  - _id: req_search_asks
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks"
+    description: |
+      Search asks with filters.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Supports ?include=listing query parameter.
+
+      Note: Non-owners can only see ACTIVE asks. Owners of the listing and ADMINs can view all asks.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Asks with Include
+  - _id: req_search_asks_with_include
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search?include=listing"
+    name: "Search Asks with Listing"
+    description: |
+      Search asks with the listing relationship included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Asks by Status
+  - _id: req_search_asks_by_status
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks by Status (ACTIVE)"
+    description: |
+      Search for asks with ACTIVE status.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Available statuses: ACTIVE, WITHDRAWN, SUSPENDED
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "ACTIVE",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Asks by Listing
+  - _id: req_search_asks_by_listing
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks by Listing"
+    description: |
+      Search for asks on a specific listing.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": ["{{ _.test_listing_id }}"],
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Asks by Execution Mode
+  - _id: req_search_asks_by_execution_mode
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks by Execution Mode"
+    description: |
+      Search for asks by execution mode.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Available modes: AUTO, MANUAL
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "executionMode": "AUTO",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Asks by Amount Range
+  - _id: req_search_asks_by_amount
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks by Amount Range"
+    description: |
+      Search for asks within a specific amount range.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "minAmount": 10000,
+          "maxAmount": 100000,
+          "currency": "USD",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Ask by ID
+  - _id: req_get_ask_by_id
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}"
+    name: "Get Ask by ID"
+    description: |
+      Get a specific ask by its UUID.
+
+      Required Permission: VIEW.INSTRUMENT
+
+      Note: Non-owners can only view ACTIVE asks.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Ask with Listing
+  - _id: req_get_ask_with_listing
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}?include=listing"
+    name: "Get Ask with Listing"
+    description: |
+      Get an ask with the related listing included.
+
+      Required Permission: VIEW.INSTRUMENT
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask Folder
+  - _id: fld_ask_create
+    parentId: wrk_moneta_ask
+    modified: 1703635200000
+    created: 1703635200000
+    name: Create Ask
+    description: "Ask creation requests with different options"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635150000
+    _type: request_group
+
+  # Create Ask - Manual Mode
+  - _id: req_create_ask_manual
+    parentId: fld_ask_create
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask (Manual Mode)"
+    description: |
+      Create a new ask on a listing with manual execution mode.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Requirements:
+      - The listing must be in OPEN status
+      - User's company must be the seller (asker company = listing seller company)
+      - valid_until (if provided) must be in the future
+      - amount must be > 0
+
+      The asker_company_id and asker_user_id are derived from the authenticated user.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 100000.00,
+          "currency": "USD",
+          "validUntil": "2025-12-31T23:59:59Z",
+          "executionMode": "MANUAL",
+          "binding": false
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635150000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask - Auto Mode
+  - _id: req_create_ask_auto
+    parentId: fld_ask_create
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask (Auto Mode)"
+    description: |
+      Create a new ask with auto execution mode.
+
+      When executionMode is AUTO, bids matching the ask price are automatically accepted.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 95000.00,
+          "currency": "USD",
+          "executionMode": "AUTO",
+          "binding": true
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635149000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask - Binding
+  - _id: req_create_ask_binding
+    parentId: fld_ask_create
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask (Binding)"
+    description: |
+      Create a binding ask that obligates the seller once a matching bid is found.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 80000.00,
+          "currency": "EUR",
+          "binding": true
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635148000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask - Minimal
+  - _id: req_create_ask_minimal
+    parentId: fld_ask_create
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask (Minimal - Defaults)"
+    description: |
+      Create an ask with only required fields (uses defaults for optional fields).
+
+      Defaults:
+      - executionMode: MANUAL
+      - binding: false
+      - validUntil: null (no expiration)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 75000.00,
+          "currency": "USD"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635147000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Update Ask
+  - _id: req_update_ask
+    parentId: fld_ask
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}"
+    name: "Update Ask (PATCH)"
+    description: |
+      Update ask price or validity.
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Only allowed if:
+      - Ask status is ACTIVE
+      - Listing status is OPEN
+      - User is from the asker company
+
+      Updatable fields: amount, currency, validUntil
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "amount": 90000.00,
+          "currency": "USD",
+          "validUntil": "2026-01-31T23:59:59Z"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635140000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition Folder
+  - _id: fld_ask_transitions
+    parentId: wrk_moneta_ask
+    modified: 1703635200000
+    created: 1703635200000
+    name: Status Transitions
+    description: "Ask status transition endpoints"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Transition: ACTIVE -> WITHDRAWN (Asker)
+  - _id: req_ask_transition_withdraw
+    parentId: fld_ask_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
+    name: "Transition: Withdraw Ask"
+    description: |
+      Withdraw an ask (ACTIVE -> WITHDRAWN).
+
+      Required Permission: UPDATE.INSTRUMENT
+
+      Can only be done by a user from the asker company.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "WITHDRAWN"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: ACTIVE -> SUSPENDED (Admin)
+  - _id: req_ask_transition_suspend
+    parentId: fld_ask_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
+    name: "Transition: Suspend Ask (Admin)"
+    description: |
+      Suspend an ask (ACTIVE -> SUSPENDED).
+
+      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+
+      Can only be done by admins.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "SUSPENDED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: SUSPENDED -> ACTIVE (Admin)
+  - _id: req_ask_transition_reactivate
+    parentId: fld_ask_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
+    name: "Transition: Reactivate Ask (Admin)"
+    description: |
+      Reactivate a suspended ask (SUSPENDED -> ACTIVE).
+
+      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+
+      Can only be done by admins.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "ACTIVE"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_ask_errors
+    parentId: wrk_moneta_ask
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635000000
+    _type: request_group
+
+  # Create Ask - Non-existent Listing (404)
+  - _id: req_create_ask_invalid_listing
+    parentId: fld_ask_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask - Invalid Listing (404)"
+    description: |
+      Test creating an ask for a non-existent listing.
+
+      Expected: 404 Not Found
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "00000000-0000-0000-0000-000000000000",
+          "amount": 50000.00,
+          "currency": "USD"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635000000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask - Invalid Amount (422)
+  - _id: req_create_ask_invalid_amount
+    parentId: fld_ask_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask - Invalid Amount (422)"
+    description: |
+      Test creating an ask with zero or negative amount.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 0,
+          "currency": "USD"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634999000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Ask - Invalid Execution Mode (422)
+  - _id: req_create_ask_invalid_mode
+    parentId: fld_ask_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
+    name: "Create Ask - Invalid Execution Mode (422)"
+    description: |
+      Test creating an ask with an invalid execution mode.
+
+      Expected: 422 Unprocessable Entity
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "listingId": "{{ _.test_listing_id }}",
+          "amount": 50000.00,
+          "currency": "USD",
+          "executionMode": "INVALID"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634998000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Ask - Not Found (404)
+  - _id: req_get_ask_not_found
+    parentId: fld_ask_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/00000000-0000-0000-0000-000000000000"
+    name: "Get Ask - Not Found (404)"
+    description: |
+      Test getting a non-existent ask.
+
+      Expected: 404 Not Found
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634997000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_search_asks_no_auth
+    parentId: fld_ask_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
+    name: "Search Asks - No Auth (401)"
+    description: |
+      Test searching asks without authentication.
+
+      Expected: 401 Unauthorized
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703634996000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

@@ -13,6 +13,9 @@ This folder contains Insomnia API collections for testing the Moneta API.
 - **collections/company_collection.yaml** - Company management endpoints (`/v1/company/*`)
 - **collections/company_address_collection.yaml** - Company address endpoints (`/v1/company-address/*`)
 - **collections/instrument_collection.yaml** - Instrument management endpoints (`/v1/instrument/*`)
+- **collections/listing_collection.yaml** - Listing management endpoints (`/v1/listing/*`)
+- **collections/bid_collection.yaml** - Bid management endpoints (`/v1/bid/*`)
+- **collections/ask_collection.yaml** - Ask management endpoints (`/v1/ask/*`)
 
 ## How to Import
 
@@ -51,6 +54,9 @@ This folder contains Insomnia API collections for testing the Moneta API.
 | `test_company_id` | UUID for testing company endpoints | `` |
 | `test_instrument_id` | UUID for testing instrument endpoints | `` |
 | `test_document_id` | UUID for testing document association | `` |
+| `test_listing_id` | UUID for testing listing endpoints | `` |
+| `test_bid_id` | UUID for testing bid endpoints | `` |
+| `test_ask_id` | UUID for testing ask endpoints | `` |
 
 ## Auth Collection Endpoints
 
@@ -255,4 +261,159 @@ When fetching a company by ID, you can include related entities using the `?incl
 | `companyId` | UUID | Filter by issuing company |
 | `sort` | string | Sort order (e.g., `-createdAt,name`) |
 | `limit` | int | Results per page (default: 50) |
+| `offset` | int | Pagination offset (default: 0) |
+
+## Listing Collection Endpoints
+
+**Note:** All listing endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Search Listings | POST | `/v1/listing/search` | Search with filters | VIEW.INSTRUMENT |
+| Search Listings with Instrument | POST | `/v1/listing/search?include=instrument` | Search with instrument included | VIEW.INSTRUMENT |
+| Get Listing by ID | GET | `/v1/listing/{id}` | Get specific listing | VIEW.INSTRUMENT |
+| Get Listing with Instrument | GET | `/v1/listing/{id}?include=instrument` | Get listing with instrument | VIEW.INSTRUMENT |
+| Create Listing | POST | `/v1/listing/` | Create new listing | UPDATE.INSTRUMENT |
+| Transition: Withdraw | POST | `/v1/listing/{id}/transition` | OPEN → WITHDRAWN | UPDATE.INSTRUMENT |
+| Transition: Suspend (Admin) | POST | `/v1/listing/{id}/transition` | OPEN → SUSPENDED | UPDATE.INSTRUMENT + ADMIN |
+| Transition: Close (Admin) | POST | `/v1/listing/{id}/transition` | OPEN → CLOSED | UPDATE.INSTRUMENT + ADMIN |
+
+### Listing Status Values
+
+| Status | Description |
+|--------|-------------|
+| `OPEN` | Listing is active and available for trading |
+| `WITHDRAWN` | Listing was voluntarily withdrawn by the seller |
+| `SUSPENDED` | Listing was suspended by admin/platform |
+| `CLOSED` | Listing has found a bidder and is closed |
+
+### Listing Status Transitions
+
+| From | To | Who Can Do It |
+|------|-----|---------------|
+| OPEN | WITHDRAWN | Company user (seller) |
+| OPEN | SUSPENDED | Admin only |
+| OPEN | CLOSED | Admin only |
+| SUSPENDED | OPEN | Admin only |
+| WITHDRAWN | SUSPENDED | Admin only |
+
+### Listing Search Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `instrumentId` | UUID[] | Filter by instrument IDs |
+| `sellerCompanyId` | UUID[] | Filter by seller company IDs |
+| `listingCreatorUserId` | UUID[] | Filter by creator user IDs |
+| `status` | ListingStatus | Filter by status |
+| `sort` | string | Sort order (e.g., `-createdAt`) |
+| `limit` | int | Results per page (default: 50, max: 200) |
+| `offset` | int | Pagination offset (default: 0) |
+
+## Bid Collection Endpoints
+
+**Note:** All bid endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Search Bids | POST | `/v1/bid/search` | Search with filters | VIEW.INSTRUMENT |
+| Search Bids with Listing | POST | `/v1/bid/search?include=listing` | Search with listing included | VIEW.INSTRUMENT |
+| Get Bid by ID | GET | `/v1/bid/{id}` | Get specific bid | VIEW.INSTRUMENT |
+| Get Bid with Listing | GET | `/v1/bid/{id}?include=listing` | Get bid with listing | VIEW.INSTRUMENT |
+| Create Bid | POST | `/v1/bid/` | Create new bid | UPDATE.INSTRUMENT |
+| Transition: Withdraw | POST | `/v1/bid/{id}/transition` | PENDING → WITHDRAWN | UPDATE.INSTRUMENT |
+| Transition: Suspend (Admin) | POST | `/v1/bid/{id}/transition` | PENDING → SUSPENDED | UPDATE.INSTRUMENT + ADMIN |
+| Accept Bid | POST | `/v1/bid/{id}/accept` | Accept bid (seller only) | UPDATE.INSTRUMENT |
+| Reject Bid | POST | `/v1/bid/{id}/reject` | Reject bid (seller only) | UPDATE.INSTRUMENT |
+
+### Bid Status Values
+
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Bid is active and awaiting decision |
+| `WITHDRAWN` | Bid was voluntarily withdrawn by the bidder |
+| `SUSPENDED` | Bid was suspended by admin/platform |
+| `SELECTED` | Bid was selected/accepted by the seller |
+| `NOT_SELECTED` | Bid was not selected (rejected or another bid was selected) |
+
+### Bid Status Transitions
+
+| From | To | Who Can Do It |
+|------|-----|---------------|
+| PENDING | WITHDRAWN | Bidder company |
+| PENDING | SUSPENDED | Admin only |
+| PENDING | SELECTED | Seller company (via accept) |
+| PENDING | NOT_SELECTED | Seller company (via reject) |
+| WITHDRAWN | SUSPENDED | Admin only |
+
+### Bid Search Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `listingId` | UUID[] | Filter by listing IDs |
+| `bidderCompanyId` | UUID[] | Filter by bidder company IDs |
+| `bidderUserId` | UUID[] | Filter by bidder user IDs |
+| `status` | BidStatus | Filter by status |
+| `minAmount` | decimal | Minimum bid amount |
+| `maxAmount` | decimal | Maximum bid amount |
+| `currency` | string | Filter by currency (ISO 4217) |
+| `sort` | string | Sort order (e.g., `-createdAt`) |
+| `limit` | int | Results per page (default: 50, max: 200) |
+| `offset` | int | Pagination offset (default: 0) |
+
+## Ask Collection Endpoints
+
+**Note:** All ask endpoints require Bearer token authentication.
+
+| Request | Method | Path | Description | Permission |
+|---------|--------|------|-------------|------------|
+| Search Asks | POST | `/v1/ask/search` | Search with filters | VIEW.INSTRUMENT |
+| Search Asks with Listing | POST | `/v1/ask/search?include=listing` | Search with listing included | VIEW.INSTRUMENT |
+| Get Ask by ID | GET | `/v1/ask/{id}` | Get specific ask | VIEW.INSTRUMENT |
+| Get Ask with Listing | GET | `/v1/ask/{id}?include=listing` | Get ask with listing | VIEW.INSTRUMENT |
+| Create Ask (Manual) | POST | `/v1/ask/` | Create ask with manual mode | UPDATE.INSTRUMENT |
+| Create Ask (Auto) | POST | `/v1/ask/` | Create ask with auto mode | UPDATE.INSTRUMENT |
+| Update Ask | PATCH | `/v1/ask/{id}` | Update ask price/validity | UPDATE.INSTRUMENT |
+| Transition: Withdraw | POST | `/v1/ask/{id}/transition` | ACTIVE → WITHDRAWN | UPDATE.INSTRUMENT |
+| Transition: Suspend (Admin) | POST | `/v1/ask/{id}/transition` | ACTIVE → SUSPENDED | UPDATE.INSTRUMENT + ADMIN |
+| Transition: Reactivate (Admin) | POST | `/v1/ask/{id}/transition` | SUSPENDED → ACTIVE | UPDATE.INSTRUMENT + ADMIN |
+
+### Ask Status Values
+
+| Status | Description |
+|--------|-------------|
+| `ACTIVE` | Ask is active and accepting bids |
+| `WITHDRAWN` | Ask was voluntarily withdrawn by the asker |
+| `SUSPENDED` | Ask was suspended by admin/platform |
+
+### Ask Status Transitions
+
+| From | To | Who Can Do It |
+|------|-----|---------------|
+| ACTIVE | WITHDRAWN | Asker company |
+| ACTIVE | SUSPENDED | Admin only |
+| WITHDRAWN | SUSPENDED | Admin only |
+| SUSPENDED | ACTIVE | Admin only |
+
+### Execution Modes
+
+| Mode | Description |
+|------|-------------|
+| `MANUAL` | Bids require manual review and acceptance by the seller |
+| `AUTO` | Bids matching the ask price are automatically accepted |
+
+### Ask Search Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `listingId` | UUID[] | Filter by listing IDs |
+| `askerCompanyId` | UUID[] | Filter by asker company IDs |
+| `askerUserId` | UUID[] | Filter by asker user IDs |
+| `status` | AskStatus | Filter by status |
+| `minAmount` | decimal | Minimum ask amount |
+| `maxAmount` | decimal | Maximum ask amount |
+| `currency` | string | Filter by currency (ISO 4217) |
+| `executionMode` | ExecutionMode | Filter by execution mode (AUTO/MANUAL) |
+| `binding` | boolean | Filter by binding status |
+| `sort` | string | Sort order (e.g., `-createdAt`) |
+| `limit` | int | Results per page (default: 50, max: 200) |
 | `offset` | int | Pagination offset (default: 0) |
