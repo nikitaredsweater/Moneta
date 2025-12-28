@@ -10,7 +10,40 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Moneta Company API
-    description: Collection for Moneta company management endpoints
+    description: |
+      # Moneta Company API Collection
+
+      This collection contains endpoints for managing companies in the Moneta platform.
+
+      ## Overview
+
+      Companies are core entities in Moneta that represent business organizations. Each company can have:
+      - Multiple addresses (headquarters, branches, etc.)
+      - Multiple users (employees with different roles)
+      - Multiple instruments (financial instruments issued by the company)
+
+      ## Authentication
+
+      All endpoints require a valid JWT Bearer token obtained from the `/v1/auth/login` endpoint.
+
+      ## Available Includes
+
+      When fetching a company by ID, you can include related entities:
+
+      | Include | Description |
+      |---------|-------------|
+      | `addresses` | Company addresses (headquarters, branches) |
+      | `users` | Users belonging to the company |
+      | `instruments` | Financial instruments issued by the company |
+
+      Use query parameter: `?include=addresses,users,instruments`
+
+      ## Permissions
+
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.COMPANY` | View company information |
+      | `CREATE.COMPANY` | Create new companies (ADMIN only) |
     scope: collection
     _type: workspace
 
@@ -58,7 +91,12 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Company
-    description: "Company management endpoints (/v1/company)"
+    description: |
+      # Company Management Endpoints
+
+      Endpoints for viewing and creating companies.
+
+      **Base Path:** `/v1/company`
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635200000
@@ -72,11 +110,61 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/"
     name: "Get All Companies"
     description: |
-      Get all companies in the system.
+      # GET /v1/company/
 
-      Required Permission: VIEW.COMPANY
+      Retrieve all companies in the system.
 
-      Returns a list of all company objects.
+      ## When to Use
+
+      Use when you need a complete list of all companies without filtering.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Request Body
+
+      None required.
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:30:00Z",
+          "legalName": "Acme Corporation",
+          "tradeName": "Acme",
+          "registrationNumber": "REG-12345",
+          "incorporationDate": "2020-01-15"
+        }
+      ]
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique company identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `legalName` | string | Official legal name |
+      | `tradeName` | string | Trading/brand name (optional) |
+      | `registrationNumber` | string | Company registration number |
+      | `incorporationDate` | date | Date of incorporation |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters: []
@@ -105,23 +193,89 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
     name: "Search Companies"
     description: |
+      # POST /v1/company/search
+
       Search companies with filters, pagination, and sorting.
 
-      Required Permission: VIEW.COMPANY
+      ## When to Use
 
-      Filters (all optional):
-      - legalName: partial match (ilike)
-      - tradeName: partial match (ilike)
-      - registrationNumber: partial match (ilike)
-      - incorporationDateAfter: date (YYYY-MM-DD)
-      - incorporationDateBefore: date (YYYY-MM-DD)
-      - createdAtAfter: date (YYYY-MM-DD)
-      - createdAtBefore: date (YYYY-MM-DD)
+      Use when you need to find companies matching specific criteria or paginate through company records.
 
-      Pagination & Sorting:
-      - sort: e.g. "-createdAt,legalName" (prefix with - for desc)
-      - limit: 1-200 (default 50)
-      - offset: 0+ (default 0)
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Request Body
+
+      ```json
+      {
+        "legalName": "Corp",
+        "tradeName": "Trading",
+        "registrationNumber": "REG",
+        "incorporationDateAfter": "2020-01-01",
+        "incorporationDateBefore": "2024-12-31",
+        "createdAtAfter": "2023-01-01",
+        "createdAtBefore": "2024-12-31",
+        "sort": "-createdAt",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `legalName` | string | No | Partial match on legal name (case-insensitive) |
+      | `tradeName` | string | No | Partial match on trade name (case-insensitive) |
+      | `registrationNumber` | string | No | Partial match on registration number |
+      | `incorporationDateAfter` | date | No | Incorporated on or after this date |
+      | `incorporationDateBefore` | date | No | Incorporated on or before this date |
+      | `createdAtAfter` | date | No | Created on or after this date |
+      | `createdAtBefore` | date | No | Created on or before this date |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | Max results (1-200, default: 50) |
+      | `offset` | integer | No | Skip results (default: 0) |
+
+      ## Sorting
+
+      Use comma-separated field names. Prefix with `-` for descending order.
+
+      **Sortable fields:** `createdAt`, `legalName`, `tradeName`, `incorporationDate`
+
+      **Examples:**
+      - `-createdAt` (newest first)
+      - `legalName` (alphabetical A-Z)
+      - `-incorporationDate,legalName` (newest incorporation, then alphabetical)
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:30:00Z",
+          "legalName": "Acme Corporation",
+          "tradeName": "Acme",
+          "registrationNumber": "REG-12345",
+          "incorporationDate": "2020-01-15"
+        }
+      ]
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error details |
+      | 500 | Server error | "Internal server error" |
     method: POST
     body:
       mimeType: application/json
@@ -157,11 +311,29 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
     name: "Search Companies - With Filters"
     description: |
-      Search companies with various filters applied.
+      # POST /v1/company/search (With Filters)
 
-      Required Permission: VIEW.COMPANY
+      Example search with legal name and date filters applied.
 
-      Example with legal name and date filters.
+      ## When to Use
+
+      Use when searching for companies by specific criteria like name patterns or incorporation date ranges.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Example Request
+
+      This example searches for companies:
+      - Legal name contains "Corp"
+      - Incorporated after January 1, 2020
+      - Sorted by incorporation date (newest first)
+      - Limited to 10 results
     method: POST
     body:
       mimeType: application/json
@@ -199,11 +371,73 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company by ID"
     description: |
-      Get a specific company by ID without any includes.
+      # GET /v1/company/{company_id}
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a specific company by its UUID.
 
-      Set the test_company_id environment variable to a valid company UUID.
+      ## When to Use
+
+      Use when you need details for a specific company without related entities.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `company_id` | UUID | The company's unique identifier |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "legalName": "Acme Corporation",
+        "tradeName": "Acme",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2020-01-15",
+        "addresses": null,
+        "users": null,
+        "instruments": null
+      }
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique company identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `legalName` | string | Official legal name |
+      | `tradeName` | string | Trading/brand name (optional) |
+      | `registrationNumber` | string | Company registration number |
+      | `incorporationDate` | date | Date of incorporation |
+      | `addresses` | array | Company addresses (null if not included) |
+      | `users` | array | Company users (null if not included) |
+      | `instruments` | array | Company instruments (null if not included) |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 422 | Invalid UUID format | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_company_id` in your environment to a valid company UUID.
     method: GET
     body: {}
     parameters: []
@@ -232,11 +466,67 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Addresses"
     description: |
-      Get a company with its addresses included.
+      # GET /v1/company/{company_id}?include=addresses
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with its addresses loaded.
 
-      Query param: ?include=addresses
+      ## When to Use
+
+      Use when you need company details along with all registered addresses (headquarters, branches, etc.).
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses` | Load company addresses |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "legalName": "Acme Corporation",
+        "tradeName": "Acme",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2020-01-15",
+        "addresses": [
+          {
+            "id": "660e8400-e29b-41d4-a716-446655440001",
+            "createdAt": "2024-01-15T10:35:00Z",
+            "updatedAt": "2024-01-15T10:35:00Z",
+            "companyId": "550e8400-e29b-41d4-a716-446655440000",
+            "addressLine1": "123 Main Street",
+            "addressLine2": "Suite 100",
+            "city": "New York",
+            "state": "NY",
+            "postalCode": "10001",
+            "country": "USA",
+            "addressType": "HEADQUARTERS"
+          }
+        ],
+        "users": null,
+        "instruments": null
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -268,11 +558,65 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Users"
     description: |
-      Get a company with its users included.
+      # GET /v1/company/{company_id}?include=users
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with its users loaded.
 
-      Query param: ?include=users
+      ## When to Use
+
+      Use when you need to see all users belonging to a specific company.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `users` | Load company users |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "legalName": "Acme Corporation",
+        "tradeName": "Acme",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2020-01-15",
+        "addresses": null,
+        "users": [
+          {
+            "id": "770e8400-e29b-41d4-a716-446655440002",
+            "createdAt": "2024-01-15T11:00:00Z",
+            "updatedAt": "2024-01-15T11:00:00Z",
+            "email": "john.doe@acme.com",
+            "firstName": "John",
+            "lastName": "Doe",
+            "companyId": "550e8400-e29b-41d4-a716-446655440000",
+            "role": "ADMIN",
+            "accountStatus": "ACTIVE"
+          }
+        ],
+        "instruments": null
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -304,11 +648,69 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Instruments"
     description: |
-      Get a company with its instruments included.
+      # GET /v1/company/{company_id}?include=instruments
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with its instruments loaded.
 
-      Query param: ?include=instruments
+      ## When to Use
+
+      Use when you need to see all financial instruments issued by a specific company.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `instruments` | Load company instruments |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "legalName": "Acme Corporation",
+        "tradeName": "Acme",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2020-01-15",
+        "addresses": null,
+        "users": null,
+        "instruments": [
+          {
+            "id": "880e8400-e29b-41d4-a716-446655440003",
+            "createdAt": "2024-02-01T09:00:00Z",
+            "updatedAt": "2024-02-01T09:00:00Z",
+            "name": "Acme Bond 2025",
+            "faceValue": 1000.00,
+            "currency": "USD",
+            "maturityDate": "2025-12-31",
+            "maturityPayment": 1050.00,
+            "instrumentStatus": "ACTIVE",
+            "maturityStatus": "NOT_DUE",
+            "tradingStatus": "TRADING",
+            "issuerId": "550e8400-e29b-41d4-a716-446655440000",
+            "createdBy": "770e8400-e29b-41d4-a716-446655440002"
+          }
+        ]
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -340,11 +742,40 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Addresses + Users"
     description: |
-      Get a company with addresses and users included.
+      # GET /v1/company/{company_id}?include=addresses,users
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with addresses and users loaded.
 
-      Query param: ?include=addresses,users
+      ## When to Use
+
+      Use when you need company details with both location and personnel information.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses,users` | Load addresses and users |
+
+      ## Response (200 OK)
+
+      Returns company with both `addresses` and `users` arrays populated, `instruments` will be null.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -376,11 +807,40 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Addresses + Instruments"
     description: |
-      Get a company with addresses and instruments included.
+      # GET /v1/company/{company_id}?include=addresses,instruments
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with addresses and instruments loaded.
 
-      Query param: ?include=addresses,instruments
+      ## When to Use
+
+      Use when you need company location information along with its financial instruments.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses,instruments` | Load addresses and instruments |
+
+      ## Response (200 OK)
+
+      Returns company with both `addresses` and `instruments` arrays populated, `users` will be null.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -412,11 +872,40 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include Users + Instruments"
     description: |
-      Get a company with users and instruments included.
+      # GET /v1/company/{company_id}?include=users,instruments
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with users and instruments loaded.
 
-      Query param: ?include=users,instruments
+      ## When to Use
+
+      Use when you need company personnel and financial instrument information together.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `users,instruments` | Load users and instruments |
+
+      ## Response (200 OK)
+
+      Returns company with both `users` and `instruments` arrays populated, `addresses` will be null.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -448,11 +937,44 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Include All"
     description: |
-      Get a company with all available includes.
+      # GET /v1/company/{company_id}?include=addresses,users,instruments
 
-      Required Permission: VIEW.COMPANY
+      Retrieve a company with all related entities loaded.
 
-      Query param: ?include=addresses,users,instruments
+      ## When to Use
+
+      Use when you need a complete view of a company including all addresses, users, and instruments.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses,users,instruments` | Load all relations |
+
+      ## Response (200 OK)
+
+      Returns company with all three arrays populated: `addresses`, `users`, and `instruments`.
+
+      ## Performance Note
+
+      This request loads all related data and may be slower than targeted includes. Use specific includes when you only need certain relations.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
     method: GET
     body: {}
     parameters:
@@ -484,17 +1006,71 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/"
     name: "Create Company"
     description: |
+      # POST /v1/company/
+
       Create a new company in the system.
 
-      Required Permission: CREATE.COMPANY (ADMIN only)
+      ## When to Use
 
-      Required fields:
-      - legalName: official company name
-      - registrationNumber: company registration number
-      - incorporationDate: date of incorporation (YYYY-MM-DD)
+      Use when onboarding a new company to the Moneta platform.
 
-      Optional fields:
-      - tradeName: trading/brand name
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY` (typically ADMIN only)
+
+      ## Request Body
+
+      ```json
+      {
+        "legalName": "New Company LLC",
+        "tradeName": "NewCo",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2024-01-15"
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `legalName` | string | Yes | Official legal company name |
+      | `tradeName` | string | No | Trading/brand name |
+      | `registrationNumber` | string | Yes | Company registration number |
+      | `incorporationDate` | date | Yes | Date of incorporation (YYYY-MM-DD) |
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "legalName": "New Company LLC",
+        "tradeName": "NewCo",
+        "registrationNumber": "REG-12345",
+        "incorporationDate": "2024-01-15"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 409 | Duplicate registration number | "Entity already exists" |
+      | 422 | Missing/invalid fields | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      - `registrationNumber` must be unique across all companies
+      - After creating a company, you can add addresses via the company address endpoints
+      - Users can be assigned to this company during user creation
     method: POST
     body:
       mimeType: application/json
@@ -531,9 +1107,43 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/"
     name: "Create Company - Minimal"
     description: |
+      # POST /v1/company/ (Minimal)
+
       Create a company with only required fields.
 
-      Required Permission: CREATE.COMPANY (ADMIN only)
+      ## When to Use
+
+      Use when you only have basic company information and want to add optional details later.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY` (typically ADMIN only)
+
+      ## Request Body
+
+      ```json
+      {
+        "legalName": "Minimal Company Inc",
+        "registrationNumber": "MIN-99999",
+        "incorporationDate": "2023-06-01"
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `legalName` | string | Yes | Official legal company name |
+      | `registrationNumber` | string | Yes | Company registration number |
+      | `incorporationDate` | date | Yes | Date of incorporation (YYYY-MM-DD) |
+
+      ## Note
+
+      `tradeName` is optional and will be null in the response if not provided.
     method: POST
     body:
       mimeType: application/json
@@ -567,7 +1177,11 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Error Cases
-    description: "Test cases for error scenarios"
+    description: |
+      # Error Test Cases
+
+      This folder contains requests designed to trigger specific error responses.
+      Use these to verify error handling and understand API behavior.
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635100000
@@ -581,9 +1195,25 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/00000000-0000-0000-0000-000000000000"
     name: "Get Company - Not Found (404)"
     description: |
-      Test getting a company that doesn't exist.
+      # GET /v1/company/{company_id} - 404 Test
 
-      Expected: 404 Not Found
+      Test the 404 Not Found response when requesting a non-existent company.
+
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Entity was not found"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates how the API handles requests for resources that don't exist.
     method: GET
     body: {}
     parameters: []
@@ -612,9 +1242,36 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/"
     name: "Create Company - Missing Fields (422)"
     description: |
-      Test creating a company with missing required fields.
+      # POST /v1/company/ - 422 Test
 
-      Expected: 422 Unprocessable Entity
+      Test the 422 Unprocessable Entity response when required fields are missing.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error details.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": ["body", "registrationNumber"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "incorporationDate"],
+            "msg": "Field required"
+          }
+        ]
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates how the API validates required fields and reports missing data.
     method: POST
     body:
       mimeType: application/json
@@ -648,9 +1305,25 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/"
     name: "Get All Companies - No Auth (401)"
     description: |
-      Test accessing companies endpoint without authentication.
+      # GET /v1/company/ - 401 Test
 
-      Expected: 401 Unauthorized
+      Test the 401 Unauthorized response when no authentication is provided.
+
+      ## Expected Behavior
+
+      The API should return a 401 status code indicating authentication is required.
+
+      ## Response (401 Unauthorized)
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that all company endpoints require authentication.
     method: GET
     body: {}
     parameters: []
@@ -677,9 +1350,37 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/company/{{ _.test_company_id }}"
     name: "Get Company - Invalid Include (422)"
     description: |
-      Test getting a company with an invalid include parameter.
+      # GET /v1/company/{company_id}?include=invalid - 422 Test
 
-      Expected: 422 Unprocessable Entity
+      Test the 422 Unprocessable Entity response when an invalid include parameter is used.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code indicating the include value is invalid.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "enum",
+            "loc": ["query", "include"],
+            "msg": "Input should be 'addresses', 'users' or 'instruments'"
+          }
+        ]
+      }
+      ```
+
+      ## Valid Include Values
+
+      - `addresses`
+      - `users`
+      - `instruments`
+
+      ## Use Case
+
+      This demonstrates how the API validates the `include` query parameter.
     method: GET
     body: {}
     parameters:

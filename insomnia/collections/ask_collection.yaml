@@ -10,7 +10,56 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Moneta Ask API
-    description: Collection for Moneta ask endpoints
+    description: |
+      # Ask Management API Collection
+
+      This collection contains endpoints for managing asks (seller price quotes) on listings in the Moneta platform.
+
+      ## Overview
+      Asks are seller-initiated price quotes on listings. They represent the price at which the seller (listing owner)
+      is willing to sell the instrument. Asks can be configured with different execution modes and binding options.
+
+      ## Authentication
+      All endpoints require Bearer token authentication.
+      Run the Admin Login from auth_collection first.
+
+      ## Ask Statuses
+      | Status | Description |
+      |--------|-------------|
+      | `ACTIVE` | Ask is live and visible to all users |
+      | `WITHDRAWN` | Seller has withdrawn the ask |
+      | `SUSPENDED` | Admin has suspended the ask |
+
+      ## Execution Modes
+      | Mode | Description |
+      |------|-------------|
+      | `MANUAL` | Seller manually reviews and accepts matching bids |
+      | `AUTO` | Bids meeting the ask price are automatically matched |
+
+      ## Binding Options
+      | Value | Description |
+      |-------|-------------|
+      | `true` | Seller is legally obligated once a matching bid is found |
+      | `false` | Ask is indicative only (default) |
+
+      ## Visibility Rules
+      - **Non-owners** can only see ACTIVE asks
+      - **Listing owners** can see all asks on their listings
+      - **Admins** can see all asks regardless of status
+
+      ## Status Transitions
+      | From | To | Who Can Do It |
+      |------|-----|---------------|
+      | ACTIVE | WITHDRAWN | Asker Company User |
+      | ACTIVE | SUSPENDED | Admin only |
+      | WITHDRAWN | SUSPENDED | Admin only |
+      | SUSPENDED | ACTIVE | Admin only |
+
+      ## Permissions Reference
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.INSTRUMENT` | Required for search and get operations |
+      | `UPDATE.INSTRUMENT` | Required for create, update, and transitions |
     scope: collection
     _type: workspace
 
@@ -60,7 +109,7 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Ask
-    description: "Ask endpoints (/v1/ask)"
+    description: "Ask endpoints (/v1/ask) - Search, retrieve, and update asks"
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635200000
@@ -74,13 +123,103 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks"
     description: |
-      Search asks with filters.
+      # POST /v1/ask/search
 
-      Required Permission: VIEW.INSTRUMENT
+      Search asks with filtering, sorting, and pagination.
 
-      Supports ?include=listing query parameter.
+      ## When to Use
+      Use when searching for asks matching specific criteria. This is the primary
+      endpoint for listing available asks on the marketplace.
 
-      Note: Non-owners can only see ACTIVE asks. Owners of the listing and ADMINs can view all asks.
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Visibility Rules
+      - Non-owners can only see ACTIVE asks
+      - Listing owners can see all asks on their listings
+      - Admins can see all asks regardless of status
+
+      ## Request Body
+      ```json
+      {
+        "listingId": ["550e8400-e29b-41d4-a716-446655440000"],
+        "askerCompanyId": ["660e8400-e29b-41d4-a716-446655440001"],
+        "askerUserId": ["770e8400-e29b-41d4-a716-446655440002"],
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": true,
+        "minAmount": 10000,
+        "maxAmount": 100000,
+        "currency": "USD",
+        "sort": "-createdAt",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `listingId` | UUID[] | No | Filter by listing IDs |
+      | `askerCompanyId` | UUID[] | No | Filter by asker company IDs |
+      | `askerUserId` | UUID[] | No | Filter by asker user IDs |
+      | `status` | AskStatus | No | ACTIVE, WITHDRAWN, SUSPENDED |
+      | `executionMode` | string | No | AUTO or MANUAL |
+      | `binding` | boolean | No | Filter by binding status |
+      | `minAmount` | float | No | Minimum ask amount |
+      | `maxAmount` | float | No | Maximum ask amount |
+      | `currency` | string | No | ISO 4217 currency code (3 chars) |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | 1-200 (default: 50) |
+      | `offset` | integer | No | Pagination offset (default: 0) |
+
+      ## Response (200 OK)
+      ```json
+      [
+        {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "createdAt": "2025-01-15T10:30:00Z",
+          "updatedAt": "2025-01-15T10:30:00Z",
+          "listingId": "550e8400-e29b-41d4-a716-446655440000",
+          "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+          "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+          "amount": 100000.00,
+          "currency": "USD",
+          "validUntil": "2025-12-31T23:59:59Z",
+          "status": "ACTIVE",
+          "executionMode": "MANUAL",
+          "binding": false,
+          "listing": null
+        }
+      ]
+      ```
+
+      ## Response Fields
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Ask unique identifier |
+      | `createdAt` | datetime | When the ask was created |
+      | `updatedAt` | datetime | When the ask was last updated |
+      | `listingId` | UUID | The listing this ask is for |
+      | `askerCompanyId` | UUID | Company that created the ask |
+      | `askerUserId` | UUID | User who created the ask |
+      | `amount` | float | Ask price amount |
+      | `currency` | string | ISO 4217 currency code |
+      | `validUntil` | datetime | When the ask expires (null = no expiry) |
+      | `status` | string | ACTIVE, WITHDRAWN, or SUSPENDED |
+      | `executionMode` | string | AUTO or MANUAL |
+      | `binding` | boolean | Whether the ask is legally binding |
+      | `listing` | object | Included listing object (if requested) |
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error details |
     method: POST
     body:
       mimeType: application/json
@@ -115,9 +254,57 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search?include=listing"
     name: "Search Asks with Listing"
     description: |
-      Search asks with the listing relationship included.
+      # POST /v1/ask/search?include=listing
 
-      Required Permission: VIEW.INSTRUMENT
+      Search asks with the listing relationship included in the response.
+
+      ## When to Use
+      Use when you need ask data along with the associated listing details,
+      avoiding additional API calls to fetch listing information.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `listing` | Include the related listing object |
+
+      ## Response (200 OK)
+      ```json
+      [
+        {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "createdAt": "2025-01-15T10:30:00Z",
+          "updatedAt": "2025-01-15T10:30:00Z",
+          "listingId": "550e8400-e29b-41d4-a716-446655440000",
+          "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+          "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+          "amount": 100000.00,
+          "currency": "USD",
+          "validUntil": null,
+          "status": "ACTIVE",
+          "executionMode": "MANUAL",
+          "binding": false,
+          "listing": {
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "instrumentId": "990e8400-e29b-41d4-a716-446655440004",
+            "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+            "sellerUserId": "770e8400-e29b-41d4-a716-446655440002",
+            "status": "OPEN"
+          }
+        }
+      ]
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
     method: POST
     body:
       mimeType: application/json
@@ -152,11 +339,42 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks by Status (ACTIVE)"
     description: |
-      Search for asks with ACTIVE status.
+      # POST /v1/ask/search (Filter by Status)
 
-      Required Permission: VIEW.INSTRUMENT
+      Search for asks with a specific status.
 
-      Available statuses: ACTIVE, WITHDRAWN, SUSPENDED
+      ## When to Use
+      Use when you need to find asks in a particular state. Non-admin users
+      typically only have visibility to ACTIVE asks unless they own the listing.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Available Statuses
+      | Status | Description |
+      |--------|-------------|
+      | `ACTIVE` | Live asks visible to all users |
+      | `WITHDRAWN` | Seller-withdrawn asks (visible to owner/admin) |
+      | `SUSPENDED` | Admin-suspended asks (visible to owner/admin) |
+
+      ## Request Body
+      ```json
+      {
+        "status": "ACTIVE",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid status value | Validation error details |
     method: POST
     body:
       mimeType: application/json
@@ -192,9 +410,38 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks by Listing"
     description: |
-      Search for asks on a specific listing.
+      # POST /v1/ask/search (Filter by Listing)
 
-      Required Permission: VIEW.INSTRUMENT
+      Search for asks on specific listings.
+
+      ## When to Use
+      Use when you need to find all asks associated with particular listings.
+      This is useful for displaying the ask history or current offers on a listing.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Visibility Note
+      - If you own the listing, you can see all asks (any status)
+      - If you don't own the listing, you only see ACTIVE asks
+
+      ## Request Body
+      ```json
+      {
+        "listingId": ["550e8400-e29b-41d4-a716-446655440000"],
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
     method: POST
     body:
       mimeType: application/json
@@ -230,11 +477,40 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks by Execution Mode"
     description: |
-      Search for asks by execution mode.
+      # POST /v1/ask/search (Filter by Execution Mode)
 
-      Required Permission: VIEW.INSTRUMENT
+      Search for asks by their execution mode.
 
-      Available modes: AUTO, MANUAL
+      ## When to Use
+      Use when filtering asks by how they handle matching bids.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Execution Modes
+      | Mode | Description |
+      |------|-------------|
+      | `AUTO` | Matching bids are automatically accepted |
+      | `MANUAL` | Seller manually reviews and accepts bids |
+
+      ## Request Body
+      ```json
+      {
+        "executionMode": "AUTO",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid execution mode | Validation error details |
     method: POST
     body:
       mimeType: application/json
@@ -270,9 +546,42 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks by Amount Range"
     description: |
-      Search for asks within a specific amount range.
+      # POST /v1/ask/search (Filter by Amount Range)
 
-      Required Permission: VIEW.INSTRUMENT
+      Search for asks within a specific price range.
+
+      ## When to Use
+      Use when searching for asks within a buyer's budget or price preferences.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Request Body
+      ```json
+      {
+        "minAmount": 10000,
+        "maxAmount": 100000,
+        "currency": "USD",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `minAmount` | float | No | Minimum ask price (inclusive) |
+      | `maxAmount` | float | No | Maximum ask price (inclusive) |
+      | `currency` | string | No | Filter by currency code |
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
     method: POST
     body:
       mimeType: application/json
@@ -310,11 +619,55 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}"
     name: "Get Ask by ID"
     description: |
-      Get a specific ask by its UUID.
+      # GET /v1/ask/{ask_id}
 
-      Required Permission: VIEW.INSTRUMENT
+      Retrieve a specific ask by its UUID.
 
-      Note: Non-owners can only view ACTIVE asks.
+      ## When to Use
+      Use when you need detailed information about a specific ask.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Visibility Rules
+      - Non-owners can only view ACTIVE asks
+      - Listing owners can view all asks on their listings
+      - Admins can view all asks regardless of status
+      - If a non-owner tries to view a non-ACTIVE ask, a 404 is returned
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `ask_id` | UUID | The ask's unique identifier |
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-15T10:30:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": false,
+        "listing": null
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Ask not found or not visible | "Ask with ID {id} does not exist" |
     method: GET
     body: {}
     parameters: []
@@ -343,9 +696,55 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}?include=listing"
     name: "Get Ask with Listing"
     description: |
-      Get an ask with the related listing included.
+      # GET /v1/ask/{ask_id}?include=listing
 
-      Required Permission: VIEW.INSTRUMENT
+      Retrieve an ask with the related listing included.
+
+      ## When to Use
+      Use when you need both ask and listing details in a single request.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `listing` | Include the related listing object |
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-15T10:30:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": null,
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": false,
+        "listing": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "instrumentId": "990e8400-e29b-41d4-a716-446655440004",
+          "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+          "sellerUserId": "770e8400-e29b-41d4-a716-446655440002",
+          "status": "OPEN"
+        }
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Ask not found | "Ask with ID {id} does not exist" |
     method: GET
     body: {}
     parameters: []
@@ -372,7 +771,7 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Create Ask
-    description: "Ask creation requests with different options"
+    description: "Ask creation requests with different execution modes and binding options (/v1/ask/)"
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635150000
@@ -386,17 +785,78 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask (Manual Mode)"
     description: |
+      # POST /v1/ask/
+
       Create a new ask on a listing with manual execution mode.
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
+      Use when the seller wants to manually review and accept bids rather than
+      having them automatically matched. This gives the seller full control.
 
-      Requirements:
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Business Rules
       - The listing must be in OPEN status
       - User's company must be the seller (asker company = listing seller company)
-      - valid_until (if provided) must be in the future
-      - amount must be > 0
+      - `validUntil` (if provided) must be in the future
+      - `amount` must be greater than 0
+      - New asks are created with status ACTIVE
 
-      The asker_company_id and asker_user_id are derived from the authenticated user.
+      ## Request Body
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Request Fields
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `listingId` | UUID | Yes | The listing to create an ask on |
+      | `amount` | float | Yes | Ask price (must be > 0) |
+      | `currency` | string | Yes | ISO 4217 currency code (3 chars) |
+      | `validUntil` | datetime | No | Expiration time (null = no expiry) |
+      | `executionMode` | string | No | AUTO or MANUAL (default: MANUAL) |
+      | `binding` | boolean | No | Legally binding? (default: false) |
+
+      ## Response (201 Created)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-15T10:30:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from seller company | "Only the listing owner can create asks" |
+      | 403 | Listing not OPEN | "Listing is not open (status: {status})" |
+      | 403 | Amount <= 0 | "Amount must be greater than zero" |
+      | 403 | validUntil in the past | "valid_until must be in the future" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 422 | Invalid field values | Validation error details |
+      | 500 | Creation failed | "Failed to create ask" |
     method: POST
     body:
       mimeType: application/json
@@ -435,9 +895,44 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask (Auto Mode)"
     description: |
-      Create a new ask with auto execution mode.
+      # POST /v1/ask/
 
-      When executionMode is AUTO, bids matching the ask price are automatically accepted.
+      Create a new ask with automatic execution mode.
+
+      ## When to Use
+      Use when the seller wants bids matching the ask price to be automatically
+      accepted without manual intervention. This is ideal for sellers who have
+      a firm price and want immediate execution.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Auto Execution Behavior
+      When `executionMode` is `AUTO`, any bid that meets or exceeds the ask price
+      will be automatically matched and accepted by the system.
+
+      ## Request Body
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 95000.00,
+        "currency": "USD",
+        "executionMode": "AUTO",
+        "binding": true
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from seller company | "Only the listing owner can create asks" |
+      | 403 | Listing not OPEN | "Listing is not open (status: {status})" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 422 | Invalid field values | Validation error details |
     method: POST
     body:
       mimeType: application/json
@@ -475,7 +970,47 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask (Binding)"
     description: |
-      Create a binding ask that obligates the seller once a matching bid is found.
+      # POST /v1/ask/
+
+      Create a binding ask that legally obligates the seller.
+
+      ## When to Use
+      Use when the seller wants to create a firm, legally binding offer.
+      Once a matching bid is found, the seller is obligated to complete the transaction.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Binding Behavior
+      When `binding` is `true`:
+      - The ask represents a firm legal commitment
+      - The seller cannot back out once a matching bid is accepted
+      - This provides more confidence to potential buyers
+
+      When `binding` is `false`:
+      - The ask is indicative only
+      - The seller may still decline after a bid is matched
+
+      ## Request Body
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 80000.00,
+        "currency": "EUR",
+        "binding": true
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from seller company | "Only the listing owner can create asks" |
+      | 403 | Listing not OPEN | "Listing is not open (status: {status})" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
     method: POST
     body:
       mimeType: application/json
@@ -512,12 +1047,50 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask (Minimal - Defaults)"
     description: |
-      Create an ask with only required fields (uses defaults for optional fields).
+      # POST /v1/ask/
 
-      Defaults:
-      - executionMode: MANUAL
-      - binding: false
-      - validUntil: null (no expiration)
+      Create an ask with only required fields, using default values for optional fields.
+
+      ## When to Use
+      Use for quick ask creation when you want to accept all default settings.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Default Values
+      | Field | Default |
+      |-------|---------|
+      | `executionMode` | `MANUAL` |
+      | `binding` | `false` |
+      | `validUntil` | `null` (no expiration) |
+
+      ## Request Body (Minimal)
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 75000.00,
+        "currency": "USD"
+      }
+      ```
+
+      ## Required Fields Only
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `listingId` | UUID | The listing to create an ask on |
+      | `amount` | float | Ask price (must be > 0) |
+      | `currency` | string | ISO 4217 currency code |
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from seller company | "Only the listing owner can create asks" |
+      | 403 | Listing not OPEN | "Listing is not open (status: {status})" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 422 | Missing required fields | Validation error details |
     method: POST
     body:
       mimeType: application/json
@@ -553,16 +1126,77 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}"
     name: "Update Ask (PATCH)"
     description: |
-      Update ask price or validity.
+      # PATCH /v1/ask/{ask_id}
 
-      Required Permission: UPDATE.INSTRUMENT
+      Update an ask's price or validity period.
 
-      Only allowed if:
+      ## When to Use
+      Use when the seller needs to adjust the ask price, currency, or expiration
+      without withdrawing and recreating the ask.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Prerequisites
+      Updates are only allowed when ALL conditions are met:
       - Ask status is ACTIVE
       - Listing status is OPEN
       - User is from the asker company
 
-      Updatable fields: amount, currency, validUntil
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `ask_id` | UUID | The ask's unique identifier |
+
+      ## Request Body
+      ```json
+      {
+        "amount": 90000.00,
+        "currency": "USD",
+        "validUntil": "2026-01-31T23:59:59Z"
+      }
+      ```
+
+      ## Updatable Fields
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `amount` | float | New ask price (must be > 0) |
+      | `currency` | string | New currency code |
+      | `validUntil` | datetime | New expiration time (must be future) |
+
+      All fields are optional - only include fields you want to update.
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-16T14:45:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 90000.00,
+        "currency": "USD",
+        "validUntil": "2026-01-31T23:59:59Z",
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from asker company | "Insufficient permissions" |
+      | 403 | Ask not ACTIVE | "Cannot update ask (status: {status})" |
+      | 403 | Listing not OPEN | "Listing is not open" |
+      | 403 | validUntil in the past | "valid_until must be in the future" |
+      | 404 | Ask not found | "Ask with ID {id} does not exist" |
+      | 422 | Invalid field values | Validation error details |
     method: PATCH
     body:
       mimeType: application/json
@@ -596,7 +1230,16 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Status Transitions
-    description: "Ask status transition endpoints"
+    description: |
+      Ask status transition endpoints (/v1/ask/{ask_id}/transition)
+
+      ## Available Transitions
+      | From | To | Who Can Do It |
+      |------|-----|---------------|
+      | ACTIVE | WITHDRAWN | Asker Company User |
+      | ACTIVE | SUSPENDED | Admin only |
+      | WITHDRAWN | SUSPENDED | Admin only |
+      | SUSPENDED | ACTIVE | Admin only |
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635100000
@@ -610,11 +1253,64 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
     name: "Transition: Withdraw Ask"
     description: |
-      Withdraw an ask (ACTIVE -> WITHDRAWN).
+      # POST /v1/ask/{ask_id}/transition
 
-      Required Permission: UPDATE.INSTRUMENT
+      Withdraw an ask (ACTIVE → WITHDRAWN).
 
-      Can only be done by a user from the asker company.
+      ## When to Use
+      Use when the seller wants to remove their ask from the marketplace.
+      The ask can no longer be matched with bids after withdrawal.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Authorization
+      Only users from the asker company can withdraw the ask.
+
+      ## Valid Transition
+      - From: `ACTIVE`
+      - To: `WITHDRAWN`
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `ask_id` | UUID | The ask's unique identifier |
+
+      ## Request Body
+      ```json
+      {
+        "status": "WITHDRAWN"
+      }
+      ```
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-16T14:45:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": null,
+        "status": "WITHDRAWN",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User not from asker company | "Insufficient permissions" |
+      | 403 | Invalid transition | "Cannot transition from {current} to WITHDRAWN" |
+      | 404 | Ask not found | "Ask with ID {id} does not exist" |
     method: POST
     body:
       mimeType: application/json
@@ -648,11 +1344,64 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
     name: "Transition: Suspend Ask (Admin)"
     description: |
-      Suspend an ask (ACTIVE -> SUSPENDED).
+      # POST /v1/ask/{ask_id}/transition
 
-      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+      Suspend an ask (ACTIVE → SUSPENDED or WITHDRAWN → SUSPENDED).
 
-      Can only be done by admins.
+      ## When to Use
+      Use when an administrator needs to temporarily remove an ask from
+      the marketplace due to policy violations or other concerns.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT` + `ADMIN` role
+
+      ## Authorization
+      Only administrators can suspend asks.
+
+      ## Valid Transitions
+      - From: `ACTIVE` → To: `SUSPENDED`
+      - From: `WITHDRAWN` → To: `SUSPENDED`
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `ask_id` | UUID | The ask's unique identifier |
+
+      ## Request Body
+      ```json
+      {
+        "status": "SUSPENDED"
+      }
+      ```
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-16T14:45:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": null,
+        "status": "SUSPENDED",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User is not admin | "Insufficient permissions" |
+      | 403 | Invalid transition | "Cannot transition from {current} to SUSPENDED" |
+      | 404 | Ask not found | "Ask with ID {id} does not exist" |
     method: POST
     body:
       mimeType: application/json
@@ -686,11 +1435,64 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/{{ _.test_ask_id }}/transition"
     name: "Transition: Reactivate Ask (Admin)"
     description: |
-      Reactivate a suspended ask (SUSPENDED -> ACTIVE).
+      # POST /v1/ask/{ask_id}/transition
 
-      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+      Reactivate a suspended ask (SUSPENDED → ACTIVE).
 
-      Can only be done by admins.
+      ## When to Use
+      Use when an administrator determines that a suspended ask should be
+      returned to active status on the marketplace.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.INSTRUMENT` + `ADMIN` role
+
+      ## Authorization
+      Only administrators can reactivate suspended asks.
+
+      ## Valid Transition
+      - From: `SUSPENDED`
+      - To: `ACTIVE`
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `ask_id` | UUID | The ask's unique identifier |
+
+      ## Request Body
+      ```json
+      {
+        "status": "ACTIVE"
+      }
+      ```
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-16T14:45:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "askerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "askerUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 100000.00,
+        "currency": "USD",
+        "validUntil": null,
+        "status": "ACTIVE",
+        "executionMode": "MANUAL",
+        "binding": false
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | User is not admin | "Insufficient permissions" |
+      | 403 | Invalid transition | "Cannot transition from {current} to ACTIVE" |
+      | 404 | Ask not found | "Ask with ID {id} does not exist" |
     method: POST
     body:
       mimeType: application/json
@@ -722,7 +1524,19 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Error Cases
-    description: "Test cases for error scenarios"
+    description: |
+      Test cases for error scenarios.
+
+      Use these requests to verify proper error handling behavior.
+
+      ## Common Error Codes
+      | Code | Description |
+      |------|-------------|
+      | 401 | Not authenticated - missing or invalid token |
+      | 403 | Forbidden - insufficient permissions or business rule violation |
+      | 404 | Not found - resource doesn't exist |
+      | 422 | Validation error - invalid request body |
+      | 500 | Server error - unexpected failure |
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635000000
@@ -736,9 +1550,20 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask - Invalid Listing (404)"
     description: |
+      # POST /v1/ask/ - Error Case
+
       Test creating an ask for a non-existent listing.
 
-      Expected: 404 Not Found
+      ## Expected Behavior
+      The API should return a 404 Not Found error when the listing
+      specified in `listingId` does not exist.
+
+      ## Expected Response (404 Not Found)
+      ```json
+      {
+        "detail": "Listing with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
     method: POST
     body:
       mimeType: application/json
@@ -774,9 +1599,26 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask - Invalid Amount (422)"
     description: |
+      # POST /v1/ask/ - Error Case
+
       Test creating an ask with zero or negative amount.
 
-      Expected: 422 Unprocessable Entity
+      ## Expected Behavior
+      The API should return a 422 Unprocessable Entity error when the
+      amount is not greater than zero.
+
+      ## Expected Response (422 Unprocessable Entity)
+      ```json
+      {
+        "detail": [
+          {
+            "loc": ["body", "amount"],
+            "msg": "Input should be greater than 0",
+            "type": "greater_than"
+          }
+        ]
+      }
+      ```
     method: POST
     body:
       mimeType: application/json
@@ -812,9 +1654,26 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/"
     name: "Create Ask - Invalid Execution Mode (422)"
     description: |
+      # POST /v1/ask/ - Error Case
+
       Test creating an ask with an invalid execution mode.
 
-      Expected: 422 Unprocessable Entity
+      ## Expected Behavior
+      The API should return a 422 Unprocessable Entity error when the
+      execution mode is not AUTO or MANUAL.
+
+      ## Expected Response (422 Unprocessable Entity)
+      ```json
+      {
+        "detail": [
+          {
+            "loc": ["body", "executionMode"],
+            "msg": "Input should be 'AUTO' or 'MANUAL'",
+            "type": "enum"
+          }
+        ]
+      }
+      ```
     method: POST
     body:
       mimeType: application/json
@@ -851,9 +1710,20 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/00000000-0000-0000-0000-000000000000"
     name: "Get Ask - Not Found (404)"
     description: |
+      # GET /v1/ask/{ask_id} - Error Case
+
       Test getting a non-existent ask.
 
-      Expected: 404 Not Found
+      ## Expected Behavior
+      The API should return a 404 Not Found error when the ask
+      with the specified ID does not exist.
+
+      ## Expected Response (404 Not Found)
+      ```json
+      {
+        "detail": "Ask with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
     method: GET
     body: {}
     parameters: []
@@ -882,9 +1752,20 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/ask/search"
     name: "Search Asks - No Auth (401)"
     description: |
+      # POST /v1/ask/search - Error Case
+
       Test searching asks without authentication.
 
-      Expected: 401 Unauthorized
+      ## Expected Behavior
+      The API should return a 401 Unauthorized error when no
+      Bearer token is provided.
+
+      ## Expected Response (401 Unauthorized)
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
     method: POST
     body:
       mimeType: application/json

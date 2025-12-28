@@ -10,7 +10,51 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Moneta Bid API
-    description: Collection for Moneta bid endpoints
+    description: |
+      # Moneta Bid API Collection
+
+      This collection contains endpoints for managing bids on instrument listings in the Moneta platform.
+
+      ## Overview
+
+      Bids represent purchase offers made by potential buyers on open listings. When a seller accepts a bid, ownership of the instrument transfers to the buyer.
+
+      ## Authentication
+
+      All endpoints require a valid JWT Bearer token obtained from the `/v1/auth/login` endpoint.
+
+      ## Bid Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `PENDING` | Bid is active and awaiting seller decision |
+      | `WITHDRAWN` | Bidder withdrew the bid |
+      | `SUSPENDED` | Admin suspended the bid |
+      | `SELECTED` | Bid was accepted by the seller |
+      | `NOT_SELECTED` | Bid was rejected or another bid was selected |
+
+      ## Permissions
+
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.INSTRUMENT` | View bids |
+      | `UPDATE.INSTRUMENT` | Create bids, manage status transitions |
+
+      ## Status Transition Rules
+
+      | From | To | Who Can Perform |
+      |------|-----|-----------------|
+      | `PENDING` | `WITHDRAWN` | Bidder company user |
+      | `PENDING` | `SUSPENDED` | Admin only |
+      | `WITHDRAWN` | `SUSPENDED` | Admin only |
+      | `PENDING` | `SELECTED` | Seller company user (via accept endpoint) |
+      | `PENDING` | `NOT_SELECTED` | Seller company user (via reject endpoint) |
+
+      ## Available Includes
+
+      | Include | Description |
+      |---------|-------------|
+      | `listing` | The listing this bid is on |
     scope: collection
     _type: workspace
 
@@ -60,7 +104,12 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Bid
-    description: "Bid endpoints (/v1/bid)"
+    description: |
+      # Bid Management Endpoints
+
+      Endpoints for creating, viewing, and searching bids.
+
+      **Base Path:** `/v1/bid`
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635200000
@@ -74,11 +123,104 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
     name: "Search Bids"
     description: |
-      Search bids with filters.
+      # POST /v1/bid/search
 
-      Required Permission: VIEW.INSTRUMENT
+      Search bids with filters, pagination, and sorting.
 
-      Supports ?include=listing query parameter.
+      ## When to Use
+
+      Use when you need to find bids matching specific criteria or paginate through bid records.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "listingId": ["550e8400-e29b-41d4-a716-446655440000"],
+        "bidderCompanyId": ["660e8400-e29b-41d4-a716-446655440001"],
+        "bidderUserId": ["770e8400-e29b-41d4-a716-446655440002"],
+        "status": "PENDING",
+        "minAmount": 10000,
+        "maxAmount": 100000,
+        "currency": "USD",
+        "sort": "-createdAt",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `listingId` | array | No | Array of listing UUIDs to filter by |
+      | `bidderCompanyId` | array | No | Array of bidder company UUIDs |
+      | `bidderUserId` | array | No | Array of bidder user UUIDs |
+      | `status` | string | No | Status filter: PENDING, WITHDRAWN, SUSPENDED, SELECTED, NOT_SELECTED |
+      | `minAmount` | float | No | Minimum bid amount |
+      | `maxAmount` | float | No | Maximum bid amount |
+      | `currency` | string | No | ISO 4217 currency code (3 chars) |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | Max results (1-200, default: 50) |
+      | `offset` | integer | No | Skip results (default: 0) |
+
+      ## Sorting
+
+      Use comma-separated field names. Prefix with `-` for descending order.
+
+      **Sortable fields:** `createdAt`, `updatedAt`, `amount`
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "createdAt": "2024-02-01T09:00:00Z",
+          "updatedAt": "2024-02-01T09:00:00Z",
+          "listingId": "550e8400-e29b-41d4-a716-446655440000",
+          "bidderCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+          "bidderUserId": "770e8400-e29b-41d4-a716-446655440002",
+          "amount": 50000.00,
+          "currency": "USD",
+          "validUntil": "2025-12-31T23:59:59Z",
+          "status": "PENDING",
+          "listing": null
+        }
+      ]
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique bid identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `listingId` | UUID | The listing this bid is on |
+      | `bidderCompanyId` | UUID | Company making the bid |
+      | `bidderUserId` | UUID | User who created the bid |
+      | `amount` | float | Bid amount |
+      | `currency` | string | ISO 4217 currency code |
+      | `validUntil` | datetime | Bid expiration time (optional) |
+      | `status` | string | Current bid status |
+      | `listing` | object | Listing details (if included) |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error details |
+      | 500 | Server error | "Internal server error" |
     method: POST
     body:
       mimeType: application/json
@@ -113,9 +255,31 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search?include=listing"
     name: "Search Bids with Listing"
     description: |
+      # POST /v1/bid/search?include=listing
+
       Search bids with the listing relationship included.
 
-      Required Permission: VIEW.INSTRUMENT
+      ## When to Use
+
+      Use when you need bid details along with the listing information in a single request.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `listing` | Load the listing relationship |
+
+      ## Response (200 OK)
+
+      Returns bids with the `listing` field populated including instrumentId, sellerCompanyId, status, etc.
     method: POST
     body:
       mimeType: application/json
@@ -150,11 +314,31 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
     name: "Search Bids by Status (PENDING)"
     description: |
+      # POST /v1/bid/search (Status Filter)
+
       Search for bids with PENDING status.
 
-      Required Permission: VIEW.INSTRUMENT
+      ## When to Use
 
-      Available statuses: PENDING, WITHDRAWN, SUSPENDED, SELECTED, NOT_SELECTED
+      Use when you need to find active bids awaiting seller decision.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Available Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `PENDING` | Active, awaiting decision |
+      | `WITHDRAWN` | Bidder cancelled |
+      | `SUSPENDED` | Admin suspended |
+      | `SELECTED` | Bid accepted |
+      | `NOT_SELECTED` | Bid rejected or lost |
     method: POST
     body:
       mimeType: application/json
@@ -190,9 +374,25 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
     name: "Search Bids by Listing"
     description: |
+      # POST /v1/bid/search (Listing Filter)
+
       Search for bids on a specific listing.
 
-      Required Permission: VIEW.INSTRUMENT
+      ## When to Use
+
+      Use when you need to see all bids for a particular listing (e.g., as a seller reviewing offers).
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Setup
+
+      Set `test_listing_id` in your environment to a valid listing UUID.
     method: POST
     body:
       mimeType: application/json
@@ -228,9 +428,25 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
     name: "Search Bids by Amount Range"
     description: |
+      # POST /v1/bid/search (Amount Filter)
+
       Search for bids within a specific amount range.
 
-      Required Permission: VIEW.INSTRUMENT
+      ## When to Use
+
+      Use when you need to find bids within a particular value range, optionally filtered by currency.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Example
+
+      This searches for USD bids between $10,000 and $100,000.
     method: POST
     body:
       mimeType: application/json
@@ -268,9 +484,59 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}"
     name: "Get Bid by ID"
     description: |
-      Get a specific bid by its UUID.
+      # GET /v1/bid/{bid_id}
 
-      Required Permission: VIEW.INSTRUMENT
+      Retrieve a specific bid by its UUID.
+
+      ## When to Use
+
+      Use when you need details for a specific bid.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `bid_id` | UUID | The bid's unique identifier |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "bidderCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "bidderUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 50000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "status": "PENDING",
+        "listing": null
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Bid not found | "Bid with ID {id} does not exist" |
+      | 422 | Invalid UUID format | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_bid_id` in your environment to a valid bid UUID.
     method: GET
     body: {}
     parameters: []
@@ -299,9 +565,27 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}?include=listing"
     name: "Get Bid with Listing"
     description: |
+      # GET /v1/bid/{bid_id}?include=listing
+
       Get a bid with the related listing included.
 
-      Required Permission: VIEW.INSTRUMENT
+      ## When to Use
+
+      Use when you need bid details along with listing information.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `listing` | Load the listing relationship |
     method: GET
     body: {}
     parameters: []
@@ -330,16 +614,89 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
     name: "Create Bid"
     description: |
+      # POST /v1/bid/
+
       Create a new bid on a listing.
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
 
-      Requirements:
+      Use when a potential buyer wants to make an offer on an open listing.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Business Rules
+
       - The listing must be in OPEN status
       - User's company cannot be the seller (no self-bidding)
       - One company can make multiple bids on the same listing
+      - Amount must be greater than zero
+      - Currency must be a valid ISO 4217 code (3 characters)
 
-      The bidder_company_id and bidder_user_id are derived from the authenticated user.
+      ## Request Body
+
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 50000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z"
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `listingId` | UUID | Yes | The listing to bid on |
+      | `amount` | float | Yes | Bid amount (must be > 0) |
+      | `currency` | string | Yes | ISO 4217 currency code (3 chars) |
+      | `validUntil` | datetime | No | Bid expiration timestamp (ISO 8601) |
+
+      ## Auto-populated Fields
+
+      The following fields are automatically set from the authenticated user:
+      - `bidderCompanyId` - Set to the user's company
+      - `bidderUserId` - Set to the authenticated user
+      - `status` - Set to `PENDING`
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "bidderCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "bidderUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 50000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "status": "PENDING"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Listing not open | "Listing is not open for bidding (status: {status})" |
+      | 403 | Self-bidding | "You cannot bid on your own listing" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 422 | Invalid amount | "Bid amount must be positive" |
+      | 422 | Invalid currency | "Currency must be exactly 3 characters" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_listing_id` in your environment to a valid OPEN listing UUID.
     method: POST
     body:
       mimeType: application/json
@@ -376,9 +733,38 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
     name: "Create Bid (No Expiry)"
     description: |
+      # POST /v1/bid/ (No Expiry)
+
       Create a bid without an expiration date.
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
+
+      Use when making a bid that should remain valid indefinitely (until manually withdrawn or the listing closes).
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "amount": 75000.00,
+        "currency": "EUR"
+      }
+      ```
+
+      ## Note
+
+      When `validUntil` is not provided, the bid has no expiration and will remain active until:
+      - The bidder withdraws it
+      - The seller accepts or rejects it
+      - The listing is closed
     method: POST
     body:
       mimeType: application/json
@@ -412,7 +798,32 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Status Transitions
-    description: "Bid status transition endpoints"
+    description: |
+      # Status Transition Endpoints
+
+      Endpoints for transitioning bids between lifecycle statuses.
+
+      ## Transition Flow
+
+      ```
+      PENDING ──────────────> WITHDRAWN (Bidder)
+         │
+         ├───────────────> SUSPENDED (Admin)
+         │
+         ├───────────────> SELECTED (Seller via /accept)
+         │
+         └───────────────> NOT_SELECTED (Seller via /reject)
+      ```
+
+      ## Role Requirements
+
+      | Transition | Who Can Perform |
+      |------------|-----------------|
+      | PENDING → WITHDRAWN | Bidder company user |
+      | PENDING → SUSPENDED | Admin only |
+      | WITHDRAWN → SUSPENDED | Admin only |
+      | PENDING → SELECTED | Seller (via accept endpoint) |
+      | PENDING → NOT_SELECTED | Seller (via reject endpoint) |
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635100000
@@ -426,11 +837,52 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/transition"
     name: "Transition: Withdraw Bid"
     description: |
+      # POST /v1/bid/{bid_id}/transition
+
       Withdraw a bid (PENDING -> WITHDRAWN).
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
 
-      Can only be done by a user from the bidder company.
+      Use when the bidder company wants to cancel their bid before the seller makes a decision.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** User from the bidder company only
+
+      ## Prerequisites
+
+      - Bid must be in `PENDING` status
+      - User must be from the bidder company
+
+      ## Request Body
+
+      ```json
+      {
+        "status": "WITHDRAWN"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated bid with `status: "WITHDRAWN"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Invalid transition | "Cannot transition from {from} to {to}" |
+      | 403 | Not bidder company | "Insufficient permissions" |
+      | 404 | Bid not found | "Bid with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
     method: POST
     body:
       mimeType: application/json
@@ -464,11 +916,52 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/transition"
     name: "Transition: Suspend Bid (Admin)"
     description: |
+      # POST /v1/bid/{bid_id}/transition
+
       Suspend a bid (PENDING -> SUSPENDED).
 
-      Required Permission: UPDATE.INSTRUMENT + ADMIN role
+      ## When to Use
 
-      Can only be done by admins.
+      Use when an admin needs to freeze a bid due to compliance issues, investigation, or other administrative reasons.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT` + ADMIN role
+
+      ## Role Requirements
+
+      **Allowed:** ADMIN only
+
+      ## Prerequisites
+
+      - Bid must be in `PENDING` or `WITHDRAWN` status
+      - User must have ADMIN role
+
+      ## Request Body
+
+      ```json
+      {
+        "status": "SUSPENDED"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated bid with `status: "SUSPENDED"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not an admin | "Insufficient permissions" |
+      | 403 | Invalid transition | "Cannot transition to SUSPENDED from {status}" |
+      | 404 | Bid not found | "Bid with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
     method: POST
     body:
       mimeType: application/json
@@ -500,7 +993,23 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Bid Actions
-    description: "Accept/Reject bid endpoints (for listing owners)"
+    description: |
+      # Accept/Reject Bid Endpoints
+
+      Endpoints for listing owners (sellers) to accept or reject bids.
+
+      ## Accept Bid
+
+      When a bid is accepted:
+      - The accepted bid is set to `SELECTED`
+      - All other PENDING bids on the same listing are set to `NOT_SELECTED`
+      - Ownership transfer process begins
+
+      ## Reject Bid
+
+      When a bid is rejected:
+      - Only that specific bid is set to `NOT_SELECTED`
+      - Other bids remain in their current state
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635050000
@@ -514,12 +1023,69 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/accept"
     name: "Accept Bid"
     description: |
+      # POST /v1/bid/{bid_id}/accept
+
       Accept a bid on a listing.
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
 
-      Can only be done by a user from the company that owns the listing.
-      Sets this bid to SELECTED and all other PENDING bids to NOT_SELECTED.
+      Use when the seller company wants to accept a specific bid, agreeing to sell the instrument at the bid price.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** User from the seller company (listing owner)
+
+      ## Prerequisites
+
+      - Bid must be in `PENDING` status
+      - Listing must be in `OPEN` status
+      - User must be from the seller company
+
+      ## Request Body
+
+      None required.
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-05T14:30:00Z",
+        "listingId": "550e8400-e29b-41d4-a716-446655440000",
+        "bidderCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "bidderUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "amount": 50000.00,
+        "currency": "USD",
+        "validUntil": "2025-12-31T23:59:59Z",
+        "status": "SELECTED"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not seller company | "Insufficient permissions" |
+      | 403 | Bid not PENDING | "Bid is not in PENDING status" |
+      | 403 | Listing not OPEN | "Listing is not in OPEN status" |
+      | 404 | Bid not found | "Bid with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Side Effects
+
+      - Accepted bid status changes to `SELECTED`
+      - All other PENDING bids on the same listing are set to `NOT_SELECTED`
+      - Instrument ownership transfer is initiated
     method: POST
     body: {}
     parameters: []
@@ -548,12 +1114,56 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/{{ _.test_bid_id }}/reject"
     name: "Reject Bid"
     description: |
+      # POST /v1/bid/{bid_id}/reject
+
       Reject a bid on a listing.
 
-      Required Permission: UPDATE.INSTRUMENT
+      ## When to Use
 
-      Can only be done by a user from the company that owns the listing.
-      Sets this bid to NOT_SELECTED.
+      Use when the seller company wants to decline a specific bid without affecting other bids.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** User from the seller company (listing owner)
+
+      ## Prerequisites
+
+      - Bid must be in `PENDING` status
+      - Listing must be in `OPEN` status
+      - User must be from the seller company
+
+      ## Request Body
+
+      None required.
+
+      ## Response (200 OK)
+
+      Returns the updated bid with `status: "NOT_SELECTED"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not seller company | "Insufficient permissions" |
+      | 403 | Bid not PENDING | "Bid is not in PENDING status" |
+      | 403 | Listing not OPEN | "Listing is not in OPEN status" |
+      | 404 | Bid not found | "Bid with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      - Only the rejected bid is affected
+      - Other bids remain in their current state
+      - The listing remains OPEN for other bids
     method: POST
     body: {}
     parameters: []
@@ -580,7 +1190,11 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Error Cases
-    description: "Test cases for error scenarios"
+    description: |
+      # Error Test Cases
+
+      This folder contains requests designed to trigger specific error responses.
+      Use these to verify error handling and understand API behavior.
     environment: {}
     environmentPropertyOrder: null
     metaSortKey: -1703635000000
@@ -594,9 +1208,21 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
     name: "Create Bid - Invalid Listing (404)"
     description: |
+      # POST /v1/bid/ - 404 Test
+
       Test creating a bid for a non-existent listing.
 
-      Expected: 404 Not Found
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Listing with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
     method: POST
     body:
       mimeType: application/json
@@ -632,9 +1258,31 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
     name: "Create Bid - Invalid Amount (422)"
     description: |
+      # POST /v1/bid/ - 422 Test (Invalid Amount)
+
       Test creating a bid with zero or negative amount.
 
-      Expected: 422 Unprocessable Entity
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "greater_than",
+            "loc": ["body", "amount"],
+            "msg": "Input should be greater than 0"
+          }
+        ]
+      }
+      ```
+
+      ## Validation Rules
+
+      - `amount` must be greater than 0
     method: POST
     body:
       mimeType: application/json
@@ -670,9 +1318,31 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/"
     name: "Create Bid - Invalid Currency (422)"
     description: |
+      # POST /v1/bid/ - 422 Test (Invalid Currency)
+
       Test creating a bid with invalid currency code.
 
-      Expected: 422 Unprocessable Entity
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "string_too_long",
+            "loc": ["body", "currency"],
+            "msg": "String should have at most 3 characters"
+          }
+        ]
+      }
+      ```
+
+      ## Validation Rules
+
+      - `currency` must be exactly 3 characters (ISO 4217 code)
     method: POST
     body:
       mimeType: application/json
@@ -708,9 +1378,21 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/00000000-0000-0000-0000-000000000000"
     name: "Get Bid - Not Found (404)"
     description: |
+      # GET /v1/bid/{bid_id} - 404 Test
+
       Test getting a non-existent bid.
 
-      Expected: 404 Not Found
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Bid with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
     method: GET
     body: {}
     parameters: []
@@ -739,9 +1421,25 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/bid/search"
     name: "Search Bids - No Auth (401)"
     description: |
+      # POST /v1/bid/search - 401 Test
+
       Test searching bids without authentication.
 
-      Expected: 401 Unauthorized
+      ## Expected Behavior
+
+      The API should return a 401 status code indicating authentication is required.
+
+      ## Response (401 Unauthorized)
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that all bid endpoints require authentication.
     method: POST
     body:
       mimeType: application/json

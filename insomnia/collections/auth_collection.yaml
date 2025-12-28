@@ -10,7 +10,23 @@ resources:
     modified: 1703635200000
     created: 1703635200000
     name: Moneta Auth API
-    description: Collection for Moneta authentication endpoints
+    description: |
+      # Authentication API Collection
+
+      This collection contains endpoints for user authentication in the Moneta platform.
+
+      ## Overview
+      The auth API provides JWT-based authentication. Users must authenticate to receive
+      a bearer token, which is then used for all subsequent authenticated requests.
+
+      ## Token Details
+      - **Type:** Bearer (JWT)
+      - **Expiration:** 15 minutes (900,000 milliseconds)
+      - **Usage:** Include in Authorization header: `Bearer <token>`
+
+      ## Account Status Requirements
+      Only users with `ACTIVE` account status can obtain tokens.
+      Users with other statuses (INACTIVE, PENDING, SUSPENDED, DISABLED, DELETED) cannot log in.
     scope: collection
     _type: workspace
 
@@ -78,9 +94,52 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
     name: Login
     description: |
+      # POST /v1/auth/login
+
       Authenticate a user and receive a JWT access token.
 
-      Provide valid email and password to receive a bearer token that can be used for authenticated requests.
+      ## When to Use
+      Call this endpoint when a user needs to log in to the system.
+      Store the returned token and use it for subsequent authenticated requests.
+
+      ## Authentication
+      **Required:** No
+
+      ## Permissions
+      **Required:** None
+
+      ## Request Body
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `email` | string | Yes | User's email address |
+      | `password` | string | Yes | User's password |
+
+      ## Response (200 OK)
+      ```json
+      {
+        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+        "token_type": "bearer",
+        "expires": 900000
+      }
+      ```
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `access_token` | string | JWT token for authenticated requests |
+      | `token_type` | string | Always "bearer" |
+      | `expires` | integer | Token expiration in milliseconds |
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | User not found | "Invalid credentials" |
+      | 401 | Wrong password | "Invalid credentials" |
+      | 403 | Account not ACTIVE | "Wrong account status" |
+      | 422 | Missing fields | Validation error |
+
+      ## Notes
+      - Only users with ACTIVE account status can obtain tokens
+      - Token expires in 15 minutes
     method: POST
     body:
       mimeType: application/json
@@ -113,9 +172,35 @@ resources:
     url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
     name: "Login - Admin"
     description: |
-      Authenticate as an ADMIN user and receive a JWT access token.
+      # POST /v1/auth/login (Admin)
 
-      Uses admin credentials to get a bearer token with admin privileges.
+      Authenticate as an ADMIN user and receive a JWT access token with admin privileges.
+
+      ## When to Use
+      Use this when you need admin-level access to perform actions like:
+      - Approving/rejecting instruments
+      - Suspending listings, bids, or asks
+      - Managing users across companies
+
+      ## Authentication
+      **Required:** No
+
+      ## Credentials
+      - **Email:** admin@example.com
+      - **Password:** password123
+
+      ## Response (200 OK)
+      ```json
+      {
+        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+        "token_type": "bearer",
+        "expires": 900000
+      }
+      ```
+
+      ## After Login
+      Copy the `access_token` value and set it in the `admin_token` environment variable
+      to use for authenticated requests.
     method: POST
     body:
       mimeType: application/json
@@ -140,17 +225,45 @@ resources:
     settingFollowRedirects: global
     _type: request
 
+  # Error Cases Folder
+  - _id: fld_auth_errors
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for authentication error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
   # Login - Invalid Email
   - _id: req_login_invalid_email
-    parentId: fld_auth
+    parentId: fld_auth_errors
     modified: 1703635200000
     created: 1703635200000
     url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
     name: "Login - Invalid Email (401)"
     description: |
-      Test login with non-existent email.
+      # POST /v1/auth/login - Invalid Email Test
 
-      Expected: 401 Unauthorized with InvalidCredentialsException
+      Test login with a non-existent email address.
+
+      ## Expected Response
+      **Status:** 401 Unauthorized
+
+      ```json
+      {
+        "detail": "Invalid credentials"
+      }
+      ```
+
+      ## Exception
+      `InvalidCredentialsException` - Raised when user is not found in the database.
+
+      ## Security Note
+      The same error message is returned for both invalid email and invalid password
+      to prevent user enumeration attacks.
     method: POST
     body:
       mimeType: application/json
@@ -165,7 +278,7 @@ resources:
         value: application/json
         id: pair_content_type
     authentication: {}
-    metaSortKey: -1703635199000
+    metaSortKey: -1703635100000
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -177,15 +290,31 @@ resources:
 
   # Login - Invalid Password
   - _id: req_login_invalid_password
-    parentId: fld_auth
+    parentId: fld_auth_errors
     modified: 1703635200000
     created: 1703635200000
     url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
     name: "Login - Invalid Password (401)"
     description: |
-      Test login with wrong password.
+      # POST /v1/auth/login - Invalid Password Test
 
-      Expected: 401 Unauthorized with InvalidCredentialsException
+      Test login with correct email but wrong password.
+
+      ## Expected Response
+      **Status:** 401 Unauthorized
+
+      ```json
+      {
+        "detail": "Invalid credentials"
+      }
+      ```
+
+      ## Exception
+      `InvalidCredentialsException` - Raised when password verification fails.
+
+      ## Security Note
+      Password verification uses bcrypt with constant-time comparison
+      to prevent timing attacks.
     method: POST
     body:
       mimeType: application/json
@@ -200,7 +329,7 @@ resources:
         value: application/json
         id: pair_content_type
     authentication: {}
-    metaSortKey: -1703635198080
+    metaSortKey: -1703635099000
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
@@ -212,15 +341,33 @@ resources:
 
   # Login - Missing Fields
   - _id: req_login_missing_fields
-    parentId: fld_auth
+    parentId: fld_auth_errors
     modified: 1703635200000
     created: 1703635200000
     url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
     name: "Login - Missing Fields (422)"
     description: |
-      Test login with missing required fields.
+      # POST /v1/auth/login - Missing Fields Test
 
-      Expected: 422 Unprocessable Entity
+      Test login with missing required fields (password omitted).
+
+      ## Expected Response
+      **Status:** 422 Unprocessable Entity
+
+      ```json
+      {
+        "detail": [
+          {
+            "loc": ["body", "password"],
+            "msg": "field required",
+            "type": "value_error.missing"
+          }
+        ]
+      }
+      ```
+
+      ## Required Fields
+      Both `email` and `password` are required in the request body.
     method: POST
     body:
       mimeType: application/json
@@ -234,7 +381,7 @@ resources:
         value: application/json
         id: pair_content_type
     authentication: {}
-    metaSortKey: -1703635197000
+    metaSortKey: -1703635098000
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
