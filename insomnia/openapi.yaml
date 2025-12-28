@@ -1,0 +1,2473 @@
+openapi: 3.0.3
+info:
+  title: Moneta API
+  description: |
+    Moneta is a financial instrument trading platform API. This API enables:
+    - User and company management
+    - Financial instrument creation and lifecycle management
+    - Marketplace listings for instruments
+    - Bidding and asking price mechanisms
+
+    ## Request/Response Format
+    - All requests and responses use JSON format
+    - Request bodies use **camelCase** field names
+    - Response bodies use **snake_case** field names
+    - Dates: ISO 8601 format (e.g., `2025-12-31`)
+    - Datetimes: ISO 8601 with timezone (e.g., `2025-12-31T23:59:59Z`)
+    - UUIDs: Standard format (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+
+    ## Authentication
+    Most endpoints require JWT Bearer token authentication. Obtain a token via `/v1/auth/login`.
+  version: 1.0.0
+  contact:
+    name: Moneta API Support
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Local Development Server
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Users
+    description: User management endpoints
+  - name: Companies
+    description: Company management endpoints
+  - name: Company Addresses
+    description: Company address management endpoints
+  - name: Instruments
+    description: Financial instrument management endpoints
+  - name: Listings
+    description: Marketplace listing endpoints
+  - name: Bids
+    description: Bid management endpoints
+  - name: Asks
+    description: Ask (selling price) management endpoints
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /v1/auth/login
+
+  schemas:
+    # Common schemas
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message describing what went wrong
+      required:
+        - detail
+      example:
+        detail: "Error message describing what went wrong"
+
+    ValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+
+    MonetaID:
+      type: string
+      format: uuid
+      description: UUID identifier
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    # Enums
+    UserRole:
+      type: string
+      enum: [ADMIN, BUYER, SELLER, ISSUER]
+      description: |
+        User roles in the system:
+        - `ADMIN`: Full system access
+        - `BUYER`: Can purchase instruments
+        - `SELLER`: Can sell instruments
+        - `ISSUER`: Can issue instruments
+
+    ActivationStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, PENDING, SUSPENDED, DISABLED, DELETED]
+      description: |
+        Account status:
+        - `ACTIVE`: User is fully active
+        - `INACTIVE`: User exists but is not currently active
+        - `PENDING`: Waiting for verification
+        - `SUSPENDED`: Temporarily disabled
+        - `DISABLED`: Permanently disabled
+        - `DELETED`: Soft-deleted
+
+    AddressType:
+      type: string
+      enum: [REGISTERED, BILLING, OFFICE, SHIPPING, OTHER]
+      description: Type of company address
+
+    InstrumentStatus:
+      type: string
+      enum: [DRAFT, PENDING_APPROVAL, ACTIVE, MATURED, REJECTED]
+      description: |
+        Instrument lifecycle status:
+        - `DRAFT`: Initial state, can be edited
+        - `PENDING_APPROVAL`: Submitted for review
+        - `ACTIVE`: Approved and available
+        - `MATURED`: Past maturity date
+        - `REJECTED`: Declined by reviewer
+
+    MaturityStatus:
+      type: string
+      enum: [NOT_DUE, DUE, SETTLED, DEFAULTED]
+      description: Instrument maturity payment status
+
+    TradingStatus:
+      type: string
+      enum: [DRAFT, OPEN, HALTED, CLOSED]
+      description: Instrument trading availability status
+
+    ListingStatus:
+      type: string
+      enum: [OPEN, WITHDRAWN, SUSPENDED, CLOSED]
+      description: Listing status on the marketplace
+
+    BidStatus:
+      type: string
+      enum: [PENDING, WITHDRAWN, SUSPENDED, SELECTED, NOT_SELECTED]
+      description: |
+        Bid status:
+        - `PENDING`: Active, awaiting decision
+        - `WITHDRAWN`: Voluntarily withdrawn by bidder
+        - `SUSPENDED`: Suspended by admin
+        - `SELECTED`: Accepted by seller
+        - `NOT_SELECTED`: Not selected/rejected
+
+    AskStatus:
+      type: string
+      enum: [ACTIVE, WITHDRAWN, SUSPENDED]
+      description: Ask status
+
+    ExecutionMode:
+      type: string
+      enum: [MANUAL, AUTO]
+      description: |
+        Ask execution mode:
+        - `MANUAL`: Bids require manual review
+        - `AUTO`: Matching bids are automatically accepted
+
+    # Auth schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+        password:
+          type: string
+          format: password
+          description: User's password
+      example:
+        email: "admin@example.com"
+        password: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT token for authenticated requests
+        token_type:
+          type: string
+          enum: [bearer]
+          description: Token type (always "bearer")
+        expires:
+          type: integer
+          description: Token expiration time in milliseconds
+      example:
+        access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type: "bearer"
+        expires: 900000
+
+    # User schemas
+    User:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        company_id:
+          $ref: '#/components/schemas/MonetaID'
+        role:
+          $ref: '#/components/schemas/UserRole'
+        account_status:
+          $ref: '#/components/schemas/ActivationStatus'
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        email: "user@example.com"
+        first_name: "John"
+        last_name: "Doe"
+        company_id: "660e8400-e29b-41d4-a716-446655440001"
+        role: "BUYER"
+        account_status: "ACTIVE"
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - password
+        - companyId
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address (must be unique)
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        password:
+          type: string
+          format: password
+          description: User's password
+        companyId:
+          $ref: '#/components/schemas/MonetaID'
+        role:
+          $ref: '#/components/schemas/UserRole'
+      example:
+        email: "newuser@example.com"
+        firstName: "Jane"
+        lastName: "Smith"
+        password: "SecurePassword123!"
+        companyId: "660e8400-e29b-41d4-a716-446655440001"
+        role: "BUYER"
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accountStatus:
+          $ref: '#/components/schemas/ActivationStatus'
+        role:
+          $ref: '#/components/schemas/UserRole'
+      example:
+        firstName: "Janet"
+        accountStatus: "SUSPENDED"
+
+    UserFilters:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Partial match on email (case-insensitive)
+        firstName:
+          type: string
+          description: Partial match on first name
+        lastName:
+          type: string
+          description: Partial match on last name
+        role:
+          $ref: '#/components/schemas/UserRole'
+        companyId:
+          $ref: '#/components/schemas/MonetaID'
+        createdAtAfter:
+          type: string
+          format: date
+        createdAtBefore:
+          type: string
+          format: date
+        sort:
+          type: string
+          default: "-createdAt"
+          description: Sort order (prefix with - for descending)
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    # Company schemas
+    Company:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        legal_name:
+          type: string
+        trade_name:
+          type: string
+        registration_number:
+          type: string
+        incorporation_date:
+          type: string
+          format: date
+      example:
+        id: "660e8400-e29b-41d4-a716-446655440001"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        legal_name: "Acme Corporation"
+        trade_name: "Acme"
+        registration_number: "12345678"
+        incorporation_date: "2020-01-15"
+
+    CompanyWithIncludes:
+      allOf:
+        - $ref: '#/components/schemas/Company'
+        - type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                $ref: '#/components/schemas/CompanyAddress'
+              nullable: true
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+              nullable: true
+            instruments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Instrument'
+              nullable: true
+
+    CompanyCreate:
+      type: object
+      required:
+        - legalName
+        - registrationNumber
+        - incorporationDate
+      properties:
+        legalName:
+          type: string
+        tradeName:
+          type: string
+        registrationNumber:
+          type: string
+        incorporationDate:
+          type: string
+          format: date
+      example:
+        legalName: "New Company LLC"
+        tradeName: "NewCo"
+        registrationNumber: "87654321"
+        incorporationDate: "2025-01-01"
+
+    CompanyFilters:
+      type: object
+      properties:
+        legalName:
+          type: string
+        tradeName:
+          type: string
+        registrationNumber:
+          type: string
+        incorporationDateAfter:
+          type: string
+          format: date
+        incorporationDateBefore:
+          type: string
+          format: date
+        createdAtAfter:
+          type: string
+          format: date
+        createdAtBefore:
+          type: string
+          format: date
+        sort:
+          type: string
+          default: "-createdAt"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    # Company Address schemas
+    CompanyAddress:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        type:
+          $ref: '#/components/schemas/AddressType'
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+        company_id:
+          $ref: '#/components/schemas/MonetaID'
+      example:
+        id: "770e8400-e29b-41d4-a716-446655440002"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        type: "REGISTERED"
+        street: "123 Main Street"
+        city: "New York"
+        state: "NY"
+        postal_code: "10001"
+        country: "US"
+        company_id: "660e8400-e29b-41d4-a716-446655440001"
+
+    CompanyAddressCreate:
+      type: object
+      required:
+        - type
+        - street
+        - city
+        - postalCode
+        - country
+        - companyId
+      properties:
+        type:
+          $ref: '#/components/schemas/AddressType'
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: ISO 3166-1 alpha-2 country code
+        companyId:
+          $ref: '#/components/schemas/MonetaID'
+
+    # Instrument schemas
+    Instrument:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        name:
+          type: string
+        face_value:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        maturity_date:
+          type: string
+          format: date
+        maturity_payment:
+          type: number
+          format: float
+        instrument_status:
+          $ref: '#/components/schemas/InstrumentStatus'
+        maturity_status:
+          $ref: '#/components/schemas/MaturityStatus'
+        trading_status:
+          $ref: '#/components/schemas/TradingStatus'
+        issuer_id:
+          $ref: '#/components/schemas/MonetaID'
+        created_by:
+          $ref: '#/components/schemas/MonetaID'
+        public_payload:
+          type: object
+          additionalProperties: true
+          nullable: true
+      example:
+        id: "880e8400-e29b-41d4-a716-446655440003"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        name: "Corporate Bond 2025"
+        face_value: 100000.00
+        currency: "USD"
+        maturity_date: "2026-01-15"
+        maturity_payment: 105000.00
+        instrument_status: "ACTIVE"
+        maturity_status: "DUE"
+        trading_status: "OPEN"
+        issuer_id: "660e8400-e29b-41d4-a716-446655440001"
+        created_by: "550e8400-e29b-41d4-a716-446655440000"
+        public_payload: null
+
+    InstrumentWithDocuments:
+      allOf:
+        - $ref: '#/components/schemas/Instrument'
+        - type: object
+          properties:
+            instrument_documents:
+              type: array
+              items:
+                $ref: '#/components/schemas/InstrumentDocument'
+              nullable: true
+
+    InstrumentCreate:
+      type: object
+      required:
+        - name
+        - faceValue
+        - currency
+        - maturityDate
+        - maturityPayment
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        faceValue:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        maturityDate:
+          type: string
+          format: date
+        maturityPayment:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        publicPayload:
+          type: object
+          additionalProperties: true
+      example:
+        name: "Corporate Bond 2025"
+        faceValue: 100000.00
+        currency: "USD"
+        maturityDate: "2026-01-15"
+        maturityPayment: 105000.00
+        publicPayload:
+          description: "5% annual yield corporate bond"
+
+    InstrumentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        faceValue:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        maturityDate:
+          type: string
+          format: date
+        maturityPayment:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        publicPayload:
+          type: object
+          additionalProperties: true
+
+    InstrumentStatusTransition:
+      type: object
+      required:
+        - newStatus
+      properties:
+        newStatus:
+          $ref: '#/components/schemas/InstrumentStatus'
+      example:
+        newStatus: "PENDING_APPROVAL"
+
+    InstrumentFilters:
+      type: object
+      properties:
+        minFaceValue:
+          type: number
+          format: float
+        maxFaceValue:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        maturityDateAfter:
+          type: string
+          format: date
+        maturityDateBefore:
+          type: string
+          format: date
+        createdAtAfter:
+          type: string
+          format: date
+        createdAtBefore:
+          type: string
+          format: date
+        minMaturityPayment:
+          type: number
+          format: float
+        maxMaturityPayment:
+          type: number
+          format: float
+        instrumentStatus:
+          $ref: '#/components/schemas/InstrumentStatus'
+        maturityStatus:
+          $ref: '#/components/schemas/MaturityStatus'
+        tradingStatus:
+          $ref: '#/components/schemas/TradingStatus'
+        issuerId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        createdBy:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        sort:
+          type: string
+          default: "-createdAt"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    InstrumentDocument:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        instrument_id:
+          $ref: '#/components/schemas/MonetaID'
+        document_id:
+          $ref: '#/components/schemas/MonetaID'
+
+    # Listing schemas
+    Listing:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        instrument_id:
+          $ref: '#/components/schemas/MonetaID'
+        seller_company_id:
+          $ref: '#/components/schemas/MonetaID'
+        listing_creator_user_id:
+          $ref: '#/components/schemas/MonetaID'
+        status:
+          $ref: '#/components/schemas/ListingStatus'
+      example:
+        id: "bb0e8400-e29b-41d4-a716-446655440006"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        instrument_id: "880e8400-e29b-41d4-a716-446655440003"
+        seller_company_id: "660e8400-e29b-41d4-a716-446655440001"
+        listing_creator_user_id: "550e8400-e29b-41d4-a716-446655440000"
+        status: "OPEN"
+
+    ListingWithInstrument:
+      allOf:
+        - $ref: '#/components/schemas/Listing'
+        - type: object
+          properties:
+            instrument:
+              $ref: '#/components/schemas/Instrument'
+              nullable: true
+
+    ListingCreate:
+      type: object
+      required:
+        - instrumentId
+      properties:
+        instrumentId:
+          $ref: '#/components/schemas/MonetaID'
+      example:
+        instrumentId: "880e8400-e29b-41d4-a716-446655440003"
+
+    ListingStatusTransition:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ListingStatus'
+      example:
+        status: "WITHDRAWN"
+
+    ListingFilters:
+      type: object
+      properties:
+        instrumentId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        sellerCompanyId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        listingCreatorUserId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        status:
+          $ref: '#/components/schemas/ListingStatus'
+        sort:
+          type: string
+          default: "-createdAt"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    # Bid schemas
+    Bid:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        listing_id:
+          $ref: '#/components/schemas/MonetaID'
+        bidder_company_id:
+          $ref: '#/components/schemas/MonetaID'
+        bidder_user_id:
+          $ref: '#/components/schemas/MonetaID'
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/BidStatus'
+      example:
+        id: "cc0e8400-e29b-41d4-a716-446655440007"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        listing_id: "bb0e8400-e29b-41d4-a716-446655440006"
+        bidder_company_id: "dd0e8400-e29b-41d4-a716-446655440008"
+        bidder_user_id: "ee0e8400-e29b-41d4-a716-446655440009"
+        amount: 95000.00
+        currency: "USD"
+        valid_until: "2025-12-31T23:59:59Z"
+        status: "PENDING"
+
+    BidWithListing:
+      allOf:
+        - $ref: '#/components/schemas/Bid'
+        - type: object
+          properties:
+            listing:
+              $ref: '#/components/schemas/Listing'
+              nullable: true
+
+    BidCreate:
+      type: object
+      required:
+        - listingId
+        - amount
+        - currency
+      properties:
+        listingId:
+          $ref: '#/components/schemas/MonetaID'
+        amount:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+      example:
+        listingId: "bb0e8400-e29b-41d4-a716-446655440006"
+        amount: 95000.00
+        currency: "USD"
+        validUntil: "2025-12-31T23:59:59Z"
+
+    BidStatusTransition:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/BidStatus'
+      example:
+        status: "WITHDRAWN"
+
+    BidFilters:
+      type: object
+      properties:
+        listingId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        bidderCompanyId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        bidderUserId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        status:
+          $ref: '#/components/schemas/BidStatus'
+        minAmount:
+          type: number
+          format: float
+        maxAmount:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        sort:
+          type: string
+          default: "-createdAt"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    # Ask schemas
+    Ask:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MonetaID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        listing_id:
+          $ref: '#/components/schemas/MonetaID'
+        asker_company_id:
+          $ref: '#/components/schemas/MonetaID'
+        asker_user_id:
+          $ref: '#/components/schemas/MonetaID'
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        execution_mode:
+          $ref: '#/components/schemas/ExecutionMode'
+        binding:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/AskStatus'
+      example:
+        id: "ff0e8400-e29b-41d4-a716-44665544000a"
+        created_at: "2025-01-15T10:30:00Z"
+        updated_at: "2025-01-15T10:30:00Z"
+        listing_id: "bb0e8400-e29b-41d4-a716-446655440006"
+        asker_company_id: "660e8400-e29b-41d4-a716-446655440001"
+        asker_user_id: "550e8400-e29b-41d4-a716-446655440000"
+        amount: 100000.00
+        currency: "USD"
+        valid_until: "2025-12-31T23:59:59Z"
+        execution_mode: "MANUAL"
+        binding: false
+        status: "ACTIVE"
+
+    AskWithListing:
+      allOf:
+        - $ref: '#/components/schemas/Ask'
+        - type: object
+          properties:
+            listing:
+              $ref: '#/components/schemas/Listing'
+              nullable: true
+
+    AskCreate:
+      type: object
+      required:
+        - listingId
+        - amount
+        - currency
+      properties:
+        listingId:
+          $ref: '#/components/schemas/MonetaID'
+        amount:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Must be in the future if provided
+        executionMode:
+          $ref: '#/components/schemas/ExecutionMode'
+          default: MANUAL
+        binding:
+          type: boolean
+          default: false
+      example:
+        listingId: "bb0e8400-e29b-41d4-a716-446655440006"
+        amount: 100000.00
+        currency: "USD"
+        validUntil: "2025-12-31T23:59:59Z"
+        executionMode: "AUTO"
+        binding: true
+
+    AskUpdate:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+      example:
+        amount: 95000.00
+        validUntil: "2026-01-31T23:59:59Z"
+
+    AskStatusTransition:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/AskStatus'
+      example:
+        status: "WITHDRAWN"
+
+    AskFilters:
+      type: object
+      properties:
+        listingId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        askerCompanyId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        askerUserId:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonetaID'
+        status:
+          $ref: '#/components/schemas/AskStatus'
+        minAmount:
+          type: number
+          format: float
+        maxAmount:
+          type: number
+          format: float
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        executionMode:
+          $ref: '#/components/schemas/ExecutionMode'
+        binding:
+          type: boolean
+        sort:
+          type: string
+          default: "-createdAt"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Not authenticated"
+
+    Forbidden:
+      description: Insufficient permissions or forbidden action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Insufficient permissions"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Entity was not found"
+
+    Conflict:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Entity with such unique fields already exists"
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Internal server error"
+
+paths:
+  # Auth endpoints
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: User login
+      description: |
+        Authenticate a user and obtain a JWT access token.
+
+        **Note:** Only users with `ACTIVE` account status can obtain tokens.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Invalid credentials"
+        '403':
+          description: Account not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Wrong account status"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # User endpoints
+  /user/:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Retrieve all users in the system. Requires `VIEW.ALL_USERS` permission.
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of all users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Create a new user in the system. Requires `CREATE.USER` permission.
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /user/search:
+    post:
+      tags:
+        - Users
+      summary: Search users
+      description: Search for users with filtering, sorting, and pagination. Requires `VIEW.ALL_USERS` permission.
+      operationId: searchUsers
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserFilters'
+      responses:
+        '200':
+          description: List of matching users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /user/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID. Requires `VIEW.USER` permission.
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Users
+      summary: Update user
+      description: |
+        Update an existing user's information. Requires `UPDATE.USER` permission
+        and must be from the same company as the target user.
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: |
+        Delete a user from the system (soft delete). Requires `DELETE.USER` permission
+        and must be from the same company as the target user.
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Company endpoints
+  /company/:
+    get:
+      tags:
+        - Companies
+      summary: Get all companies
+      description: Retrieve all companies in the system. Requires `VIEW.COMPANY` permission.
+      operationId: getAllCompanies
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of all companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Companies
+      summary: Create a new company
+      description: Create a new company in the system. Requires `CREATE.COMPANY` permission.
+      operationId: createCompany
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+      responses:
+        '201':
+          description: Company created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /company/search:
+    post:
+      tags:
+        - Companies
+      summary: Search companies
+      description: Search for companies with filtering, sorting, and pagination. Requires `VIEW.COMPANY` permission.
+      operationId: searchCompanies
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyFilters'
+      responses:
+        '200':
+          description: List of matching companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /company/{company_id}:
+    get:
+      tags:
+        - Companies
+      summary: Get company by ID
+      description: |
+        Retrieve a specific company by ID with optional related entities.
+        Requires `VIEW.COMPANY` permission.
+      operationId: getCompanyById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of relations to include (addresses, users, instruments)
+          example: "addresses,users"
+      responses:
+        '200':
+          description: Company details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyWithIncludes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Company Address endpoints
+  /company-address/:
+    get:
+      tags:
+        - Company Addresses
+      summary: Get all company addresses
+      description: Retrieve all company addresses in the system. Requires `VIEW.COMPANY_ADDRESS` permission.
+      operationId: getAllCompanyAddresses
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of all company addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyAddress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Company Addresses
+      summary: Create a company address
+      description: Create a new address for a company. Requires `CREATE.COMPANY_ADDRESS` permission.
+      operationId: createCompanyAddress
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyAddressCreate'
+      responses:
+        '201':
+          description: Address created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyAddress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # Instrument endpoints
+  /instrument/search:
+    post:
+      tags:
+        - Instruments
+      summary: Search instruments
+      description: Search for instruments with filtering, sorting, and pagination. Requires `VIEW.INSTRUMENT` permission.
+      operationId: searchInstruments
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentFilters'
+      responses:
+        '200':
+          description: List of matching instruments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Instrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /instrument/:
+    post:
+      tags:
+        - Instruments
+      summary: Create a new instrument
+      description: |
+        Create a new financial instrument. The instrument starts in DRAFT status.
+        Requires `CREATE.INSTRUMENT` permission.
+      operationId: createInstrument
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentCreate'
+      responses:
+        '201':
+          description: Instrument created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /instrument/{instrument_id}:
+    get:
+      tags:
+        - Instruments
+      summary: Get instrument by ID
+      description: Retrieve a specific instrument by ID with optional documents. Requires `VIEW.INSTRUMENT` permission.
+      operationId: getInstrumentById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [documents]
+          description: Set to 'documents' to include associated documents
+      responses:
+        '200':
+          description: Instrument details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentWithDocuments'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Instrument not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Instrument with ID {id} does not exist"
+
+    patch:
+      tags:
+        - Instruments
+      summary: Update a draft instrument
+      description: |
+        Update an instrument that is still in DRAFT status.
+        Only the issuing company can update their instruments.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: updateInstrument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentUpdate'
+      responses:
+        '200':
+          description: Instrument updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Cannot update (not DRAFT or different company)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /instrument/{instrument_id}/transition:
+    post:
+      tags:
+        - Instruments
+      summary: Transition instrument status
+      description: |
+        Transition an instrument to a new status.
+
+        **Allowed Transitions:**
+        - DRAFT → PENDING_APPROVAL (ISSUER, ADMIN)
+        - PENDING_APPROVAL → ACTIVE (ADMIN only)
+        - PENDING_APPROVAL → REJECTED (ADMIN only)
+
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: transitionInstrumentStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentStatusTransition'
+      responses:
+        '200':
+          description: Status transitioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid transition for role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "You cannot perform this transition"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instrument/{instrument_id}/documents/{document_id}:
+    post:
+      tags:
+        - Instruments
+      summary: Associate document with instrument
+      description: Attach a document to an instrument. Requires `UPDATE.INSTRUMENT` permission.
+      operationId: associateDocument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      responses:
+        '200':
+          description: Document associated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentDocument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Instrument or document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Document already associated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "This document is already associated with this instrument"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Listing endpoints
+  /listing/search:
+    post:
+      tags:
+        - Listings
+      summary: Search listings
+      description: Search for listings with filtering, sorting, and pagination. Requires `VIEW.INSTRUMENT` permission.
+      operationId: searchListings
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [instrument]
+          description: Set to 'instrument' to include related instrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingFilters'
+      responses:
+        '200':
+          description: List of matching listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ListingWithInstrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /listing/:
+    post:
+      tags:
+        - Listings
+      summary: Create a new listing
+      description: |
+        Create a new listing for an instrument.
+        User must own the instrument and no existing OPEN listing can exist for it.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: createListing
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingCreate'
+      responses:
+        '201':
+          description: Listing created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not owner or listing already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Instrument not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Open listing already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "An open listing already exists for this instrument"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /listing/{listing_id}:
+    get:
+      tags:
+        - Listings
+      summary: Get listing by ID
+      description: Retrieve a specific listing by ID. Requires `VIEW.INSTRUMENT` permission.
+      operationId: getListingById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: listing_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [instrument]
+          description: Set to 'instrument' to include related instrument
+      responses:
+        '200':
+          description: Listing details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingWithInstrument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Listing not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Listing with ID {id} does not exist"
+
+  /listing/{listing_id}/transition:
+    post:
+      tags:
+        - Listings
+      summary: Transition listing status
+      description: |
+        Transition a listing to a new status.
+
+        **Allowed Transitions:**
+        - OPEN → WITHDRAWN (Seller company only)
+        - OPEN → SUSPENDED (Admin only)
+        - OPEN → CLOSED (Admin only)
+        - SUSPENDED → OPEN (Admin only)
+        - WITHDRAWN → SUSPENDED (Admin only)
+
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: transitionListingStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: listing_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingStatusTransition'
+      responses:
+        '200':
+          description: Status transitioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid transition or not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Bid endpoints
+  /bid/search:
+    post:
+      tags:
+        - Bids
+      summary: Search bids
+      description: Search for bids with filtering, sorting, and pagination. Requires `VIEW.INSTRUMENT` permission.
+      operationId: searchBids
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [listing]
+          description: Set to 'listing' to include related listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidFilters'
+      responses:
+        '200':
+          description: List of matching bids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BidWithListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bid/:
+    post:
+      tags:
+        - Bids
+      summary: Create a new bid
+      description: |
+        Create a new bid on a listing.
+        Cannot bid on your own listing. Listing must be OPEN.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: createBid
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidCreate'
+      responses:
+        '201':
+          description: Bid created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Listing not open or self-bidding
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Listing not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /bid/{bid_id}:
+    get:
+      tags:
+        - Bids
+      summary: Get bid by ID
+      description: Retrieve a specific bid by ID. Requires `VIEW.INSTRUMENT` permission.
+      operationId: getBidById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [listing]
+          description: Set to 'listing' to include related listing
+      responses:
+        '200':
+          description: Bid details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidWithListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Bid not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Bid with ID {id} does not exist"
+
+  /bid/{bid_id}/transition:
+    post:
+      tags:
+        - Bids
+      summary: Transition bid status
+      description: |
+        Transition a bid to a new status.
+
+        **Allowed Transitions:**
+        - PENDING → WITHDRAWN (Bidder company only)
+        - PENDING → SUSPENDED (Admin only)
+        - WITHDRAWN → SUSPENDED (Admin only)
+
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: transitionBidStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidStatusTransition'
+      responses:
+        '200':
+          description: Status transitioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid transition or listing not open
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bid/{bid_id}/accept:
+    post:
+      tags:
+        - Bids
+      summary: Accept a bid
+      description: |
+        Accept a bid on a listing. Only the seller company can accept bids.
+        All other PENDING bids are marked as NOT_SELECTED.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: acceptBid
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      responses:
+        '200':
+          description: Bid accepted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not seller, listing not open, or bid not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bid/{bid_id}/reject:
+    post:
+      tags:
+        - Bids
+      summary: Reject a bid
+      description: |
+        Reject a bid on a listing. Only the seller company can reject bids.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: rejectBid
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      responses:
+        '200':
+          description: Bid rejected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not seller, listing not open, or bid not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Ask endpoints
+  /ask/search:
+    post:
+      tags:
+        - Asks
+      summary: Search asks
+      description: |
+        Search for asks with filtering, sorting, and pagination.
+        Non-owners can only see ACTIVE asks. Listing owners and ADMINs can see all asks.
+        Requires `VIEW.INSTRUMENT` permission.
+      operationId: searchAsks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [listing]
+          description: Set to 'listing' to include related listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskFilters'
+      responses:
+        '200':
+          description: List of matching asks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AskWithListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /ask/:
+    post:
+      tags:
+        - Asks
+      summary: Create a new ask
+      description: |
+        Create a new ask (asking price) on a listing.
+        Only the seller company can create asks. Listing must be OPEN.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: createAsk
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskCreate'
+      responses:
+        '201':
+          description: Ask created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Listing not open or not seller company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Listing not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /ask/{ask_id}:
+    get:
+      tags:
+        - Asks
+      summary: Get ask by ID
+      description: |
+        Retrieve a specific ask by ID.
+        Non-owners can only view ACTIVE asks. Listing owners and ADMINs can view all asks.
+        Requires `VIEW.INSTRUMENT` permission.
+      operationId: getAskById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ask_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [listing]
+          description: Set to 'listing' to include related listing
+      responses:
+        '200':
+          description: Ask details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskWithListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Ask not found or not visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Ask with ID {id} does not exist"
+
+    patch:
+      tags:
+        - Asks
+      summary: Update an ask
+      description: |
+        Update an ask's price or validity.
+        Only the asker company can update. Ask must be ACTIVE and listing must be OPEN.
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: updateAsk
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ask_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskUpdate'
+      responses:
+        '200':
+          description: Ask updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Ask not active, listing not open, or not asker company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ask/{ask_id}/transition:
+    post:
+      tags:
+        - Asks
+      summary: Transition ask status
+      description: |
+        Transition an ask to a new status.
+
+        **Allowed Transitions:**
+        - ACTIVE → WITHDRAWN (Asker company only)
+        - ACTIVE → SUSPENDED (Admin only)
+        - WITHDRAWN → SUSPENDED (Admin only)
+        - SUSPENDED → ACTIVE (Admin only)
+
+        Requires `UPDATE.INSTRUMENT` permission.
+      operationId: transitionAskStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ask_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MonetaID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskStatusTransition'
+      responses:
+        '200':
+          description: Status transitioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Invalid transition or listing not open
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
