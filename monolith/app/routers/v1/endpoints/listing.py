@@ -257,14 +257,25 @@ async def create_listing(
 
 # Status transition rules
 # Company users (with UPDATE.INSTRUMENT permission): OPEN -> WITHDRAWN only
-# Admin: Any transition EXCEPT (OPEN -> WITHDRAWN) and (WITHDRAWN -> OPEN)
+# Admin: OPEN -> SUSPENDED/CLOSED, WITHDRAWN -> SUSPENDED/CLOSED,
+#        SUSPENDED -> OPEN/WITHDRAWN/CLOSED, CLOSED -> any state
 COMPANY_ALLOWED_TRANSITIONS: Dict[ListingStatus, List[ListingStatus]] = {
     ListingStatus.OPEN: [ListingStatus.WITHDRAWN],
 }
 
-ADMIN_FORBIDDEN_TRANSITIONS: Dict[ListingStatus, List[ListingStatus]] = {
-    ListingStatus.OPEN: [ListingStatus.WITHDRAWN],
-    ListingStatus.WITHDRAWN: [ListingStatus.OPEN],
+ADMIN_ALLOWED_TRANSITIONS: Dict[ListingStatus, List[ListingStatus]] = {
+    ListingStatus.OPEN: [ListingStatus.SUSPENDED, ListingStatus.CLOSED],
+    ListingStatus.WITHDRAWN: [ListingStatus.SUSPENDED, ListingStatus.CLOSED],
+    ListingStatus.SUSPENDED: [
+        ListingStatus.OPEN,
+        ListingStatus.WITHDRAWN,
+        ListingStatus.CLOSED,
+    ],
+    ListingStatus.CLOSED: [
+        ListingStatus.OPEN,
+        ListingStatus.WITHDRAWN,
+        ListingStatus.SUSPENDED,
+    ],
 }
 
 
@@ -283,7 +294,8 @@ async def update_listing_status(
 
     Transition rules:
     - Company users (same company as seller): OPEN -> WITHDRAWN only
-    - Admin: Any transition EXCEPT (OPEN -> WITHDRAWN) and (WITHDRAWN -> OPEN)
+    - Admin: OPEN -> SUSPENDED/CLOSED, WITHDRAWN -> SUSPENDED/CLOSED,
+             SUSPENDED -> OPEN/WITHDRAWN/CLOSED, CLOSED -> any state
 
     Args:
         listing_id: The listing UUID.
@@ -328,11 +340,11 @@ async def update_listing_status(
     is_same_company = listing.seller_company_id == current_user.company_id
 
     if is_admin:
-        # Admin can do any transition except the forbidden ones
-        forbidden = ADMIN_FORBIDDEN_TRANSITIONS.get(current_status, [])
-        if new_status in forbidden:
+        # Admin can only do specific transitions
+        allowed = ADMIN_ALLOWED_TRANSITIONS.get(current_status, [])
+        if new_status not in allowed:
             logger.warning(
-                '[BUSINESS] Forbidden admin transition | listing_id=%s | '
+                '[BUSINESS] Invalid admin transition | listing_id=%s | '
                 'current_status=%s | new_status=%s',
                 listing_id,
                 current_status,
