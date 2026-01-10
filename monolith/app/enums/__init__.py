@@ -20,6 +20,7 @@ from app.enums.instrument_status import (
 )
 from app.enums.listing_status import ListingStatus
 from app.enums.order_types import OrderType
+from app.enums.transitionable_entity import TransitionableEntity
 from moneta_auth import (
     ActivationStatus,
     PermissionEntity,
@@ -47,4 +48,5 @@ __all__ = [
     'BidStatus',
     'AskStatus',
     'ExecutionMode',
+    'TransitionableEntity',
 ]

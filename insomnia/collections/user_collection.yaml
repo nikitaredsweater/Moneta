@@ -1,0 +1,896 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_user
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta User API
+    description: |
+      # User Management API Collection
+
+      This collection contains endpoints for user management in the Moneta platform.
+
+      ## Overview
+      The User API allows administrators to manage user accounts including creation,
+      updates, deletion, and searching.
+
+      ## Authentication
+      All endpoints require Bearer token authentication.
+      Run the Admin Login from auth_collection first.
+
+      ## User Roles
+      | Role | Description |
+      |------|-------------|
+      | `ADMIN` | Full system access |
+      | `BUYER` | Can purchase instruments |
+      | `SELLER` | Can sell instruments |
+      | `ISSUER` | Can issue instruments |
+
+      ## Account Statuses
+      | Status | Description |
+      |--------|-------------|
+      | `ACTIVE` | User is fully active |
+      | `INACTIVE` | User exists but is not currently active |
+      | `PENDING` | Waiting for verification |
+      | `SUSPENDED` | Temporarily disabled |
+      | `DISABLED` | Permanently disabled |
+      | `DELETED` | Soft-deleted |
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_user_base
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_user_local
+    parentId: env_user_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_user_id: ""
+      test_company_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_user_id
+        - test_company_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # User Folder
+  - _id: fld_user
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: User
+    description: "User management endpoints (/v1/user)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Get All Users
+  - _id: req_get_all_users
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Get All Users"
+    description: |
+      # GET /v1/user/
+
+      Retrieve all users in the system.
+
+      ## When to Use
+      Use when you need a complete list of all users without filtering.
+      For large datasets, prefer using the search endpoint with pagination.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.ALL_USERS`
+
+      ## Response (200 OK)
+      ```json
+      [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "created_at": "2025-01-15T10:30:00Z",
+          "updated_at": "2025-01-15T10:30:00Z",
+          "email": "user@example.com",
+          "first_name": "John",
+          "last_name": "Doe",
+          "company_id": "660e8400-e29b-41d4-a716-446655440001",
+          "role": "BUYER",
+          "account_status": "ACTIVE"
+        }
+      ]
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Users
+  - _id: req_search_users
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/search"
+    name: "Search Users"
+    description: |
+      # POST /v1/user/search
+
+      Search for users with filtering, sorting, and pagination.
+
+      ## When to Use
+      Use when searching for users matching specific criteria, or when implementing
+      paginated user lists in the UI.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.ALL_USERS`
+
+      ## Request Body
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `email` | string | No | Partial match (case-insensitive) |
+      | `firstName` | string | No | Partial match (case-insensitive) |
+      | `lastName` | string | No | Partial match (case-insensitive) |
+      | `role` | UserRole | No | Exact match: ADMIN, BUYER, SELLER, ISSUER |
+      | `companyId` | UUID | No | Exact match on company |
+      | `createdAtAfter` | date | No | Users created on or after (YYYY-MM-DD) |
+      | `createdAtBefore` | date | No | Users created on or before (YYYY-MM-DD) |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | 1-200 (default: 50) |
+      | `offset` | integer | No | Pagination offset (default: 0) |
+
+      ## Sorting
+      - Prefix field with `-` for descending order
+      - Multiple fields: `-createdAt,firstName`
+
+      ## Response (200 OK)
+      Array of User objects
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error |
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Users with Filters
+  - _id: req_search_users_filtered
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/search"
+    name: "Search Users - With Filters"
+    description: |
+      # POST /v1/user/search - Filtered Example
+
+      Example search with role and email filters applied.
+
+      ## Example Filters Applied
+      - `role`: ISSUER (exact match)
+      - `email`: "test" (partial match)
+
+      ## Notes
+      - Email filter uses case-insensitive partial matching
+      - Role filter requires exact enum value
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "role": "ISSUER",
+          "email": "test",
+          "limit": 10,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get User by ID
+  - _id: req_get_user_by_id
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Get User by ID"
+    description: |
+      # GET /v1/user/{user_id}
+
+      Retrieve a specific user by their UUID.
+
+      ## When to Use
+      Use when you need to fetch details for a specific user, such as displaying
+      a user profile or verifying user information.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `VIEW.USER`
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `user_id` | UUID | The unique identifier of the user |
+
+      ## Response (200 OK)
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z",
+        "email": "user@example.com",
+        "first_name": "John",
+        "last_name": "Doe",
+        "company_id": "660e8400-e29b-41d4-a716-446655440001",
+        "role": "BUYER",
+        "account_status": "ACTIVE"
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | User not found | "Entity was not found" |
+
+      ## Setup
+      Set `test_user_id` environment variable to a valid user UUID.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User
+  - _id: req_create_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User"
+    description: |
+      # POST /v1/user/
+
+      Create a new user in the system.
+
+      ## When to Use
+      Use when onboarding a new user to the platform. The company must exist
+      before creating users for it.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `CREATE.USER`
+
+      ## Request Body
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `email` | string | Yes | User's email (must be unique) |
+      | `firstName` | string | Yes | User's first name |
+      | `lastName` | string | Yes | User's last name |
+      | `password` | string | Yes | User's password |
+      | `companyId` | UUID | Yes | ID of company user belongs to |
+      | `role` | UserRole | Yes | ADMIN, BUYER, SELLER, or ISSUER |
+
+      ## Response (201 Created)
+      ```json
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z",
+        "email": "newuser@example.com",
+        "first_name": "John",
+        "last_name": "Doe",
+        "company_id": "660e8400-e29b-41d4-a716-446655440001",
+        "role": "ISSUER",
+        "account_status": "ACTIVE"
+      }
+      ```
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Entity was not found" |
+      | 409 | Email already exists | "Entity with such unique fields already exists" |
+      | 422 | Validation error | Field validation details |
+      | 500 | Creation failed | "Failed to save the entity" |
+
+      ## Setup
+      Set `test_company_id` environment variable to a valid company UUID.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "newuser@example.com",
+          "firstName": "John",
+          "lastName": "Doe",
+          "password": "SecurePassword123!",
+          "companyId": "{{ _.test_company_id }}",
+          "role": "ISSUER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User
+  - _id: req_patch_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User"
+    description: |
+      # PATCH /v1/user/{user_id}
+
+      Update an existing user's information.
+
+      ## When to Use
+      Use when modifying user details. Only pass fields you want to update;
+      unprovided fields remain unchanged.
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `UPDATE.USER`
+      **Restriction:** Must be from same company as target user
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `user_id` | UUID | The user to update |
+
+      ## Request Body (all optional)
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `email` | string | New email address |
+      | `firstName` | string | New first name (cannot be empty) |
+      | `lastName` | string | New last name (cannot be empty) |
+      | `accountStatus` | ActivationStatus | New account status |
+      | `role` | UserRole | New role |
+
+      ## Response (200 OK)
+      Updated User object
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 403 | Different company | "Forbidden Action" |
+      | 404 | User not found | "Entity was not found" |
+      | 409 | Email already exists | "Entity with such unique fields already exists" |
+      | 422 | Empty name fields | "Entity passed in has an invalid field" |
+
+      ## Setup
+      Set `test_user_id` environment variable to a valid user UUID.
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "firstName": "Jane",
+          "lastName": "Smith"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User - Change Role
+  - _id: req_patch_user_role
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User - Change Role"
+    description: |
+      # PATCH /v1/user/{user_id} - Role Update
+
+      Update a user's role.
+
+      ## Available Roles
+      | Role | Description |
+      |------|-------------|
+      | `ADMIN` | Full system access |
+      | `BUYER` | Can purchase instruments |
+      | `SELLER` | Can sell instruments |
+      | `ISSUER` | Can issue instruments |
+
+      ## Permissions
+      **Required:** `UPDATE.USER`
+      **Restriction:** Must be from same company
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "role": "BUYER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Patch User - Change Status
+  - _id: req_patch_user_status
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Patch User - Change Status"
+    description: |
+      # PATCH /v1/user/{user_id} - Status Update
+
+      Update a user's account status.
+
+      ## Available Statuses
+      | Status | Description |
+      |--------|-------------|
+      | `ACTIVE` | User is fully active, can log in |
+      | `INACTIVE` | User exists but cannot log in |
+      | `PENDING` | Waiting for verification |
+      | `SUSPENDED` | Temporarily disabled by admin |
+      | `DISABLED` | Permanently disabled |
+      | `DELETED` | Soft-deleted |
+
+      ## Notes
+      - Only ACTIVE users can obtain JWT tokens
+      - Changing to non-ACTIVE status effectively locks the user out
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "accountStatus": "ACTIVE"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Delete User
+  - _id: req_delete_user
+    parentId: fld_user
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/{{ _.test_user_id }}"
+    name: "Delete User"
+    description: |
+      # DELETE /v1/user/{user_id}
+
+      Delete a user from the system.
+
+      ## When to Use
+      Use when removing a user account. This performs a soft delete
+      (sets status to DELETED).
+
+      ## Authentication
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+      **Required:** `DELETE.USER`
+      **Restriction:** Must be from same company as target user
+
+      ## Path Parameters
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `user_id` | UUID | The user to delete |
+
+      ## Response (200 OK)
+      The deleted User object
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 403 | Different company | "Forbidden Action" |
+      | 404 | User not found | "Entity was not found" |
+
+      ## Warning
+      This action removes the user's ability to access the system.
+
+      ## Setup
+      Set `test_user_id` environment variable to a valid user UUID.
+    method: DELETE
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635192000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_user_errors
+    parentId: wrk_moneta_user
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for user endpoint error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Get User - Not Found (404)
+  - _id: req_get_user_not_found
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/00000000-0000-0000-0000-000000000000"
+    name: "Get User - Not Found (404)"
+    description: |
+      # GET /v1/user/{user_id} - Not Found Test
+
+      Test getting a user that doesn't exist.
+
+      ## Expected Response
+      **Status:** 404 Not Found
+
+      ```json
+      {
+        "detail": "Entity was not found"
+      }
+      ```
+
+      ## Exception
+      `WasNotFoundException` - Raised when user ID doesn't exist in database.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User - Duplicate Email (409)
+  - _id: req_create_user_duplicate
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User - Duplicate Email (409)"
+    description: |
+      # POST /v1/user/ - Duplicate Email Test
+
+      Test creating a user with an email that already exists.
+
+      ## Expected Response
+      **Status:** 409 Conflict
+
+      ```json
+      {
+        "detail": "Entity with such unique fields already exists"
+      }
+      ```
+
+      ## Exception
+      `EntityAlreadyExistsException` - Raised when email uniqueness constraint is violated.
+
+      ## Note
+      Email addresses must be unique across all users in the system.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "admin@example.com",
+          "firstName": "Duplicate",
+          "lastName": "User",
+          "password": "Password123!",
+          "companyId": "{{ _.test_company_id }}",
+          "role": "ISSUER"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create User - Missing Fields (422)
+  - _id: req_create_user_missing_fields
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Create User - Missing Fields (422)"
+    description: |
+      # POST /v1/user/ - Missing Fields Test
+
+      Test creating a user with missing required fields.
+
+      ## Expected Response
+      **Status:** 422 Unprocessable Entity
+
+      ```json
+      {
+        "detail": [
+          {
+            "loc": ["body", "firstName"],
+            "msg": "field required",
+            "type": "value_error.missing"
+          },
+          ...
+        ]
+      }
+      ```
+
+      ## Required Fields
+      - email
+      - firstName
+      - lastName
+      - password
+      - companyId
+      - role
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "incomplete@example.com"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_get_users_no_auth
+    parentId: fld_user_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/user/"
+    name: "Get All Users - No Auth (401)"
+    description: |
+      # GET /v1/user/ - No Authentication Test
+
+      Test accessing the users endpoint without authentication.
+
+      ## Expected Response
+      **Status:** 401 Unauthorized
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Note
+      All user endpoints require Bearer token authentication.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635097000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

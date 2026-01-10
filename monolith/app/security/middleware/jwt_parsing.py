@@ -10,9 +10,10 @@ No database access is required - all authorization data comes from JWT claims.
 import fnmatch
 import logging
 from types import SimpleNamespace
+from uuid import UUID
 
 from jose import JWTError
-from moneta_auth import verify_access_token, ActivationStatus
+from moneta_auth import ActivationStatus, verify_access_token
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -75,7 +76,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             Response: The HTTP response after processing or early rejection.
         """
         if _is_path_excluded(request.url.path):
-            logger.debug('[AUTH] Path excluded from JWT auth | path=%s', request.url.path)
+            logger.debug(
+                '[AUTH] Path excluded from JWT auth | path=%s', request.url.path
+            )
             return await call_next(request)
 
         auth = request.headers.get('Authorization')
@@ -104,7 +107,9 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                 )
                 return JSONResponse(
                     status_code=403,
-                    content={'detail': f'Account is {claims.account_status.value.lower()}'},
+                    content={
+                        'detail': f'Account is {claims.account_status.value.lower()}'
+                    },
                 )
 
             # Attach claims to request.state (used by has_permission from moneta-auth)
@@ -117,10 +122,13 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
             # Backward compatibility: create a user-like object from claims
             # This allows existing code using request.state.user to continue working
+            # Convert string IDs to UUIDs for proper comparison with database entities
             request.state.user = SimpleNamespace(
-                id=claims.user_id,
+                id=UUID(claims.user_id),
                 role=claims.role,
-                company_id=claims.company_id,
+                company_id=(
+                    UUID(claims.company_id) if claims.company_id else None
+                ),
                 account_status=claims.account_status,
             )
 

@@ -1,0 +1,922 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_company_address
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Company Address API
+    description: |
+      # Moneta Company Address API Collection
+
+      This collection contains endpoints for managing company addresses in the Moneta platform.
+
+      ## Overview
+
+      Company addresses represent physical locations associated with a company. Each company can have multiple addresses of different types for various purposes.
+
+      ## Authentication
+
+      All endpoints require a valid JWT Bearer token obtained from the `/v1/auth/login` endpoint.
+
+      ## Address Types
+
+      | Type | Description |
+      |------|-------------|
+      | `REGISTERED` | Official registered business address |
+      | `BILLING` | Address for invoices and payments |
+      | `OFFICE` | Physical office location |
+      | `SHIPPING` | Delivery/shipping address |
+      | `OTHER` | Any other address type |
+
+      ## Permissions
+
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.COMPANY_ADDRESS` | View company addresses |
+      | `CREATE.COMPANY_ADDRESS` | Create new company addresses |
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_company_address_base
+    parentId: wrk_moneta_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_company_address_local
+    parentId: env_company_address_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_company_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_company_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Company Address Folder
+  - _id: fld_company_address
+    parentId: wrk_moneta_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    name: Company Address
+    description: |
+      # Company Address Endpoints
+
+      Endpoints for managing company physical addresses.
+
+      **Base Path:** `/v1/company-address`
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Get All Company Addresses
+  - _id: req_get_all_company_addresses
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Get All Company Addresses"
+    description: |
+      # GET /v1/company-address/
+
+      Retrieve all company addresses in the system.
+
+      ## When to Use
+
+      Use when you need a complete list of all company addresses across all companies.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      None required.
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "660e8400-e29b-41d4-a716-446655440001",
+          "createdAt": "2024-01-15T10:35:00Z",
+          "updatedAt": "2024-01-15T10:35:00Z",
+          "type": "REGISTERED",
+          "street": "123 Main Street",
+          "city": "New York",
+          "state": "NY",
+          "postalCode": "10001",
+          "country": "US",
+          "companyId": "550e8400-e29b-41d4-a716-446655440000"
+        }
+      ]
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique address identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `type` | string | Address type (REGISTERED, BILLING, OFFICE, SHIPPING, OTHER) |
+      | `street` | string | Street address |
+      | `city` | string | City name |
+      | `state` | string | State/province (optional) |
+      | `postalCode` | string | Postal/ZIP code |
+      | `country` | string | ISO 3166-1 alpha-2 country code |
+      | `companyId` | UUID | Associated company identifier |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Note
+
+      To get addresses for a specific company, use the company endpoint with `?include=addresses` query parameter instead.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - Registered
+  - _id: req_create_company_address_registered
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - Registered"
+    description: |
+      # POST /v1/company-address/
+
+      Create a new registered address for a company.
+
+      ## When to Use
+
+      Use when registering a company's official legal address. This is typically the address filed with government agencies.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "REGISTERED",
+        "street": "123 Main Street",
+        "city": "New York",
+        "state": "NY",
+        "postalCode": "10001",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `type` | string | Yes | Address type: `REGISTERED`, `BILLING`, `OFFICE`, `SHIPPING`, `OTHER` |
+      | `street` | string | Yes | Street address (can include suite/unit) |
+      | `city` | string | Yes | City name |
+      | `state` | string | No | State/province (recommended for US addresses) |
+      | `postalCode` | string | Yes | Postal/ZIP code |
+      | `country` | string | Yes | ISO 3166-1 alpha-2 country code (e.g., "US", "GB", "DE") |
+      | `companyId` | UUID | Yes | ID of the company this address belongs to |
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "660e8400-e29b-41d4-a716-446655440001",
+        "createdAt": "2024-01-15T10:35:00Z",
+        "updatedAt": "2024-01-15T10:35:00Z",
+        "type": "REGISTERED",
+        "street": "123 Main Street",
+        "city": "New York",
+        "state": "NY",
+        "postalCode": "10001",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Company not found | "Company with ID {id} does not exist" |
+      | 422 | Missing/invalid fields | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_company_id` in your environment to a valid company UUID before running this request.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "REGISTERED",
+          "street": "123 Main Street",
+          "city": "New York",
+          "state": "NY",
+          "postalCode": "10001",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - Billing
+  - _id: req_create_company_address_billing
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - Billing"
+    description: |
+      # POST /v1/company-address/ (Billing)
+
+      Create a billing address for a company.
+
+      ## When to Use
+
+      Use when setting up an address for invoices, payments, and financial correspondence.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "BILLING",
+        "street": "456 Finance Ave, Suite 100",
+        "city": "Chicago",
+        "state": "IL",
+        "postalCode": "60601",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+
+      ## Note
+
+      A company can have multiple billing addresses if needed for different departments or subsidiaries.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "BILLING",
+          "street": "456 Finance Ave, Suite 100",
+          "city": "Chicago",
+          "state": "IL",
+          "postalCode": "60601",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - Office
+  - _id: req_create_company_address_office
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - Office"
+    description: |
+      # POST /v1/company-address/ (Office)
+
+      Create an office address for a company.
+
+      ## When to Use
+
+      Use when adding a physical office location. Companies often have multiple office addresses for different branches or departments.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "OFFICE",
+        "street": "789 Business Park",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "OFFICE",
+          "street": "789 Business Park",
+          "city": "San Francisco",
+          "state": "CA",
+          "postalCode": "94105",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - Shipping
+  - _id: req_create_company_address_shipping
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - Shipping"
+    description: |
+      # POST /v1/company-address/ (Shipping)
+
+      Create a shipping address for a company.
+
+      ## When to Use
+
+      Use when adding an address for receiving deliveries, packages, or physical documents.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "SHIPPING",
+        "street": "321 Warehouse Blvd",
+        "city": "Dallas",
+        "state": "TX",
+        "postalCode": "75201",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "SHIPPING",
+          "street": "321 Warehouse Blvd",
+          "city": "Dallas",
+          "state": "TX",
+          "postalCode": "75201",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - Other
+  - _id: req_create_company_address_other
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - Other"
+    description: |
+      # POST /v1/company-address/ (Other)
+
+      Create an address with type OTHER for a company.
+
+      ## When to Use
+
+      Use when the address doesn't fit into the standard categories (REGISTERED, BILLING, OFFICE, SHIPPING). This is a catch-all type for miscellaneous locations.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "OTHER",
+        "street": "999 Miscellaneous Lane",
+        "city": "Miami",
+        "state": "FL",
+        "postalCode": "33101",
+        "country": "US",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "OTHER",
+          "street": "999 Miscellaneous Lane",
+          "city": "Miami",
+          "state": "FL",
+          "postalCode": "33101",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Company Address - International (UK)
+  - _id: req_create_company_address_uk
+    parentId: fld_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Company Address - International (UK)"
+    description: |
+      # POST /v1/company-address/ (International)
+
+      Create an international address (UK example).
+
+      ## When to Use
+
+      Use when adding addresses outside the United States. This example shows a UK address without a state field.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.COMPANY_ADDRESS`
+
+      ## Request Body
+
+      ```json
+      {
+        "type": "OFFICE",
+        "street": "10 Downing Street",
+        "city": "London",
+        "postalCode": "SW1A 2AA",
+        "country": "GB",
+        "companyId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+
+      ## Country Codes
+
+      Use ISO 3166-1 alpha-2 country codes:
+      - `US` - United States
+      - `GB` - United Kingdom
+      - `DE` - Germany
+      - `FR` - France
+      - `JP` - Japan
+      - etc.
+
+      ## Note
+
+      The `state` field is optional and can be omitted for countries that don't use states/provinces.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "OFFICE",
+          "street": "10 Downing Street",
+          "city": "London",
+          "postalCode": "SW1A 2AA",
+          "country": "GB",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_company_address_errors
+    parentId: wrk_moneta_company_address
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: |
+      # Error Test Cases
+
+      This folder contains requests designed to trigger specific error responses.
+      Use these to verify error handling and understand API behavior.
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Create Address - Missing Fields (422)
+  - _id: req_create_address_missing_fields
+    parentId: fld_company_address_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Address - Missing Fields (422)"
+    description: |
+      # POST /v1/company-address/ - 422 Test
+
+      Test creating an address with missing required fields.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error details listing all missing fields.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": ["body", "city"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "postalCode"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "country"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "companyId"],
+            "msg": "Field required"
+          }
+        ]
+      }
+      ```
+
+      ## Required Fields
+
+      - `type` - Address type
+      - `street` - Street address
+      - `city` - City name
+      - `postalCode` - Postal/ZIP code
+      - `country` - Country code
+      - `companyId` - Company UUID
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "OFFICE",
+          "street": "123 Main St"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Address - Invalid Company ID (404)
+  - _id: req_create_address_invalid_company
+    parentId: fld_company_address_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Address - Invalid Company ID (404)"
+    description: |
+      # POST /v1/company-address/ - 404 Test
+
+      Test creating an address for a non-existent company.
+
+      ## Expected Behavior
+
+      The API should return a 404 status code because the referenced company doesn't exist.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Company with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that the API validates the `companyId` foreign key constraint and returns a meaningful error when the company doesn't exist.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "REGISTERED",
+          "street": "123 Main Street",
+          "city": "New York",
+          "postalCode": "10001",
+          "country": "US",
+          "companyId": "00000000-0000-0000-0000-000000000000"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_get_addresses_no_auth
+    parentId: fld_company_address_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Get All Addresses - No Auth (401)"
+    description: |
+      # GET /v1/company-address/ - 401 Test
+
+      Test accessing the addresses endpoint without authentication.
+
+      ## Expected Behavior
+
+      The API should return a 401 status code indicating authentication is required.
+
+      ## Response (401 Unauthorized)
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that all company address endpoints require authentication.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Invalid Address Type (422)
+  - _id: req_create_address_invalid_type
+    parentId: fld_company_address_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company-address/"
+    name: "Create Address - Invalid Type (422)"
+    description: |
+      # POST /v1/company-address/ - 422 Test (Invalid Type)
+
+      Test creating an address with an invalid address type.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code because the address type is not a valid enum value.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "enum",
+            "loc": ["body", "type"],
+            "msg": "Input should be 'REGISTERED', 'BILLING', 'OFFICE', 'SHIPPING' or 'OTHER'"
+          }
+        ]
+      }
+      ```
+
+      ## Valid Address Types
+
+      - `REGISTERED` - Official registered business address
+      - `BILLING` - Address for invoices and payments
+      - `OFFICE` - Physical office location
+      - `SHIPPING` - Delivery/shipping address
+      - `OTHER` - Any other address type
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "type": "INVALID_TYPE",
+          "street": "123 Main Street",
+          "city": "New York",
+          "postalCode": "10001",
+          "country": "US",
+          "companyId": "{{ _.test_company_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635097000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

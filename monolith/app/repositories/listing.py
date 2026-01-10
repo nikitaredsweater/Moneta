@@ -21,6 +21,10 @@ class ListingRepository(BasePGRepository[schemas.Listing]):
         orm_model = models.Listing
         exclusion_fields = None
         eager_relations = [models.Listing.instrument]
+        # When loading instrument, also eagerly load its public_payload
+        nested_eager_relations = {
+            "instrument": ["public_payload"],
+        }
 
     async def get_by_instrument_id(
         self, instrument_id: MonetaID

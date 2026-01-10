@@ -186,9 +186,22 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_cls).where(orm_cls.id == obj_id)
 
                 eager_relations = getattr(self.Meta, "eager_relations", None)
+                nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                 if eager_relations:
                     for rel in eager_relations:
-                        query = query.options(selectinload(rel))
+                        rel_name = rel.key
+                        loader = selectinload(rel)
+
+                        if rel_name in nested_eager:
+                            rel_property = rel.property
+                            related_model = rel_property.mapper.class_
+                            for nested_name in nested_eager[rel_name]:
+                                if hasattr(related_model, nested_name):
+                                    loader = loader.selectinload(
+                                        getattr(related_model, nested_name)
+                                    )
+
+                        query = query.options(loader)
 
                 result = await session.execute(query)
                 loaded = result.scalars().unique().one()
@@ -254,9 +267,24 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_model)
 
                 eager_relations = getattr(self.Meta, "eager_relations", None)
+                nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                 if eager_relations:
                     for rel in eager_relations:
-                        query = query.options(selectinload(rel))
+                        # Get relationship name from the attribute
+                        rel_name = rel.key
+                        loader = selectinload(rel)
+
+                        # Check if this relationship has nested relations to load
+                        if rel_name in nested_eager:
+                            rel_property = rel.property
+                            related_model = rel_property.mapper.class_
+                            for nested_name in nested_eager[rel_name]:
+                                if hasattr(related_model, nested_name):
+                                    loader = loader.selectinload(
+                                        getattr(related_model, nested_name)
+                                    )
+
+                        query = query.options(loader)
 
                 if not deleted:
                     query = query.where(
@@ -285,9 +313,20 @@ class BasePGRepository(Generic[T]):
                     for name in includes:
                         # only apply if the relationship exists
                         if hasattr(orm_model, name):
-                            query = query.options(
-                                selectinload(getattr(orm_model, name))
-                            )
+                            rel_attr = getattr(orm_model, name)
+                            loader = selectinload(rel_attr)
+
+                            # Check if this relationship has nested relations to load
+                            if name in nested_eager:
+                                rel_property = rel_attr.property
+                                related_model = rel_property.mapper.class_
+                                for nested_name in nested_eager[name]:
+                                    if hasattr(related_model, nested_name):
+                                        loader = loader.selectinload(
+                                            getattr(related_model, nested_name)
+                                        )
+
+                            query = query.options(loader)
 
                 result = await session.execute(query)
                 # Use safe conversion when includes are specified to avoid
@@ -332,9 +371,22 @@ class BasePGRepository(Generic[T]):
                 query = query.where(orm_model.deleted_at == None)  # noqa: E711
 
                 eager_relations = getattr(self.Meta, "eager_relations", None)
+                nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                 if eager_relations:
                     for rel in eager_relations:
-                        query = query.options(selectinload(rel))
+                        rel_name = rel.key
+                        loader = selectinload(rel)
+
+                        if rel_name in nested_eager:
+                            rel_property = rel.property
+                            related_model = rel_property.mapper.class_
+                            for nested_name in nested_eager[rel_name]:
+                                if hasattr(related_model, nested_name):
+                                    loader = loader.selectinload(
+                                        getattr(related_model, nested_name)
+                                    )
+
+                        query = query.options(loader)
 
                 if where_list:
                     for where_clause in where_list:
@@ -369,9 +421,22 @@ class BasePGRepository(Generic[T]):
                 query = select(orm_model).where(orm_model.id == pk)
 
                 eager_relations = getattr(self.Meta, "eager_relations", None)
+                nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                 if eager_relations:
                     for rel in eager_relations:
-                        query = query.options(selectinload(rel))
+                        rel_name = rel.key
+                        loader = selectinload(rel)
+
+                        if rel_name in nested_eager:
+                            rel_property = rel.property
+                            related_model = rel_property.mapper.class_
+                            for nested_name in nested_eager[rel_name]:
+                                if hasattr(related_model, nested_name):
+                                    loader = loader.selectinload(
+                                        getattr(related_model, nested_name)
+                                    )
+
+                        query = query.options(loader)
 
                 if not deleted:
                     query = query.where(
@@ -379,7 +444,6 @@ class BasePGRepository(Generic[T]):
                     )  # noqa: E711
 
                 if includes:
-                    nested_eager = getattr(self.Meta, "nested_eager_relations", None) or {}
                     for name in includes:
                         if hasattr(orm_model, name):
                             rel_attr = getattr(orm_model, name)

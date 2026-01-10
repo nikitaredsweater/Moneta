@@ -3,14 +3,15 @@ Listing endpoints
 """
 
 import logging
-from typing import Dict, List, Optional, Set
+from typing import List, Set
 
 from app import repositories as repo
 from app import schemas
 from app.dependencies import get_current_user, parse_listing_includes
-from app.enums import ListingInclude, ListingStatus, UserRole
+from app.enums import ListingInclude, ListingStatus
 from app.enums import PermissionEntity as Entity
 from app.enums import PermissionVerb as Verb
+from app.enums import TransitionableEntity, UserRole
 from app.exceptions import (
     EntityAlreadyExistsException,
     FailedToCreateEntityException,
@@ -19,14 +20,20 @@ from app.exceptions import (
     WasNotFoundException,
 )
 from app.security import Permission, has_permission
-from app.utils.filters.listing_filters import build_sort_listing, build_where_listing
+from app.utils.allowed_transitions import get_allowed_transitions
+from app.utils.filters.listing_filters import (
+    build_sort_listing,
+    build_where_listing,
+)
 from fastapi import APIRouter, Depends
 
 logger = logging.getLogger(__name__)
 listing_router = APIRouter()
 
 
-def map_listing_includes_to_rel_names(includes: Set[ListingInclude]) -> List[str]:
+def map_listing_includes_to_rel_names(
+    includes: Set[ListingInclude],
+) -> List[str]:
     """
     Map include enums to actual relationship attribute names on models.Listing.
     """
@@ -36,7 +43,9 @@ def map_listing_includes_to_rel_names(includes: Set[ListingInclude]) -> List[str
     return [rel_map[i] for i in includes if i in rel_map]
 
 
-@listing_router.post('/search', response_model=List[schemas.ListingWithInstrument])
+@listing_router.post(
+    '/search', response_model=List[schemas.ListingWithInstrument]
+)
 async def search_listings(
     listing_repo: repo.Listing,
     filters: schemas.ListingFilters,
@@ -86,11 +95,15 @@ async def search_listings(
             schemas.ListingWithInstrument(**l.model_dump()) for l in listings
         ]
 
-    logger.info('[BUSINESS] Listing search completed | results=%d', len(listings))
+    logger.info(
+        '[BUSINESS] Listing search completed | results=%d', len(listings)
+    )
     return listings
 
 
-@listing_router.get('/{listing_id}', response_model=schemas.ListingWithInstrument)
+@listing_router.get(
+    '/{listing_id}', response_model=schemas.ListingWithInstrument
+)
 async def get_listing(
     listing_id: schemas.MonetaID,
     listing_repo: repo.Listing,
@@ -199,9 +212,7 @@ async def create_listing(
             '[BUSINESS] No active ownership for instrument | instrument_id=%s',
             listing_data.instrument_id,
         )
-        raise ForbiddenException(
-            detail='This instrument has no active owner'
-        )
+        raise ForbiddenException(detail='This instrument has no active owner')
 
     if current_ownership.owner_id != current_user.company_id:
         logger.warning(
@@ -240,9 +251,7 @@ async def create_listing(
             '[BUSINESS] Failed to create listing | instrument_id=%s',
             listing_data.instrument_id,
         )
-        raise FailedToCreateEntityException(
-            detail='Failed to create listing'
-        )
+        raise FailedToCreateEntityException(detail='Failed to create listing')
 
     logger.info(
         '[BUSINESS] Listing created | listing_id=%s | instrument_id=%s | '
@@ -255,22 +264,7 @@ async def create_listing(
     return listing
 
 
-# Status transition rules
-# Company users (with UPDATE.INSTRUMENT permission): OPEN -> WITHDRAWN only
-# Admin: Any transition EXCEPT (OPEN -> WITHDRAWN) and (WITHDRAWN -> OPEN)
-COMPANY_ALLOWED_TRANSITIONS: Dict[ListingStatus, List[ListingStatus]] = {
-    ListingStatus.OPEN: [ListingStatus.WITHDRAWN],
-}
-
-ADMIN_FORBIDDEN_TRANSITIONS: Dict[ListingStatus, List[ListingStatus]] = {
-    ListingStatus.OPEN: [ListingStatus.WITHDRAWN],
-    ListingStatus.WITHDRAWN: [ListingStatus.OPEN],
-}
-
-
-@listing_router.post(
-    '/{listing_id}/transition', response_model=schemas.Listing
-)
+@listing_router.post('/{listing_id}/transition', response_model=schemas.Listing)
 async def update_listing_status(
     listing_id: schemas.MonetaID,
     body: schemas.ListingStatusUpdate,
@@ -283,7 +277,8 @@ async def update_listing_status(
 
     Transition rules:
     - Company users (same company as seller): OPEN -> WITHDRAWN only
-    - Admin: Any transition EXCEPT (OPEN -> WITHDRAWN) and (WITHDRAWN -> OPEN)
+    - Admin: OPEN -> SUSPENDED/CLOSED, WITHDRAWN -> SUSPENDED/CLOSED,
+             SUSPENDED -> OPEN/WITHDRAWN/CLOSED, CLOSED -> any state
 
     Args:
         listing_id: The listing UUID.
@@ -324,39 +319,18 @@ async def update_listing_status(
     if current_status == new_status:
         return listing
 
-    is_admin = current_user.role == UserRole.ADMIN
     is_same_company = listing.seller_company_id == current_user.company_id
 
-    if is_admin:
-        # Admin can do any transition except the forbidden ones
-        forbidden = ADMIN_FORBIDDEN_TRANSITIONS.get(current_status, [])
-        if new_status in forbidden:
-            logger.warning(
-                '[BUSINESS] Forbidden admin transition | listing_id=%s | '
-                'current_status=%s | new_status=%s',
-                listing_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Admin cannot transition from {current_status.value} to {new_status.value}'
-            )
-    elif is_same_company:
-        # Company user can only do allowed transitions
-        allowed = COMPANY_ALLOWED_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            logger.warning(
-                '[BUSINESS] Invalid company user transition | listing_id=%s | '
-                'current_status=%s | new_status=%s',
-                listing_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Cannot transition from {current_status.value} to {new_status.value}'
-            )
-    else:
-        # User is not from the seller company and is not admin
+    # Get allowed transitions for the user's role
+    allowed_transitions = get_allowed_transitions(
+        entity=TransitionableEntity.LISTING,
+        role=current_user.role,
+    )
+    allowed_targets = allowed_transitions.get(current_status, [])
+
+    # Check if user has permission to update this listing
+    # Non-admin users must be from the seller company
+    if current_user.role != UserRole.ADMIN and not is_same_company:
         logger.warning(
             '[BUSINESS] Unauthorized listing update | listing_id=%s | '
             'seller_company_id=%s | user_company_id=%s',
@@ -366,6 +340,20 @@ async def update_listing_status(
         )
         raise ForbiddenException(
             detail='You do not have permission to update this listing'
+        )
+
+    # Check if the transition is allowed for this role
+    if new_status not in allowed_targets:
+        logger.warning(
+            '[BUSINESS] Invalid transition | listing_id=%s | role=%s | '
+            'current_status=%s | new_status=%s',
+            listing_id,
+            current_user.role,
+            current_status,
+            new_status,
+        )
+        raise InsufficientPermissionsException(
+            detail=f'Cannot transition from {current_status.value} to {new_status.value}'
         )
 
     # Perform the update
