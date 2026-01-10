@@ -14,10 +14,9 @@ Key rules:
 """
 
 import logging
-from typing import Dict, List
 
 from app import schemas
-from app.enums import BidStatus, ListingStatus, UserRole
+from app.enums import BidStatus, ListingStatus, TransitionableEntity, UserRole
 from app.exceptions import (
     ForbiddenException,
     InsufficientPermissionsException,
@@ -25,21 +24,9 @@ from app.exceptions import (
 )
 from app.repositories import BidRepository, ListingRepository
 from app.schemas.base import MonetaID
+from app.utils.allowed_transitions import get_allowed_transitions
 
 logger = logging.getLogger(__name__)
-
-
-# Status transition rules
-# Company users (bidder company with UPDATE.INSTRUMENT permission): PENDING -> WITHDRAWN only
-COMPANY_ALLOWED_TRANSITIONS: Dict[BidStatus, List[BidStatus]] = {
-    BidStatus.PENDING: [BidStatus.WITHDRAWN],
-}
-
-# Admin allowed transitions: PENDING -> SUSPENDED, WITHDRAWN -> SUSPENDED
-ADMIN_ALLOWED_TRANSITIONS: Dict[BidStatus, List[BidStatus]] = {
-    BidStatus.PENDING: [BidStatus.SUSPENDED],
-    BidStatus.WITHDRAWN: [BidStatus.SUSPENDED],
-}
 
 
 async def validate_listing_is_open(
@@ -133,39 +120,18 @@ async def transition_bid_status(
     # Validate listing is OPEN
     await validate_listing_is_open(listing_repo, bid.listing_id)
 
-    is_admin = user_role == UserRole.ADMIN
     is_bidder_company = bid.bidder_company_id == user_company_id
 
-    if is_admin:
-        # Admin can only do specific transitions
-        allowed = ADMIN_ALLOWED_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            logger.warning(
-                '[BUSINESS] Invalid admin transition | bid_id=%s | '
-                'current_status=%s | new_status=%s',
-                bid_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Admin cannot transition from {current_status.value} to {new_status.value}'
-            )
-    elif is_bidder_company:
-        # Company user can only do allowed transitions
-        allowed = COMPANY_ALLOWED_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            logger.warning(
-                '[BUSINESS] Invalid company user transition | bid_id=%s | '
-                'current_status=%s | new_status=%s',
-                bid_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Cannot transition from {current_status.value} to {new_status.value}'
-            )
-    else:
-        # User is not from bidder company and is not admin
+    # Get allowed transitions for the user's role
+    allowed_transitions = get_allowed_transitions(
+        entity=TransitionableEntity.BID,
+        role=user_role,
+    )
+    allowed_targets = allowed_transitions.get(current_status, [])
+
+    # Check if user has permission to update this bid
+    # Non-admin users must be from the bidder company
+    if user_role != UserRole.ADMIN and not is_bidder_company:
         logger.warning(
             '[BUSINESS] Unauthorized bid update | bid_id=%s | '
             'bidder_company_id=%s | user_company_id=%s',
@@ -175,6 +141,20 @@ async def transition_bid_status(
         )
         raise ForbiddenException(
             detail='You do not have permission to update this bid'
+        )
+
+    # Check if the transition is allowed for this role
+    if new_status not in allowed_targets:
+        logger.warning(
+            '[BUSINESS] Invalid transition | bid_id=%s | role=%s | '
+            'current_status=%s | new_status=%s',
+            bid_id,
+            user_role,
+            current_status,
+            new_status,
+        )
+        raise InsufficientPermissionsException(
+            detail=f'Cannot transition from {current_status.value} to {new_status.value}'
         )
 
     # Perform the update

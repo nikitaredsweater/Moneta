@@ -16,10 +16,9 @@ Key rules:
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List
 
 from app import schemas
-from app.enums import AskStatus, ListingStatus, UserRole
+from app.enums import AskStatus, ListingStatus, TransitionableEntity, UserRole
 from app.exceptions import (
     ForbiddenException,
     InsufficientPermissionsException,
@@ -27,22 +26,9 @@ from app.exceptions import (
 )
 from app.repositories import AskRepository, ListingRepository
 from app.schemas.base import MonetaID
+from app.utils.allowed_transitions import get_allowed_transitions
 
 logger = logging.getLogger(__name__)
-
-
-# Status transition rules
-# Company users (asker company with UPDATE.INSTRUMENT permission): ACTIVE -> WITHDRAWN only
-COMPANY_ALLOWED_TRANSITIONS: Dict[AskStatus, List[AskStatus]] = {
-    AskStatus.ACTIVE: [AskStatus.WITHDRAWN],
-}
-
-# Admin allowed transitions: ACTIVE -> SUSPENDED, WITHDRAWN -> SUSPENDED, SUSPENDED -> ACTIVE
-ADMIN_ALLOWED_TRANSITIONS: Dict[AskStatus, List[AskStatus]] = {
-    AskStatus.ACTIVE: [AskStatus.SUSPENDED],
-    AskStatus.WITHDRAWN: [AskStatus.SUSPENDED],
-    AskStatus.SUSPENDED: [AskStatus.ACTIVE],
-}
 
 
 async def validate_listing_is_open(
@@ -166,39 +152,18 @@ async def transition_ask_status(
     # Validate listing is OPEN
     await validate_listing_is_open(listing_repo, ask.listing_id)
 
-    is_admin = user_role == UserRole.ADMIN
     is_asker_company = ask.asker_company_id == user_company_id
 
-    if is_admin:
-        # Admin can only do specific transitions
-        allowed = ADMIN_ALLOWED_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            logger.warning(
-                '[BUSINESS] Invalid admin transition | ask_id=%s | '
-                'current_status=%s | new_status=%s',
-                ask_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Admin cannot transition from {current_status.value} to {new_status.value}'
-            )
-    elif is_asker_company:
-        # Company user can only do allowed transitions
-        allowed = COMPANY_ALLOWED_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            logger.warning(
-                '[BUSINESS] Invalid company user transition | ask_id=%s | '
-                'current_status=%s | new_status=%s',
-                ask_id,
-                current_status,
-                new_status,
-            )
-            raise InsufficientPermissionsException(
-                detail=f'Cannot transition from {current_status.value} to {new_status.value}'
-            )
-    else:
-        # User is not from asker company and is not admin
+    # Get allowed transitions for the user's role
+    allowed_transitions = get_allowed_transitions(
+        entity=TransitionableEntity.ASK,
+        role=user_role,
+    )
+    allowed_targets = allowed_transitions.get(current_status, [])
+
+    # Check if user has permission to update this ask
+    # Non-admin users must be from the asker company
+    if user_role != UserRole.ADMIN and not is_asker_company:
         logger.warning(
             '[BUSINESS] Unauthorized ask update | ask_id=%s | '
             'asker_company_id=%s | user_company_id=%s',
@@ -208,6 +173,20 @@ async def transition_ask_status(
         )
         raise ForbiddenException(
             detail='You do not have permission to update this ask'
+        )
+
+    # Check if the transition is allowed for this role
+    if new_status not in allowed_targets:
+        logger.warning(
+            '[BUSINESS] Invalid transition | ask_id=%s | role=%s | '
+            'current_status=%s | new_status=%s',
+            ask_id,
+            user_role,
+            current_status,
+            new_status,
+        )
+        raise InsufficientPermissionsException(
+            detail=f'Cannot transition from {current_status.value} to {new_status.value}'
         )
 
     # Perform the update
