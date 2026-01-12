@@ -105,25 +105,42 @@ async def get_company_by_uuid(
     return schemas.CompanyIncludes(**base.dict())
 
 
-@company_router.post('/search', response_model=List[schemas.Company])
+@company_router.post('/search', response_model=List[schemas.CompanyIncludes])
 async def search_companies(
     company_repo: repo.Company,
     filters: schemas.CompanyFilters,
+    includes: Set[CompanyInclude] = Depends(parse_company_includes),
     _=Depends(has_permission([Permission(Verb.VIEW, Entity.COMPANY)])),
-) -> Optional[List[schemas.Company]]:
+) -> List[schemas.CompanyIncludes]:
     logger.debug(
-        '[BUSINESS] Searching companies | limit=%d | offset=%d',
+        '[BUSINESS] Searching companies | limit=%d | offset=%d | includes=%s',
         filters.limit,
         filters.offset,
+        list(includes) if includes else [],
     )
     where = build_where_company(filters)
     order = build_sort_company(filters.sort)
-    result = await company_repo.get_all(
-        where_list=where or None,
-        order_list=order or None,
-        limit=filters.limit,
-        offset=filters.offset,
-    )
+    rel_names = map_includes_to_rel_names(includes)
+
+    if rel_names:
+        result = await company_repo.get_all(
+            where_list=where or None,
+            order_list=order or None,
+            limit=filters.limit,
+            offset=filters.offset,
+            includes=rel_names,
+            custom_model=schemas.CompanyIncludes,
+        )
+    else:
+        companies = await company_repo.get_all(
+            where_list=where or None,
+            order_list=order or None,
+            limit=filters.limit,
+            offset=filters.offset,
+        )
+        # Convert to CompanyIncludes for consistent response type
+        result = [schemas.CompanyIncludes(**c.dict()) for c in companies]
+
     logger.info('[BUSINESS] Company search completed | results=%d', len(result))
     return result
 
