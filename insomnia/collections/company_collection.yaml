@@ -28,7 +28,7 @@ resources:
 
       ## Available Includes
 
-      When fetching a company by ID, you can include related entities:
+      When fetching a company by ID or searching companies, you can include related entities:
 
       | Include | Description |
       |---------|-------------|
@@ -37,6 +37,8 @@ resources:
       | `instruments` | Financial instruments issued by the company |
 
       Use query parameter: `?include=addresses,users,instruments`
+
+      **Note:** Includes are supported on both `GET /company/{id}` and `POST /company/search` endpoints.
 
       ## Permissions
 
@@ -195,7 +197,7 @@ resources:
     description: |
       # POST /v1/company/search
 
-      Search companies with filters, pagination, and sorting.
+      Search companies with filters, pagination, sorting, and optional includes.
 
       ## When to Use
 
@@ -208,6 +210,12 @@ resources:
       ## Permissions
 
       **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `include` | string | Comma-separated list of relations to include (addresses, users, instruments) |
 
       ## Request Body
 
@@ -263,7 +271,10 @@ resources:
           "legalName": "Acme Corporation",
           "tradeName": "Acme",
           "registrationNumber": "REG-12345",
-          "incorporationDate": "2020-01-15"
+          "incorporationDate": "2020-01-15",
+          "addresses": null,
+          "users": null,
+          "instruments": null
         }
       ]
       ```
@@ -354,6 +365,222 @@ resources:
       type: bearer
       token: "{{ _.admin_token }}"
     metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Companies with Addresses Include
+  - _id: req_search_companies_include_addresses
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
+    name: "Search Companies - Include Addresses"
+    description: |
+      # POST /v1/company/search?include=addresses
+
+      Search companies with addresses included in the response.
+
+      ## When to Use
+
+      Use when searching for companies and you need their addresses loaded in a single request.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses` | Load company addresses |
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:30:00Z",
+          "legalName": "Acme Corporation",
+          "tradeName": "Acme",
+          "registrationNumber": "REG-12345",
+          "incorporationDate": "2020-01-15",
+          "addresses": [
+            {
+              "id": "660e8400-e29b-41d4-a716-446655440001",
+              "addressLine1": "123 Main Street",
+              "city": "New York",
+              "country": "USA",
+              "addressType": "HEADQUARTERS"
+            }
+          ],
+          "users": null,
+          "instruments": null
+        }
+      ]
+      ```
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters:
+      - name: include
+        value: addresses
+        id: param_include_addresses
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197500
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Companies with Users Include
+  - _id: req_search_companies_include_users
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
+    name: "Search Companies - Include Users"
+    description: |
+      # POST /v1/company/search?include=users
+
+      Search companies with users included in the response.
+
+      ## When to Use
+
+      Use when searching for companies and you need their users loaded in a single request.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `users` | Load company users |
+
+      ## Response (200 OK)
+
+      Returns an array of companies with `users` populated and other relations as null.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters:
+      - name: include
+        value: users
+        id: param_include_users
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197400
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Companies with All Includes
+  - _id: req_search_companies_include_all
+    parentId: fld_company
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/company/search"
+    name: "Search Companies - Include All"
+    description: |
+      # POST /v1/company/search?include=addresses,users,instruments
+
+      Search companies with all related entities included.
+
+      ## When to Use
+
+      Use when you need a complete view of companies including all addresses, users, and instruments.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.COMPANY`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `addresses,users,instruments` | Load all relations |
+
+      ## Response (200 OK)
+
+      Returns an array of companies with all three arrays populated: `addresses`, `users`, and `instruments`.
+
+      ## Performance Note
+
+      This request loads all related data for each company and may be slower than targeted includes. Use specific includes when you only need certain relations.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters:
+      - name: include
+        value: addresses,users,instruments
+        id: param_include_all
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197300
     isPrivate: false
     settingStoreCookies: true
     settingSendCookies: true
