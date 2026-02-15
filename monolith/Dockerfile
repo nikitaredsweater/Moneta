@@ -58,7 +58,9 @@ FROM base AS production
 # Copy source code
 COPY . .
 
-# Command to run the application in development mode
-# fastapi dev app/main.py
-# TODO: Untested. Test later
-CMD ["fastapi", "dev", "app/main.py"]
+# Copy and make entrypoint executable
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Entrypoint: generates JWT keys, runs migrations, starts uvicorn
+ENTRYPOINT ["/entrypoint.sh"]

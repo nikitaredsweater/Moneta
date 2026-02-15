@@ -21,7 +21,13 @@ from starlette.types import ASGIApp
 
 logger = logging.getLogger(__name__)
 
-EXCLUDED_PATH_PATTERNS = ['/', '/v1/auth/login', '/openapi.json', '/docs']
+EXCLUDED_PATH_PATTERNS = [
+    '/',
+    '/health',
+    '/v1/auth/login',
+    '/openapi.json',
+    '/docs',
+]
 
 
 def _is_path_excluded(path: str) -> bool:
