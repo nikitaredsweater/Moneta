@@ -12,8 +12,11 @@
 #   Run specific test file:
 #     docker compose -f docker-compose.test.yml run --rm monolith-test pytest tests/integration/routers/test_auth.py -v
 #
-#   Run with coverage:
-#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest --cov=app tests/
+#   Run with coverage (terminal report):
+#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest --cov=app --cov-report=term-missing tests/
+#
+#   Run with coverage (HTML report — outputs to monolith/htmlcov/index.html):
+#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest --cov=app --cov-report=html tests/
 #
 #   Clean up:
 #     docker compose -f docker-compose.test.yml down -v

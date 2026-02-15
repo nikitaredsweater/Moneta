@@ -10,6 +10,7 @@ asyncpg
 # --- Testing ---
 pytest
 pytest-asyncio
+pytest-cov
 httpx
 aiosqlite
 
