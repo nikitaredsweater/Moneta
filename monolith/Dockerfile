@@ -58,9 +58,7 @@ FROM base AS production
 # Copy source code
 COPY . .
 
-# Copy and make entrypoint executable
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 # Entrypoint: generates JWT keys, runs migrations, starts uvicorn
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
