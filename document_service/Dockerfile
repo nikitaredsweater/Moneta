@@ -57,7 +57,7 @@ FROM base AS production
 # Copy source code
 COPY . .
 
-# Command to run the application in production mode
-# CMD ["fastapi", "dev", "app/main.py"]
-# Command to run the application in production mode
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chmod +x entrypoint.sh
+
+# Entrypoint: decodes JWT public key, starts uvicorn
+ENTRYPOINT ["./entrypoint.sh"]

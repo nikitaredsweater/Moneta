@@ -23,7 +23,17 @@ configure_logging()
 
 logger = logging.getLogger(__name__)
 
-DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@postgres:5432/moneta")
+_raw_db_url = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@postgres:5432/moneta",
+)
+# Railway provides postgresql:// but asyncpg needs postgresql+asyncpg://
+if _raw_db_url.startswith("postgresql://"):
+    DB_URL = _raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif _raw_db_url.startswith("postgresql+psycopg://"):
+    DB_URL = _raw_db_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
+else:
+    DB_URL = _raw_db_url
 SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "3600"))  # Do the check every hour
 LOCK_KEY = int(os.getenv("LOCK_KEY", "90201"))
 STATUS_ACTIVE = "ACTIVE"

@@ -37,7 +37,7 @@ except Exception as e:
     )
     raise RuntimeError(f'JWT keys required but failed to load: {e}') from e
 
-ENABLE_GRPC = os.getenv('ENABLE_GRPC', 'false').lower() in ('true', '1', 'yes')
+ENABLE_GRPC = os.getenv('ENABLE_GRPC', 'true').lower() in ('true', '1', 'yes')
 
 
 @asynccontextmanager

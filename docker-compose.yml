@@ -26,6 +26,7 @@ services:
       - LOG_FILE_PATH=/logs/monolith.log
       - JWT_PRIVATE_KEY_PATH=/app/keys/jwt_private.pem
       - JWT_PUBLIC_KEY_PATH=/app/keys/jwt_public.pem
+      - ENABLE_GRPC=true
 
   document_service:
     build:

@@ -20,11 +20,13 @@ RUN pip install --upgrade pip wheel setuptools
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
+# Copy source code and entrypoint
 COPY src ./src
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 # Create logs directory for file-based logging
 RUN mkdir -p /logs
 
-# Command to run the application
-CMD ["python", "-m", "scheduler.main"]
+# Entrypoint: starts the scheduler
+ENTRYPOINT ["./entrypoint.sh"]
