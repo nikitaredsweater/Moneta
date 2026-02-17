@@ -231,6 +231,7 @@ pyrightconfig.json
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
+[Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -672,9 +673,11 @@ app/keys
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudio,visualstudiocode,python,venv,dotenv,windows,linux
 
+# Proto files
+app/gen
+
 # Include scripts folders (but exclude venv Scripts folders)
 !scripts/
-!zkp-service/scripts
 !*/scripts/
 !monolith/scripts/
 !document_service/scripts/

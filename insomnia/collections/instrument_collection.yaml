@@ -1,0 +1,1605 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_instrument
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Instrument API
+    description: |
+      # Moneta Instrument API Collection
+
+      This collection contains endpoints for managing financial instruments in the Moneta platform.
+
+      ## Overview
+
+      Instruments represent financial products (bonds, notes, etc.) that can be traded on the platform. Each instrument has a lifecycle managed through status transitions.
+
+      ## Authentication
+
+      All endpoints require a valid JWT Bearer token obtained from the `/v1/auth/login` endpoint.
+
+      ## Instrument Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `DRAFT` | Initial state, can be modified |
+      | `PENDING_APPROVAL` | Submitted for admin review |
+      | `ACTIVE` | Approved and available for trading |
+      | `MATURED` | Reached maturity date |
+      | `REJECTED` | Rejected by admin |
+
+      ## Maturity Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `NOT_DUE` | Not yet matured |
+      | `DUE` | Maturity date reached |
+      | `IN_GRACE` | In grace period |
+      | `PARTIALLY_PAID` | Partial payment made |
+      | `PAID` | Fully paid |
+      | `DEFAULTED` | Payment defaulted |
+
+      ## Trading Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `DRAFT` | Not yet approved |
+      | `LISTED` | Available for trading |
+      | `PAUSED` | Trading temporarily paused |
+      | `OFF_MARKET` | Removed from trading |
+
+      ## Permissions
+
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.INSTRUMENT` | View instrument information |
+      | `CREATE.INSTRUMENT` | Create new instruments |
+      | `UPDATE.INSTRUMENT` | Update/transition instruments |
+
+      ## Status Transition Rules
+
+      - `DRAFT` → `PENDING_APPROVAL` (Issuer/Admin)
+      - `PENDING_APPROVAL` → `ACTIVE` (Admin only)
+      - `PENDING_APPROVAL` → `REJECTED` (Admin only)
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_instrument_base
+    parentId: wrk_moneta_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_instrument_local
+    parentId: env_instrument_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_instrument_id: ""
+      test_document_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_instrument_id
+        - test_document_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Instrument Folder
+  - _id: fld_instrument
+    parentId: wrk_moneta_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    name: Instrument
+    description: |
+      # Instrument Management Endpoints
+
+      Endpoints for creating, viewing, and updating instruments.
+
+      **Base Path:** `/v1/instrument`
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Search Instruments
+  - _id: req_search_instruments
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/search"
+    name: "Search Instruments"
+    description: |
+      # POST /v1/instrument/search
+
+      Search instruments with filters, pagination, and sorting.
+
+      ## When to Use
+
+      Use when you need to find instruments matching specific criteria or paginate through instrument records.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "minFaceValue": 1000,
+        "maxFaceValue": 100000,
+        "currency": "USD",
+        "maturityDateAfter": "2025-01-01",
+        "maturityDateBefore": "2026-12-31",
+        "createdAtAfter": "2024-01-01",
+        "createdAtBefore": "2024-12-31",
+        "minMaturityPayment": 1000,
+        "maxMaturityPayment": 200000,
+        "instrumentStatus": "ACTIVE",
+        "maturityStatus": "NOT_DUE",
+        "tradingStatus": "LISTED",
+        "issuerId": ["550e8400-e29b-41d4-a716-446655440000"],
+        "createdBy": ["770e8400-e29b-41d4-a716-446655440002"],
+        "sort": "-createdAt",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `minFaceValue` | float | No | Minimum face value |
+      | `maxFaceValue` | float | No | Maximum face value |
+      | `currency` | string | No | ISO 4217 currency code (3 chars) |
+      | `maturityDateAfter` | date | No | Matures on or after this date |
+      | `maturityDateBefore` | date | No | Matures on or before this date |
+      | `createdAtAfter` | date | No | Created on or after this date |
+      | `createdAtBefore` | date | No | Created on or before this date |
+      | `minMaturityPayment` | float | No | Minimum maturity payment |
+      | `maxMaturityPayment` | float | No | Maximum maturity payment |
+      | `instrumentStatus` | string | No | Instrument status filter |
+      | `maturityStatus` | string | No | Maturity status filter |
+      | `tradingStatus` | string | No | Trading status filter |
+      | `issuerId` | array | No | Array of issuer company UUIDs |
+      | `createdBy` | array | No | Array of creator user UUIDs |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | Max results (1-200, default: 50) |
+      | `offset` | integer | No | Skip results (default: 0) |
+
+      ## Sorting
+
+      Use comma-separated field names. Prefix with `-` for descending order.
+
+      **Sortable fields:** `createdAt`, `name`, `faceValue`, `maturityDate`, `maturityPayment`
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "createdAt": "2024-02-01T09:00:00Z",
+          "updatedAt": "2024-02-01T09:00:00Z",
+          "name": "Corporate Bond 2025",
+          "faceValue": 10000.00,
+          "currency": "USD",
+          "maturityDate": "2025-12-31",
+          "maturityPayment": 10500.00,
+          "instrumentStatus": "ACTIVE",
+          "maturityStatus": "NOT_DUE",
+          "tradingStatus": "LISTED",
+          "issuerId": "550e8400-e29b-41d4-a716-446655440000",
+          "createdBy": "770e8400-e29b-41d4-a716-446655440002",
+          "publicPayload": null
+        }
+      ]
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error details |
+      | 500 | Server error | "Internal server error" |
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Instruments - Active Only
+  - _id: req_search_instruments_active
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/search"
+    name: "Search Instruments - Active Only"
+    description: |
+      # POST /v1/instrument/search (Active Only)
+
+      Search for active instruments only.
+
+      ## When to Use
+
+      Use when you need to find instruments that are approved and available for trading.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Example Request
+
+      This example filters to only show active instruments.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "instrumentStatus": "ACTIVE",
+          "limit": 50,
+          "offset": 0,
+          "sort": "-createdAt"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Instruments - With Value Filters
+  - _id: req_search_instruments_value_filters
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/search"
+    name: "Search Instruments - Value Filters"
+    description: |
+      # POST /v1/instrument/search (Value Filters)
+
+      Search instruments with face value and maturity payment filters.
+
+      ## When to Use
+
+      Use when you need to find instruments within a specific value range.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Example Request
+
+      This example searches for USD instruments with:
+      - Face value between $1,000 and $100,000
+      - Minimum maturity payment of $1,000
+      - Sorted by face value (highest first)
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "minFaceValue": 1000,
+          "maxFaceValue": 100000,
+          "currency": "USD",
+          "minMaturityPayment": 1000,
+          "limit": 20,
+          "offset": 0,
+          "sort": "-faceValue"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Instrument by ID
+  - _id: req_get_instrument_by_id
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}"
+    name: "Get Instrument by ID"
+    description: |
+      # GET /v1/instrument/{instrument_id}
+
+      Retrieve a specific instrument by its UUID.
+
+      ## When to Use
+
+      Use when you need details for a specific instrument.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `instrument_id` | UUID | The instrument's unique identifier |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "name": "Corporate Bond 2025",
+        "faceValue": 10000.00,
+        "currency": "USD",
+        "maturityDate": "2025-12-31",
+        "maturityPayment": 10500.00,
+        "instrumentStatus": "ACTIVE",
+        "maturityStatus": "NOT_DUE",
+        "tradingStatus": "LISTED",
+        "issuerId": "550e8400-e29b-41d4-a716-446655440000",
+        "createdBy": "770e8400-e29b-41d4-a716-446655440002",
+        "publicPayload": {
+          "description": "Corporate bond with 5% yield",
+          "category": "corporate"
+        },
+        "instrumentDocuments": null
+      }
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique instrument identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `name` | string | Instrument name (max 255 chars) |
+      | `faceValue` | float | Face value of the instrument |
+      | `currency` | string | ISO 4217 currency code |
+      | `maturityDate` | date | Date when instrument matures |
+      | `maturityPayment` | float | Payment amount at maturity |
+      | `instrumentStatus` | string | Current instrument status |
+      | `maturityStatus` | string | Current maturity status |
+      | `tradingStatus` | string | Current trading status |
+      | `issuerId` | UUID | Issuing company ID |
+      | `createdBy` | UUID | Creator user ID |
+      | `publicPayload` | object | Custom public metadata (optional) |
+      | `instrumentDocuments` | array | Associated documents (null if not included) |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 422 | Invalid UUID format | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_instrument_id` in your environment to a valid instrument UUID.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Instrument - Include Documents
+  - _id: req_get_instrument_include_documents
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}"
+    name: "Get Instrument - Include Documents"
+    description: |
+      # GET /v1/instrument/{instrument_id}?include=documents
+
+      Retrieve an instrument with its associated documents loaded.
+
+      ## When to Use
+
+      Use when you need instrument details along with any attached documents (prospectus, terms, etc.).
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `documents` | Load associated documents |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "name": "Corporate Bond 2025",
+        "faceValue": 10000.00,
+        "currency": "USD",
+        "maturityDate": "2025-12-31",
+        "maturityPayment": 10500.00,
+        "instrumentStatus": "ACTIVE",
+        "maturityStatus": "NOT_DUE",
+        "tradingStatus": "LISTED",
+        "issuerId": "550e8400-e29b-41d4-a716-446655440000",
+        "createdBy": "770e8400-e29b-41d4-a716-446655440002",
+        "publicPayload": null,
+        "instrumentDocuments": [
+          {
+            "id": "990e8400-e29b-41d4-a716-446655440004",
+            "instrumentId": "880e8400-e29b-41d4-a716-446655440003",
+            "documentId": "aa0e8400-e29b-41d4-a716-446655440005",
+            "document": {
+              "id": "aa0e8400-e29b-41d4-a716-446655440005",
+              "name": "Bond Prospectus",
+              "type": "PROSPECTUS"
+            }
+          }
+        ]
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: documents
+        id: param_include_documents
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Instrument
+  - _id: req_create_instrument
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/"
+    name: "Create Instrument"
+    description: |
+      # POST /v1/instrument/
+
+      Create a new instrument (starts in DRAFT status).
+
+      ## When to Use
+
+      Use when creating a new financial instrument. The instrument starts in DRAFT status and can be modified until submitted for approval.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "name": "Corporate Bond 2025",
+        "faceValue": 10000.00,
+        "currency": "USD",
+        "maturityDate": "2025-12-31",
+        "maturityPayment": 10500.00,
+        "publicPayload": {
+          "description": "Corporate bond with 5% annual yield",
+          "category": "corporate"
+        }
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `name` | string | Yes | Instrument name (max 255 chars) |
+      | `faceValue` | float | Yes | Face value of the instrument |
+      | `currency` | string | Yes | ISO 4217 currency code (3 chars, e.g., "USD") |
+      | `maturityDate` | date | Yes | Date when instrument matures (YYYY-MM-DD) |
+      | `maturityPayment` | float | Yes | Payment amount at maturity |
+      | `publicPayload` | object | No | Custom public metadata JSON |
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "name": "Corporate Bond 2025",
+        "faceValue": 10000.00,
+        "currency": "USD",
+        "maturityDate": "2025-12-31",
+        "maturityPayment": 10500.00,
+        "instrumentStatus": "DRAFT",
+        "maturityStatus": "NOT_DUE",
+        "tradingStatus": "DRAFT",
+        "issuerId": "550e8400-e29b-41d4-a716-446655440000",
+        "createdBy": "770e8400-e29b-41d4-a716-446655440002",
+        "publicPayload": {
+          "description": "Corporate bond with 5% annual yield",
+          "category": "corporate"
+        }
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Missing/invalid fields | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      - `issuerId` is automatically set to the authenticated user's company
+      - `createdBy` is automatically set to the authenticated user
+      - Initial status is always `DRAFT`
+      - Currency is automatically uppercased
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "name": "Corporate Bond 2025",
+          "faceValue": 10000.00,
+          "currency": "USD",
+          "maturityDate": "2025-12-31",
+          "maturityPayment": 10500.00,
+          "publicPayload": {
+            "description": "Corporate bond with 5% annual yield",
+            "category": "corporate"
+          }
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Instrument - Minimal
+  - _id: req_create_instrument_minimal
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/"
+    name: "Create Instrument - Minimal"
+    description: |
+      # POST /v1/instrument/ (Minimal)
+
+      Create an instrument with only required fields.
+
+      ## When to Use
+
+      Use when you only have basic instrument information and don't need custom metadata.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `CREATE.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "name": "Simple Note",
+        "faceValue": 5000.00,
+        "currency": "EUR",
+        "maturityDate": "2026-06-30",
+        "maturityPayment": 5250.00
+      }
+      ```
+
+      ## Note
+
+      `publicPayload` is optional and will be null in the response if not provided.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "name": "Simple Note",
+          "faceValue": 5000.00,
+          "currency": "EUR",
+          "maturityDate": "2026-06-30",
+          "maturityPayment": 5250.00
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Update Draft Instrument
+  - _id: req_update_draft_instrument
+    parentId: fld_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}"
+    name: "Update Draft Instrument"
+    description: |
+      # PATCH /v1/instrument/{instrument_id}
+
+      Update a DRAFT instrument. Only instruments in DRAFT status can be modified.
+
+      ## When to Use
+
+      Use when you need to modify an instrument before submitting it for approval.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Restrictions
+
+      - Instrument must be in `DRAFT` status
+      - User must be from the same company as the issuer
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `instrument_id` | UUID | The instrument's unique identifier |
+
+      ## Request Body
+
+      ```json
+      {
+        "name": "Updated Corporate Bond 2025",
+        "faceValue": 15000.00,
+        "maturityPayment": 15750.00
+      }
+      ```
+
+      ## Request Fields (All Optional, At Least One Required)
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `name` | string | New instrument name (max 255 chars) |
+      | `faceValue` | float | New face value |
+      | `currency` | string | New currency code (3 chars) |
+      | `maturityDate` | date | New maturity date |
+      | `maturityPayment` | float | New maturity payment |
+      | `publicPayload` | object | New public metadata JSON |
+
+      ## Response (200 OK)
+
+      Returns the updated instrument object.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not in DRAFT status | "Insufficient permissions" |
+      | 403 | Different company | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 422 | No fields provided | "At least one field must be provided" |
+      | 500 | Server error | "Internal server error" |
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "name": "Updated Corporate Bond 2025",
+          "faceValue": 15000.00,
+          "maturityPayment": 15750.00
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635193000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Status Transitions Folder
+  - _id: fld_instrument_transitions
+    parentId: wrk_moneta_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    name: Status Transitions
+    description: |
+      # Status Transition Endpoints
+
+      Endpoints for transitioning instruments between lifecycle statuses.
+
+      ## Transition Flow
+
+      ```
+      DRAFT → PENDING_APPROVAL → ACTIVE
+                    ↓
+                REJECTED
+      ```
+
+      ## Role Requirements
+
+      - **DRAFT → PENDING_APPROVAL**: Issuer or Admin
+      - **PENDING_APPROVAL → ACTIVE**: Admin only
+      - **PENDING_APPROVAL → REJECTED**: Admin only
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635150000
+    _type: request_group
+
+  # Transition: DRAFT -> PENDING_APPROVAL
+  - _id: req_transition_to_pending
+    parentId: fld_instrument_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}/transition"
+    name: "Transition: DRAFT -> PENDING_APPROVAL"
+    description: |
+      # POST /v1/instrument/{instrument_id}/transition
+
+      Submit a DRAFT instrument for approval.
+
+      ## When to Use
+
+      Use when an instrument is ready for admin review. After this transition, the instrument can no longer be modified.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed Roles:** ISSUER, ADMIN
+
+      ## Prerequisites
+
+      - Instrument must be in `DRAFT` status
+      - User must be from the same company as the issuer (or be ADMIN)
+
+      ## Request Body
+
+      ```json
+      {
+        "newStatus": "PENDING_APPROVAL"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated instrument with `instrumentStatus: "PENDING_APPROVAL"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Invalid transition | "Insufficient permissions" |
+      | 403 | Wrong company | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      After this transition:
+      - The instrument enters review queue
+      - No further modifications are allowed
+      - Only admin can approve or reject
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "newStatus": "PENDING_APPROVAL"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635150000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: PENDING_APPROVAL -> ACTIVE
+  - _id: req_transition_to_active
+    parentId: fld_instrument_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}/transition"
+    name: "Transition: PENDING_APPROVAL -> ACTIVE (Admin)"
+    description: |
+      # POST /v1/instrument/{instrument_id}/transition
+
+      Approve a pending instrument and make it active for trading.
+
+      ## When to Use
+
+      Use when an admin reviews and approves a pending instrument. This activates the instrument for trading.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed Roles:** ADMIN only
+
+      ## Prerequisites
+
+      - Instrument must be in `PENDING_APPROVAL` status
+      - User must have ADMIN role
+
+      ## Request Body
+
+      ```json
+      {
+        "newStatus": "ACTIVE"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated instrument with:
+      - `instrumentStatus: "ACTIVE"`
+      - `tradingStatus: "LISTED"` (set automatically)
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not an admin | "Insufficient permissions" |
+      | 403 | Invalid current status | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Side Effects
+
+      - Trading status is set to `LISTED`
+      - Initial ownership is recorded (issuer becomes owner)
+      - Instrument becomes available for trading
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "newStatus": "ACTIVE"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635149000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: PENDING_APPROVAL -> REJECTED
+  - _id: req_transition_to_rejected
+    parentId: fld_instrument_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}/transition"
+    name: "Transition: PENDING_APPROVAL -> REJECTED (Admin)"
+    description: |
+      # POST /v1/instrument/{instrument_id}/transition
+
+      Reject a pending instrument.
+
+      ## When to Use
+
+      Use when an admin reviews and rejects a pending instrument that doesn't meet requirements.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed Roles:** ADMIN only
+
+      ## Prerequisites
+
+      - Instrument must be in `PENDING_APPROVAL` status
+      - User must have ADMIN role
+
+      ## Request Body
+
+      ```json
+      {
+        "newStatus": "REJECTED"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated instrument with `instrumentStatus: "REJECTED"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not an admin | "Insufficient permissions" |
+      | 403 | Invalid current status | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      Rejected instruments are terminal - they cannot be reactivated. The issuer must create a new instrument if they want to try again.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "newStatus": "REJECTED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635148000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Document Association Folder
+  - _id: fld_instrument_documents
+    parentId: wrk_moneta_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    name: Document Association
+    description: |
+      # Document Association Endpoints
+
+      Endpoints for associating documents with instruments.
+
+      Documents (prospectus, terms, etc.) can be attached to instruments to provide additional information to potential buyers.
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635120000
+    _type: request_group
+
+  # Associate Document with Instrument
+  - _id: req_associate_document
+    parentId: fld_instrument_documents
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}/documents/{{ _.test_document_id }}"
+    name: "Associate Document with Instrument"
+    description: |
+      # POST /v1/instrument/{instrument_id}/documents/{document_id}
+
+      Associate an existing document with an instrument.
+
+      ## When to Use
+
+      Use when you need to attach a document (prospectus, terms, financial statements) to an instrument.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `instrument_id` | UUID | The instrument's unique identifier |
+      | `document_id` | UUID | The document's unique identifier |
+
+      ## Request Body
+
+      None required.
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "990e8400-e29b-41d4-a716-446655440004",
+        "instrumentId": "880e8400-e29b-41d4-a716-446655440003",
+        "documentId": "aa0e8400-e29b-41d4-a716-446655440005",
+        "createdAt": "2024-02-01T10:00:00Z"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Instrument not found | "Entity was not found" |
+      | 404 | Document not found | "Entity was not found" |
+      | 409 | Already associated | "Entity already exists" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set both `test_instrument_id` and `test_document_id` in your environment before running this request.
+    method: POST
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635120000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_instrument_errors
+    parentId: wrk_moneta_instrument
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: |
+      # Error Test Cases
+
+      This folder contains requests designed to trigger specific error responses.
+      Use these to verify error handling and understand API behavior.
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Get Instrument - Not Found (404)
+  - _id: req_get_instrument_not_found
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/00000000-0000-0000-0000-000000000000"
+    name: "Get Instrument - Not Found (404)"
+    description: |
+      # GET /v1/instrument/{instrument_id} - 404 Test
+
+      Test the 404 Not Found response when requesting a non-existent instrument.
+
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Entity was not found"
+      }
+      ```
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Instrument - Missing Fields (422)
+  - _id: req_create_instrument_missing_fields
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/"
+    name: "Create Instrument - Missing Fields (422)"
+    description: |
+      # POST /v1/instrument/ - 422 Test
+
+      Test creating an instrument with missing required fields.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error details.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": ["body", "faceValue"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "currency"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "maturityDate"],
+            "msg": "Field required"
+          },
+          {
+            "type": "missing",
+            "loc": ["body", "maturityPayment"],
+            "msg": "Field required"
+          }
+        ]
+      }
+      ```
+
+      ## Required Fields
+
+      - `name` - Instrument name
+      - `faceValue` - Face value
+      - `currency` - Currency code
+      - `maturityDate` - Maturity date
+      - `maturityPayment` - Maturity payment
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "name": "Incomplete Instrument"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Update Non-Draft Instrument (403)
+  - _id: req_update_non_draft_instrument
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}"
+    name: "Update Non-Draft Instrument (403)"
+    description: |
+      # PATCH /v1/instrument/{instrument_id} - 403 Test
+
+      Test updating an instrument that is not in DRAFT status.
+
+      ## Expected Behavior
+
+      The API should return a 403 Forbidden status because only DRAFT instruments can be updated.
+
+      ## Response (403 Forbidden)
+
+      ```json
+      {
+        "detail": "Insufficient permissions"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that instruments are immutable once submitted for approval.
+
+      ## Setup
+
+      Set `test_instrument_id` to an ACTIVE or PENDING_APPROVAL instrument to test this.
+    method: PATCH
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "name": "Should Not Update"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Invalid Status Transition (403)
+  - _id: req_invalid_transition
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}/transition"
+    name: "Invalid Status Transition (403)"
+    description: |
+      # POST /v1/instrument/{instrument_id}/transition - 403 Test
+
+      Test an invalid status transition (e.g., DRAFT → ACTIVE directly).
+
+      ## Expected Behavior
+
+      The API should return a 403 Forbidden status because DRAFT cannot transition directly to ACTIVE.
+
+      ## Response (403 Forbidden)
+
+      ```json
+      {
+        "detail": "Insufficient permissions"
+      }
+      ```
+
+      ## Valid Transitions
+
+      - `DRAFT` → `PENDING_APPROVAL`
+      - `PENDING_APPROVAL` → `ACTIVE` (Admin only)
+      - `PENDING_APPROVAL` → `REJECTED` (Admin only)
+
+      ## Setup
+
+      Set `test_instrument_id` to a DRAFT instrument to test this invalid transition.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "newStatus": "ACTIVE"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635097000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_search_instruments_no_auth
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/search"
+    name: "Search Instruments - No Auth (401)"
+    description: |
+      # POST /v1/instrument/search - 401 Test
+
+      Test accessing the instrument search endpoint without authentication.
+
+      ## Expected Behavior
+
+      The API should return a 401 status code indicating authentication is required.
+
+      ## Response (401 Unauthorized)
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that all instrument endpoints require authentication.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635096000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Invalid Include Parameter (422)
+  - _id: req_get_instrument_invalid_include
+    parentId: fld_instrument_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/instrument/{{ _.test_instrument_id }}"
+    name: "Get Instrument - Invalid Include (422)"
+    description: |
+      # GET /v1/instrument/{instrument_id}?include=invalid - 422 Test
+
+      Test getting an instrument with an invalid include parameter.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code because the include value is not valid.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "enum",
+            "loc": ["query", "include"],
+            "msg": "Input should be 'documents'"
+          }
+        ]
+      }
+      ```
+
+      ## Valid Include Values
+
+      - `documents` - Include associated documents
+    method: GET
+    body: {}
+    parameters:
+      - name: include
+        value: invalid_relation
+        id: param_invalid_include
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635095000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

@@ -1,0 +1,48 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Global Environment - Import this FIRST before other collections!
+  # This creates a global environment that is shared across ALL workspaces/collections
+  - _id: env_global_moneta
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Global
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+      admin_email: "admin@example.com"
+      admin_password: "password123"
+      admin_token: ""
+      test_email: "test@example.com"
+      test_password: "TestPassword123!"
+      test_user_id: ""
+      test_company_id: ""
+      test_instrument_id: ""
+      test_document_id: ""
+      test_listing_id: ""
+      test_bid_id: ""
+      test_ask_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+        - admin_email
+        - admin_password
+        - admin_token
+        - test_email
+        - test_password
+        - test_user_id
+        - test_company_id
+        - test_instrument_id
+        - test_document_id
+        - test_listing_id
+        - test_bid_id
+        - test_ask_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment

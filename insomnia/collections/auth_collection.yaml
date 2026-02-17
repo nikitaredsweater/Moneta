@@ -1,0 +1,392 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_auth
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Auth API
+    description: |
+      # Authentication API Collection
+
+      This collection contains endpoints for user authentication in the Moneta platform.
+
+      ## Overview
+      The auth API provides JWT-based authentication. Users must authenticate to receive
+      a bearer token, which is then used for all subsequent authenticated requests.
+
+      ## Token Details
+      - **Type:** Bearer (JWT)
+      - **Expiration:** 15 minutes (900,000 milliseconds)
+      - **Usage:** Include in Authorization header: `Bearer <token>`
+
+      ## Account Status Requirements
+      Only users with `ACTIVE` account status can obtain tokens.
+      Users with other statuses (INACTIVE, PENDING, SUSPENDED, DISABLED, DELETED) cannot log in.
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_base
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_local
+    parentId: env_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      test_email: "test@example.com"
+      test_password: "TestPassword123!"
+      admin_email: "admin@example.com"
+      admin_password: "password123"
+      admin_token: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - test_email
+        - test_password
+        - admin_email
+        - admin_password
+        - admin_token
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Auth Folder
+  - _id: fld_auth
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Auth
+    description: "Authentication endpoints (/v1/auth)"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Login Request
+  - _id: req_login
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: Login
+    description: |
+      # POST /v1/auth/login
+
+      Authenticate a user and receive a JWT access token.
+
+      ## When to Use
+      Call this endpoint when a user needs to log in to the system.
+      Store the returned token and use it for subsequent authenticated requests.
+
+      ## Authentication
+      **Required:** No
+
+      ## Permissions
+      **Required:** None
+
+      ## Request Body
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `email` | string | Yes | User's email address |
+      | `password` | string | Yes | User's password |
+
+      ## Response (200 OK)
+      ```json
+      {
+        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+        "token_type": "bearer",
+        "expires": 900000
+      }
+      ```
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `access_token` | string | JWT token for authenticated requests |
+      | `token_type` | string | Always "bearer" |
+      | `expires` | integer | Token expiration in milliseconds |
+
+      ## Error Responses
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | User not found | "Invalid credentials" |
+      | 401 | Wrong password | "Invalid credentials" |
+      | 403 | Account not ACTIVE | "Wrong account status" |
+      | 422 | Missing fields | Validation error |
+
+      ## Notes
+      - Only users with ACTIVE account status can obtain tokens
+      - Token expires in 15 minutes
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.test_email }}",
+          "password": "{{ _.test_password }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Admin
+  - _id: req_login_admin
+    parentId: fld_auth
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Admin"
+    description: |
+      # POST /v1/auth/login (Admin)
+
+      Authenticate as an ADMIN user and receive a JWT access token with admin privileges.
+
+      ## When to Use
+      Use this when you need admin-level access to perform actions like:
+      - Approving/rejecting instruments
+      - Suspending listings, bids, or asks
+      - Managing users across companies
+
+      ## Authentication
+      **Required:** No
+
+      ## Credentials
+      - **Email:** admin@example.com
+      - **Password:** password123
+
+      ## Response (200 OK)
+      ```json
+      {
+        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+        "token_type": "bearer",
+        "expires": 900000
+      }
+      ```
+
+      ## After Login
+      Copy the `access_token` value and set it in the `admin_token` environment variable
+      to use for authenticated requests.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.admin_email }}",
+          "password": "{{ _.admin_password }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635199500
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_auth_errors
+    parentId: wrk_moneta_auth
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: "Test cases for authentication error scenarios"
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Login - Invalid Email
+  - _id: req_login_invalid_email
+    parentId: fld_auth_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Invalid Email (401)"
+    description: |
+      # POST /v1/auth/login - Invalid Email Test
+
+      Test login with a non-existent email address.
+
+      ## Expected Response
+      **Status:** 401 Unauthorized
+
+      ```json
+      {
+        "detail": "Invalid credentials"
+      }
+      ```
+
+      ## Exception
+      `InvalidCredentialsException` - Raised when user is not found in the database.
+
+      ## Security Note
+      The same error message is returned for both invalid email and invalid password
+      to prevent user enumeration attacks.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "nonexistent@example.com",
+          "password": "AnyPassword123!"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Invalid Password
+  - _id: req_login_invalid_password
+    parentId: fld_auth_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Invalid Password (401)"
+    description: |
+      # POST /v1/auth/login - Invalid Password Test
+
+      Test login with correct email but wrong password.
+
+      ## Expected Response
+      **Status:** 401 Unauthorized
+
+      ```json
+      {
+        "detail": "Invalid credentials"
+      }
+      ```
+
+      ## Exception
+      `InvalidCredentialsException` - Raised when password verification fails.
+
+      ## Security Note
+      Password verification uses bcrypt with constant-time comparison
+      to prevent timing attacks.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "{{ _.test_email }}",
+          "password": "WrongPassword123!"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Login - Missing Fields
+  - _id: req_login_missing_fields
+    parentId: fld_auth_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/auth/login"
+    name: "Login - Missing Fields (422)"
+    description: |
+      # POST /v1/auth/login - Missing Fields Test
+
+      Test login with missing required fields (password omitted).
+
+      ## Expected Response
+      **Status:** 422 Unprocessable Entity
+
+      ```json
+      {
+        "detail": [
+          {
+            "loc": ["body", "password"],
+            "msg": "field required",
+            "type": "value_error.missing"
+          }
+        ]
+      }
+      ```
+
+      ## Required Fields
+      Both `email` and `password` are required in the request body.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "email": "test@example.com"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

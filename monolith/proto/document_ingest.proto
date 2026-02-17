@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package docingest;
+
+import "google/protobuf/timestamp.proto";
+
+// Request mirrors your DocumentCreate model
+message CreateDocumentRequest {
+  string internal_filename = 1;
+  string mime               = 2;
+  string storage_bucket     = 3;
+  string storage_object_key = 4;
+  string created_by         = 5; // MonetaID as string/UUID
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message CreateDocumentResponse {
+  enum CreateStatus {
+    CREATE_STATUS_UNSPECIFIED = 0;
+    CREATED                   = 1;
+    ALREADY_EXISTS            = 2;
+    FAILED                    = 3;
+  }
+  CreateStatus status = 1;
+  string row_id       = 2; // Internal DB PK
+  string message      = 3; // Optional human-readable message
+}
+
+message CreateDocumentVersionRequest {
+  string document_id        = 1; // UUID (existing document PK)
+  uint32 version_number     = 2; // >= 1
+  string storage_version_id = 3; // S3/MinIO versionId (required)
+  string created_by         = 4; // UUID
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message CreateDocumentVersionResponse {
+  // Reuse the same status semantics as CreateDocumentResponse
+  CreateDocumentResponse.CreateStatus status = 1;
+  string version_id = 2; // Version row PK
+  string message    = 3; // Optional
+}
+
+message GetDocumentRequest {
+  string internal_filename = 1; // Filename to search for
+}
+
+message GetDocumentResponse {
+  enum GetStatus {
+    GET_STATUS_UNSPECIFIED = 0;
+    FOUND                  = 1;
+    NOT_FOUND              = 2;
+    FAILED                 = 3;
+  }
+  GetStatus status = 1;
+  string document_id = 2; // Document UUID if found
+  string internal_filename = 3; // Original filename
+  string mime = 4; // MIME type
+  string storage_bucket = 5; // Storage bucket
+  string storage_object_key = 6; // Storage object key
+  string created_by = 7; // Creator UUID
+  google.protobuf.Timestamp created_at = 8; // Creation timestamp
+  string message = 9; // Optional human-readable message
+}
+
+service DocumentIngest {
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+  rpc CreateDocumentVersion(CreateDocumentVersionRequest) returns (CreateDocumentVersionResponse);
+  rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
+}

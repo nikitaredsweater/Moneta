@@ -1,0 +1,1190 @@
+_type: export
+__export_format: 4
+__export_date: "2025-12-27T00:00:00.000Z"
+__export_source: "insomnia.desktop.app:v2023.5.8"
+
+resources:
+  # Workspace
+  - _id: wrk_moneta_listing
+    parentId: null
+    modified: 1703635200000
+    created: 1703635200000
+    name: Moneta Listing API
+    description: |
+      # Moneta Listing API Collection
+
+      This collection contains endpoints for managing instrument listings in the Moneta platform.
+
+      ## Overview
+
+      Listings represent instruments that are available for sale/trade. When an instrument owner wants to sell, they create a listing which can then receive bids from potential buyers.
+
+      ## Authentication
+
+      All endpoints require a valid JWT Bearer token obtained from the `/v1/auth/login` endpoint.
+
+      ## Listing Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `OPEN` | Listing is active and accepting bids |
+      | `WITHDRAWN` | Seller withdrew the listing |
+      | `SUSPENDED` | Admin suspended the listing |
+      | `CLOSED` | Listing is closed (bid selected) |
+
+      ## Permissions
+
+      | Permission | Description |
+      |------------|-------------|
+      | `VIEW.INSTRUMENT` | View listings |
+      | `UPDATE.INSTRUMENT` | Create listings, manage status transitions |
+
+      ## Status Transition Rules
+
+      | From | To | Who Can Perform |
+      |------|-----|-----------------|
+      | `OPEN` | `WITHDRAWN` | Seller company user |
+      | `OPEN` | `SUSPENDED` | Admin only |
+      | `OPEN` | `CLOSED` | Admin only (when bid selected) |
+
+      ## Available Includes
+
+      | Include | Description |
+      |---------|-------------|
+      | `instrument` | The instrument being listed |
+    scope: collection
+    _type: workspace
+
+  # Base Environment
+  - _id: env_listing_base
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Base Environment
+    data:
+      base_url: "http://localhost:8080"
+      api_version: v1
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - api_version
+    color: null
+    isPrivate: false
+    metaSortKey: 1703635200000
+    _type: environment
+
+  # Local Development Environment
+  - _id: env_listing_local
+    parentId: env_listing_base
+    modified: 1703635200000
+    created: 1703635200000
+    name: Local Development
+    data:
+      base_url: "http://localhost:8080"
+      admin_token: ""
+      test_listing_id: ""
+      test_instrument_id: ""
+    dataPropertyOrder:
+      "&":
+        - base_url
+        - admin_token
+        - test_listing_id
+        - test_instrument_id
+    color: "#7d69cb"
+    isPrivate: false
+    metaSortKey: 1703635200001
+    _type: environment
+
+  # Listing Folder
+  - _id: fld_listing
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Listing
+    description: |
+      # Listing Management Endpoints
+
+      Endpoints for creating, viewing, and searching listings.
+
+      **Base Path:** `/v1/listing`
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635200000
+    _type: request_group
+
+  # Search Listings
+  - _id: req_search_listings
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings"
+    description: |
+      # POST /v1/listing/search
+
+      Search listings with filters, pagination, and sorting.
+
+      ## When to Use
+
+      Use when you need to find listings matching specific criteria or paginate through listing records.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Request Body
+
+      ```json
+      {
+        "instrumentId": ["550e8400-e29b-41d4-a716-446655440000"],
+        "sellerCompanyId": ["660e8400-e29b-41d4-a716-446655440001"],
+        "listingCreatorUserId": ["770e8400-e29b-41d4-a716-446655440002"],
+        "status": "OPEN",
+        "sort": "-createdAt",
+        "limit": 50,
+        "offset": 0
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `instrumentId` | array | No | Array of instrument UUIDs to filter by |
+      | `sellerCompanyId` | array | No | Array of seller company UUIDs |
+      | `listingCreatorUserId` | array | No | Array of creator user UUIDs |
+      | `status` | string | No | Status filter: OPEN, WITHDRAWN, SUSPENDED, CLOSED |
+      | `sort` | string | No | Sort order (default: `-createdAt`) |
+      | `limit` | integer | No | Max results (1-200, default: 50) |
+      | `offset` | integer | No | Skip results (default: 0) |
+
+      ## Sorting
+
+      Use comma-separated field names. Prefix with `-` for descending order.
+
+      **Sortable fields:** `createdAt`, `updatedAt`
+
+      ## Response (200 OK)
+
+      ```json
+      [
+        {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "createdAt": "2024-02-01T09:00:00Z",
+          "updatedAt": "2024-02-01T09:00:00Z",
+          "instrumentId": "550e8400-e29b-41d4-a716-446655440000",
+          "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+          "listingCreatorUserId": "770e8400-e29b-41d4-a716-446655440002",
+          "status": "OPEN",
+          "instrument": null
+        }
+      ]
+      ```
+
+      ## Response Fields
+
+      | Field | Type | Description |
+      |-------|------|-------------|
+      | `id` | UUID | Unique listing identifier |
+      | `createdAt` | datetime | Record creation timestamp |
+      | `updatedAt` | datetime | Last update timestamp |
+      | `instrumentId` | UUID | The instrument being listed |
+      | `sellerCompanyId` | UUID | Company selling the instrument |
+      | `listingCreatorUserId` | UUID | User who created the listing |
+      | `status` | string | Current listing status |
+      | `instrument` | object | Instrument details (if included) |
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid filter values | Validation error details |
+      | 500 | Server error | "Internal server error" |
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635200000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings with Include
+  - _id: req_search_listings_with_include
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search?include=instrument"
+    name: "Search Listings with Instrument"
+    description: |
+      # POST /v1/listing/search?include=instrument
+
+      Search listings with the instrument relationship included.
+
+      ## When to Use
+
+      Use when you need listing details along with the full instrument information in a single request.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `instrument` | Load the instrument relationship |
+
+      ## Response (200 OK)
+
+      Returns listings with the `instrument` field populated with full instrument details including name, faceValue, currency, maturityDate, etc.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 422 | Invalid include value | Validation error details |
+      | 500 | Server error | "Internal server error" |
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635199000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings by Status
+  - _id: req_search_listings_by_status
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings by Status (OPEN)"
+    description: |
+      # POST /v1/listing/search (Status Filter)
+
+      Search for listings with OPEN status.
+
+      ## When to Use
+
+      Use when you need to find active listings that are accepting bids.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Available Statuses
+
+      | Status | Description |
+      |--------|-------------|
+      | `OPEN` | Active, accepting bids |
+      | `WITHDRAWN` | Seller cancelled |
+      | `SUSPENDED` | Admin suspended |
+      | `CLOSED` | Bid selected, trading complete |
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "OPEN",
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635198000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Search Listings by Seller Company
+  - _id: req_search_listings_by_seller
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings by Seller Company"
+    description: |
+      # POST /v1/listing/search (Seller Filter)
+
+      Search for listings by seller company ID.
+
+      ## When to Use
+
+      Use when you need to find all listings from a specific company.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Setup
+
+      Set `test_company_id` in your environment to a valid company UUID.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "sellerCompanyId": ["{{ _.test_company_id }}"],
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635197000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing by ID
+  - _id: req_get_listing_by_id
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}"
+    name: "Get Listing by ID"
+    description: |
+      # GET /v1/listing/{listing_id}
+
+      Retrieve a specific listing by its UUID.
+
+      ## When to Use
+
+      Use when you need details for a specific listing.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Path Parameters
+
+      | Parameter | Type | Description |
+      |-----------|------|-------------|
+      | `listing_id` | UUID | The listing's unique identifier |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "instrumentId": "550e8400-e29b-41d4-a716-446655440000",
+        "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "listingCreatorUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "status": "OPEN",
+        "instrument": null
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 422 | Invalid UUID format | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_listing_id` in your environment to a valid listing UUID.
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635196000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing with Instrument
+  - _id: req_get_listing_with_instrument
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}?include=instrument"
+    name: "Get Listing with Instrument"
+    description: |
+      # GET /v1/listing/{listing_id}?include=instrument
+
+      Get a listing with the related instrument included.
+
+      ## When to Use
+
+      Use when you need listing details along with full instrument information.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `VIEW.INSTRUMENT`
+
+      ## Query Parameters
+
+      | Parameter | Value | Description |
+      |-----------|-------|-------------|
+      | `include` | `instrument` | Load the instrument relationship |
+
+      ## Response (200 OK)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "instrumentId": "550e8400-e29b-41d4-a716-446655440000",
+        "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "listingCreatorUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "status": "OPEN",
+        "instrument": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "Corporate Bond 2025",
+          "faceValue": 10000.00,
+          "currency": "USD",
+          "maturityDate": "2025-12-31",
+          "maturityPayment": 10500.00,
+          "instrumentStatus": "ACTIVE",
+          "maturityStatus": "NOT_DUE",
+          "tradingStatus": "LISTED"
+        }
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Insufficient permissions | "Insufficient permissions" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635195000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Listing
+  - _id: req_create_listing
+    parentId: fld_listing
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/"
+    name: "Create Listing"
+    description: |
+      # POST /v1/listing/
+
+      Create a new listing for an instrument.
+
+      ## When to Use
+
+      Use when the owner of an instrument wants to offer it for sale.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Business Rules
+
+      - User must be from the company that currently owns the instrument
+      - No OPEN listing can already exist for the instrument
+      - The instrument must have active ownership records
+
+      ## Request Body
+
+      ```json
+      {
+        "instrumentId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+      ```
+
+      ## Request Fields
+
+      | Field | Type | Required | Description |
+      |-------|------|----------|-------------|
+      | `instrumentId` | UUID | Yes | The instrument to list for sale |
+
+      ## Auto-populated Fields
+
+      The following fields are automatically set from the authenticated user:
+      - `sellerCompanyId` - Set to the user's company
+      - `listingCreatorUserId` - Set to the authenticated user
+      - `status` - Set to `OPEN`
+
+      ## Response (201 Created)
+
+      ```json
+      {
+        "id": "880e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2024-02-01T09:00:00Z",
+        "updatedAt": "2024-02-01T09:00:00Z",
+        "instrumentId": "550e8400-e29b-41d4-a716-446655440000",
+        "sellerCompanyId": "660e8400-e29b-41d4-a716-446655440001",
+        "listingCreatorUserId": "770e8400-e29b-41d4-a716-446655440002",
+        "status": "OPEN"
+      }
+      ```
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Company doesn't own instrument | "Your company does not own this instrument" |
+      | 403 | No active owner | "This instrument has no active owner" |
+      | 404 | Instrument not found | "Instrument with ID {id} does not exist" |
+      | 409 | Open listing exists | "An open listing already exists for this instrument" |
+      | 422 | Missing instrumentId | Validation error details |
+      | 500 | Server error | "Internal server error" |
+
+      ## Setup
+
+      Set `test_instrument_id` in your environment to a valid instrument UUID that your company owns.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "instrumentId": "{{ _.test_instrument_id }}"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635194000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition Folder
+  - _id: fld_listing_transitions
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Status Transitions
+    description: |
+      # Status Transition Endpoints
+
+      Endpoints for transitioning listings between lifecycle statuses.
+
+      ## Transition Flow
+
+      ```
+      OPEN ──────────────────> WITHDRAWN (Seller)
+        │
+        ├──────────────────> SUSPENDED (Admin)
+        │
+        └──────────────────> CLOSED (Admin, after bid selected)
+      ```
+
+      ## Role Requirements
+
+      | Transition | Who Can Perform |
+      |------------|-----------------|
+      | OPEN → WITHDRAWN | Seller company user |
+      | OPEN → SUSPENDED | Admin only |
+      | OPEN → CLOSED | Admin only |
+
+      ## Admin Restrictions
+
+      Admins CANNOT perform these transitions:
+      - OPEN → WITHDRAWN (seller action only)
+      - WITHDRAWN → OPEN (no reactivation)
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635100000
+    _type: request_group
+
+  # Transition: OPEN -> WITHDRAWN (Company User)
+  - _id: req_listing_transition_withdraw
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Withdraw Listing"
+    description: |
+      # POST /v1/listing/{listing_id}/transition
+
+      Withdraw a listing (OPEN -> WITHDRAWN).
+
+      ## When to Use
+
+      Use when the seller company wants to cancel/withdraw their listing and stop accepting bids.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** User from the seller company only
+
+      ## Prerequisites
+
+      - Listing must be in `OPEN` status
+      - User must be from the seller company
+
+      ## Request Body
+
+      ```json
+      {
+        "status": "WITHDRAWN"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated listing with `status: "WITHDRAWN"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Invalid transition | "Cannot transition from {from} to {to}" |
+      | 403 | Not seller company | "You do not have permission to update this listing" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Side Effects
+
+      - All pending bids on this listing will need to be handled separately
+      - The instrument remains owned by the seller company
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "WITHDRAWN"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635100000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: OPEN -> SUSPENDED (Admin)
+  - _id: req_listing_transition_suspend
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Suspend Listing (Admin)"
+    description: |
+      # POST /v1/listing/{listing_id}/transition
+
+      Suspend a listing (OPEN -> SUSPENDED).
+
+      ## When to Use
+
+      Use when an admin needs to temporarily halt trading on a listing due to compliance, investigation, or other administrative reasons.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** ADMIN only
+
+      ## Prerequisites
+
+      - Listing must be in `OPEN` status
+      - User must have ADMIN role
+
+      ## Request Body
+
+      ```json
+      {
+        "status": "SUSPENDED"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated listing with `status: "SUSPENDED"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not an admin | "Admin cannot transition from OPEN to WITHDRAWN" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Notes
+
+      - Suspended listings stop accepting new bids
+      - Existing bids remain in their current state
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "SUSPENDED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635099000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Transition: OPEN -> CLOSED (Admin)
+  - _id: req_listing_transition_close
+    parentId: fld_listing_transitions
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/{{ _.test_listing_id }}/transition"
+    name: "Transition: Close Listing (Admin)"
+    description: |
+      # POST /v1/listing/{listing_id}/transition
+
+      Close a listing (OPEN -> CLOSED).
+
+      ## When to Use
+
+      Use when an admin finalizes a transaction after a bid has been selected and the trade is complete.
+
+      ## Authentication
+
+      **Required:** Yes (Bearer Token)
+
+      ## Permissions
+
+      **Required:** `UPDATE.INSTRUMENT`
+
+      ## Role Requirements
+
+      **Allowed:** ADMIN only
+
+      ## Prerequisites
+
+      - Listing must be in `OPEN` status
+      - User must have ADMIN role
+      - Typically performed after a bid has been selected/accepted
+
+      ## Request Body
+
+      ```json
+      {
+        "status": "CLOSED"
+      }
+      ```
+
+      ## Response (200 OK)
+
+      Returns the updated listing with `status: "CLOSED"`.
+
+      ## Error Responses
+
+      | Code | Condition | Detail |
+      |------|-----------|--------|
+      | 401 | Missing/invalid token | "Not authenticated" |
+      | 403 | Not an admin | "You do not have permission to update this listing" |
+      | 404 | Listing not found | "Listing with ID {id} does not exist" |
+      | 500 | Server error | "Internal server error" |
+
+      ## Side Effects
+
+      - Listing is permanently closed
+      - All non-selected bids should be marked as NOT_SELECTED
+      - Instrument ownership transfer should be recorded
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "status": "CLOSED"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635098000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Error Cases Folder
+  - _id: fld_listing_errors
+    parentId: wrk_moneta_listing
+    modified: 1703635200000
+    created: 1703635200000
+    name: Error Cases
+    description: |
+      # Error Test Cases
+
+      This folder contains requests designed to trigger specific error responses.
+      Use these to verify error handling and understand API behavior.
+    environment: {}
+    environmentPropertyOrder: null
+    metaSortKey: -1703635000000
+    _type: request_group
+
+  # Create Listing - Non-existent Instrument (404)
+  - _id: req_create_listing_invalid_instrument
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/"
+    name: "Create Listing - Invalid Instrument (404)"
+    description: |
+      # POST /v1/listing/ - 404 Test
+
+      Test creating a listing for a non-existent instrument.
+
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Instrument with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates how the API validates that the instrument exists before creating a listing.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "instrumentId": "00000000-0000-0000-0000-000000000000"
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703635000000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Get Listing - Not Found (404)
+  - _id: req_get_listing_not_found
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/00000000-0000-0000-0000-000000000000"
+    name: "Get Listing - Not Found (404)"
+    description: |
+      # GET /v1/listing/{listing_id} - 404 Test
+
+      Test getting a non-existent listing.
+
+      ## Expected Behavior
+
+      The API should return a 404 status code with an error message.
+
+      ## Response (404 Not Found)
+
+      ```json
+      {
+        "detail": "Listing with ID 00000000-0000-0000-0000-000000000000 does not exist"
+      }
+      ```
+    method: GET
+    body: {}
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634999000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # No Auth Request (401)
+  - _id: req_search_listings_no_auth
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/search"
+    name: "Search Listings - No Auth (401)"
+    description: |
+      # POST /v1/listing/search - 401 Test
+
+      Test searching listings without authentication.
+
+      ## Expected Behavior
+
+      The API should return a 401 status code indicating authentication is required.
+
+      ## Response (401 Unauthorized)
+
+      ```json
+      {
+        "detail": "Not authenticated"
+      }
+      ```
+
+      ## Use Case
+
+      This demonstrates that all listing endpoints require authentication.
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+          "limit": 50,
+          "offset": 0
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication: {}
+    metaSortKey: -1703634998000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request
+
+  # Create Listing - Missing instrumentId (422)
+  - _id: req_create_listing_missing_instrument_id
+    parentId: fld_listing_errors
+    modified: 1703635200000
+    created: 1703635200000
+    url: "{{ _.base_url }}/{{ _.api_version }}/listing/"
+    name: "Create Listing - Missing Fields (422)"
+    description: |
+      # POST /v1/listing/ - 422 Test
+
+      Test creating a listing without required instrumentId.
+
+      ## Expected Behavior
+
+      The API should return a 422 status code with validation error details.
+
+      ## Response (422 Unprocessable Entity)
+
+      ```json
+      {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": ["body", "instrumentId"],
+            "msg": "Field required"
+          }
+        ]
+      }
+      ```
+
+      ## Required Fields
+
+      - `instrumentId` - The instrument to list for sale
+    method: POST
+    body:
+      mimeType: application/json
+      text: |
+        {
+        }
+    parameters: []
+    headers:
+      - name: Content-Type
+        value: application/json
+        id: pair_content_type
+    authentication:
+      type: bearer
+      token: "{{ _.admin_token }}"
+    metaSortKey: -1703634997000
+    isPrivate: false
+    settingStoreCookies: true
+    settingSendCookies: true
+    settingDisableRenderRequestBody: false
+    settingEncodeUrl: true
+    settingRebuildPath: true
+    settingFollowRedirects: global
+    _type: request

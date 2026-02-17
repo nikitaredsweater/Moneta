@@ -1,0 +1,9 @@
+# --- Database ---
+sqlalchemy
+alembic
+psycopg[binary]
+asyncpg
+
+# --- Logging ---
+moneta-logging @ git+https://github.com/adtimokhin/moneta-logging.git
+python-dotenv

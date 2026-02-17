@@ -1,0 +1,69 @@
+# Docker Compose configuration for running integration tests
+# This is separate from the main docker-compose.yml to keep test and dev/prod environments isolated.
+#
+# The test setup uses Alembic migrations to create the database schema, ensuring
+# the test database matches the production schema exactly (including any data
+# migrations or custom SQL in migration files).
+#
+# Usage:
+#   Run all tests:
+#     docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+#
+#   Run specific test file:
+#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest tests/integration/routers/test_auth.py -v
+#
+#   Run with coverage (terminal report):
+#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest --cov=app --cov-report=term-missing tests/
+#
+#   Run with coverage (HTML report — outputs to monolith/htmlcov/index.html):
+#     docker compose -f docker-compose.test.yml run --rm monolith-test pytest --cov=app --cov-report=html tests/
+#
+#   Clean up:
+#     docker compose -f docker-compose.test.yml down -v
+
+services:
+  # Test database - isolated PostgreSQL instance for tests
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moneta_test
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with dev database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d moneta_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No persistent volume - tests should start fresh each time
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  # Monolith test runner
+  monolith-test:
+    build:
+      context: ./monolith
+      dockerfile: Dockerfile
+      target: test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - ./monolith:/app_root
+      # Mount test-specific JWT keys (or use mock keys for tests)
+      - ./monolith/app/keys/jwt_private.pem:/app/keys/jwt_private.pem:ro
+      - ./monolith/app/keys/jwt_public.pem:/app/keys/jwt_public.pem:ro
+    environment:
+      # Test database connection
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres-test:5432/moneta_test
+      # JWT keys for test environment
+      JWT_PRIVATE_KEY_PATH: /app/keys/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /app/keys/jwt_public.pem
+      # Logging - minimal for tests
+      LOG_LEVEL: WARNING
+      LOG_OUTPUT: console
+      # Ensure Python doesn't buffer output
+      PYTHONUNBUFFERED: 1
+    # Default command runs all tests
+    command: ["pytest", "tests/", "-v", "--durations=10"]

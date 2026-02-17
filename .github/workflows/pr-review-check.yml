@@ -1,0 +1,68 @@
+name: Enforce PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+jobs:
+  check-reviews:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for required reviews
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const approvedReviews = reviews.filter(review =>
+              review.state === 'APPROVED' &&
+              review.user.login !== context.payload.pull_request.user.login
+            );
+
+            if (approvedReviews.length === 0) {
+              core.setFailed('This pull request requires at least one approved review before it can be merged.');
+              return;
+            }
+
+            console.log(`✅ Found ${approvedReviews.length} approved review(s)`);
+            console.log('Approved by:', approvedReviews.map(r => r.user.login).join(', '));
+
+  # Optional: Additional checks that depend on review approval
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: check-reviews
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          echo "Running tests after review approval..."
+          # Add your test commands here
+          # npm test
+          # pytest
+          # make test
+          echo "Tests completed successfully!"
+
+  # Optional: Build step that only runs after review approval
+  build:
+    runs-on: ubuntu-latest
+    needs: check-reviews
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build project
+        run: |
+          echo "Building project after review approval..."
+          # Add your build commands here
+          # npm run build
+          # docker build
+          # make build
+          echo "Build completed successfully!"
