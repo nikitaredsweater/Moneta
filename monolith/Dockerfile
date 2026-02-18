@@ -61,4 +61,4 @@ COPY . .
 # Command to run the application in development mode
 # fastapi dev app/main.py
 # TODO: Untested. Test later
-CMD ["fastapi", "dev", "app/main.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
