@@ -386,15 +386,33 @@ When running with Docker, services are accessible at these local URLs:
 
 ### Environment Configuration
 
-Update your `.env` files:
+Copy the example config and fill in your values:
 
 ```bash
-# monolith/.env
+cp monolith/environment.config.example monolith/.env
+```
+
+Key variables for the monolith:
+
+```bash
+# monolith/.env (local/Docker)
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/moneta
+
+# JWT keys — local: reference file paths
 JWT_PRIVATE_KEY_PATH=app/keys/jwt_private.pem
 JWT_PUBLIC_KEY_PATH=app/keys/jwt_public.pem
-MONOLITH_GRPC_TARGET=app:50061
 
+# JWT keys — cloud (Railway): provide PEM content directly as env vars
+# JWT_PRIVATE_KEY=<private key PEM content>
+# JWT_PUBLIC_KEY=<public key PEM content>
+
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+BUCKET_NAME=documents
+```
+
+```bash
 # document_service/.env
 MONGO_URI=mongodb://localhost:27017/
 RABBIT_URL=amqp://guest:guest@localhost:5672/
@@ -746,7 +764,8 @@ open http://localhost:8081/docs
 
 Both services include helpful scripts:
 
-- **Protocol buffer generation**: `./scripts/generate_protos.sh`
+- **Protocol buffer generation**: `./scripts/generate_protos.sh` — only needed if you modify a `.proto` file; generated files are committed to the repo
+- **Production entrypoint** (monolith): `./scripts/entrypoint.sh` — used by the production Docker image; runs migrations and starts the server automatically; handles JWT key injection from env vars for cloud deployments
 - **Environment setup**: Check `environment.config.example`
 - **Docker configuration**: `Dockerfile` and `docker-compose.yml`
 
@@ -758,9 +777,9 @@ Both services include helpful scripts:
 - [ ] Set up virtual environment
 - [ ] Install dependencies with pip-tools
 - [ ] Start Docker services
-- [ ] Configure environment variables
-- [ ] Generate JWT keys
-- [ ] Run database migrations
+- [ ] Configure environment variables (copy `environment.config.example` to `.env`)
+- [ ] Generate JWT keys (local only — not needed on Railway)
+- [ ] Run database migrations (`alembic upgrade head` — handled automatically by entrypoint in production)
 - [ ] Set up MinIO-RabbitMQ integration
 - [ ] Install pre-commit hooks
 - [ ] Test APIs are accessible

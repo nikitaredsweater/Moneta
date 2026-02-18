@@ -21,34 +21,24 @@ The Monolith Service is the core backend service for the Moneta financial platfo
 
 ### Protocol Buffer Generation (gRPC communication)
 
-1. Navigate to the monolith root directory:
+The generated protobuf files (`app/gen/`) are committed to the repository and do not need to be regenerated for normal development. They are ready to use as-is.
+
+If you change `proto/document_ingest.proto`, regenerate them by running:
+
+1. Navigate to the monolith root directory and activate the virtual environment:
 
    ```bash
    cd [project_location]/monolith
-   ```
-
-2. Activate the virtual environment:
-
-   ```bash
    source venv/bin/activate
    ```
 
-3. Run the proto generation script:
+2. Run the proto generation script:
 
    ```bash
    ./scripts/generate_protos.sh
    ```
 
-4. Fix the import in the generated gRPC file:
-   - Open `app/gen/document_ingest_pb2_grpc.py`
-   - Find the line:
-     ```python
-     import gen.document_ingest_pb2 as document__ingest__pb2
-     ```
-   - Change it to:
-     ```python
-     import app.gen.document_ingest_pb2 as document__ingest__pb2
-     ```
+3. Commit the updated files in `app/gen/`.
 
 ### Database Migrations
 
@@ -85,18 +75,31 @@ When not using Docker:
 
 ### JWT Key Generation
 
-1. Generate RSA keys:
+#### Local / Docker development
 
-   ```bash
-   openssl genrsa -out app/keys/jwt_private.pem 2048
-   openssl rsa -in app/keys/jwt_private.pem -pubout -out app/keys/jwt_public.pem
-   ```
+Generate RSA keys and reference them by path:
 
-2. Set environment variables in your `.env` file:
-   ```bash
-   JWT_PRIVATE_KEY_PATH=app/keys/jwt_private.pem
-   JWT_PUBLIC_KEY_PATH=app/keys/jwt_public.pem
-   ```
+```bash
+openssl genrsa -out app/keys/jwt_private.pem 2048
+openssl rsa -in app/keys/jwt_private.pem -pubout -out app/keys/jwt_public.pem
+```
+
+Set in your `.env`:
+```bash
+JWT_PRIVATE_KEY_PATH=app/keys/jwt_private.pem
+JWT_PUBLIC_KEY_PATH=app/keys/jwt_public.pem
+```
+
+#### Cloud deployment (Railway, etc.)
+
+Do not use file paths. Instead, set the full PEM content as environment variables:
+
+```bash
+JWT_PRIVATE_KEY=<contents of jwt_private.pem>
+JWT_PUBLIC_KEY=<contents of jwt_public.pem>
+```
+
+`scripts/entrypoint.sh` (used as the production Docker entrypoint) automatically writes these values to temporary files and sets the path variables before starting the app. No manual key management is required on Railway.
 
 ## Enumerations
 

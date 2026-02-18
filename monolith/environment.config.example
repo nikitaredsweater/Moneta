@@ -2,10 +2,19 @@
 # Copy this file to .env and fill in your actual values
 
 # ==============================================
+# Database
+# ==============================================
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/moneta
+
+# ==============================================
 # JWT RS256 KEYS
 # ==============================================
-JWT_PRIVATE_KEY_PATH=
-JWT_PUBLIC_KEY_PATH=
+# Option A (local/Docker): provide file paths
+JWT_PRIVATE_KEY_PATH=app/keys/jwt_private.pem
+JWT_PUBLIC_KEY_PATH=app/keys/jwt_public.pem
+# Option B (Railway/cloud): provide PEM content directly as env vars
+# JWT_PRIVATE_KEY=
+# JWT_PUBLIC_KEY=
 
 # ==============================================
 # MinIO Configuration

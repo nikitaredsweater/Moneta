@@ -674,8 +674,6 @@ app/keys
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudio,visualstudiocode,python,venv,dotenv,windows,linux
 
 
-app/gen
-
 # Include scripts folders (but exclude venv Scripts folders)
 !scripts/
 !*/scripts/
