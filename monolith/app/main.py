@@ -34,7 +34,8 @@ except Exception as e:
     logger.error(
         '[SYSTEM] FATAL: JWT keys failed to load. '
         'Ensure JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH environment variables '
-        'are set and point to valid PEM key files. Error: %s', e
+        'are set and point to valid PEM key files. Error: %s',
+        e,
     )
     raise RuntimeError(f'JWT keys required but failed to load: {e}') from e
 
@@ -76,6 +77,7 @@ app.add_middleware(
     allow_origins=[
         'http://localhost:3000',
         'http://127.0.0.1:3000',
+        'http://100.64.0.8:29978',
     ],
     allow_credentials=False,  # set True only if you use cookies
     allow_methods=['*'],  # or list methods you use
